@@ -4,7 +4,13 @@
 #define LIBRARY_VERSION	0.0.1
 
 #include "userConfig.h"
-#include "Mqtt.h"
+#if (ONLYPID==0 && pinBrewButton==0)
+#undef ENABLE_USER_MENU
+#define ENABLE_USER_MENU 0
+#endif
+
+#include "display.h"
+#include "MQTT.h"
 
 #include "src/RemoteDebug/RemoteDebug.h" //https://github.com/JoaoLopesF/RemoteDebug
 //#include <RemoteDebug.h>  // uncomment this line AND delete src/RemoteDebug/ folder, if you want to use system lib
@@ -23,6 +29,8 @@ extern RemoteDebug Debug;
 #define ERROR_println(a) if (Debug.isActive(Debug.ERROR)) Debug.printf("%0u %s\n", millis()/1000, a)
 #define DEBUGSTART(a) Serial.begin(a);
 #endif
+
+
 
 #define LCDWidth                        u8g2.getDisplayWidth()
 #define LCDHeight                       u8g2.getDisplayHeight()

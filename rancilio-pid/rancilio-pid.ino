@@ -23,7 +23,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.3.0";
+const char* sysVersion PROGMEM  = "2.4.0 beta_0";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -64,13 +64,11 @@ unsigned int blynk_max_incremental_backoff = 5 ; // At most backoff <mqtt_max_in
 // MQTT
 #if (MQTT_ENABLE==1)
 #include "src/PubSubClient/PubSubClient.h"
+//#include <PubSubClient.h>  // uncomment this line AND delete src/PubSubClient/ folder, if you want to use system lib
 #elif (MQTT_ENABLE==2)
 //#include "src/uMQTTBroker/uMQTTBroker.h"
 #include "uMQTTBroker.h"
 #endif
-
-#include "src/PubSubClient/PubSubClient.h"
-//#include <PubSubClient.h>  // uncomment this line AND delete src/PubSubClient/ folder, if you want to use system lib
 const int MQTT_MAX_PUBLISH_SIZE = 120; //see https://github.com/knolleary/pubsubclient/blob/master/src/PubSubClient.cpp
 const char* mqtt_server_ip = MQTT_SERVER_IP;
 const int mqtt_server_port = MQTT_SERVER_PORT;
@@ -201,7 +199,6 @@ PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyP
 double brewtime          = BREWTIME;
 double preinfusion       = PREINFUSION;
 double preinfusionpause  = PREINFUSION_PAUSE;
-const int analogPin      = 0; // A0 pin to be used for button detection (either external multibutton or brew-button)
 int brewing              = 0;
 int brewswitch           = 0;
 bool waitingForBrewSwitchOff = false;
@@ -223,6 +220,7 @@ int maxErrorCounter = 10 ;  //define maximum number of consecutive polls (of int
 /********************************************************
  * Rest
  *****************************************************/
+unsigned long userActivity = 0;
 unsigned long previousMillistemp;       // initialisation at the end of init()
 const long refreshTempInterval = 1000;  //How often to read the temperature sensor
 unsigned long best_time_to_call_refreshTemp = refreshTempInterval;
@@ -245,7 +243,8 @@ float marginOfFluctuation = 0;          // 0 = disable functionality
 #endif
 char* blynkReadyLedColor = "#000000";
 unsigned long lastCheckBrewReady = 0;
-unsigned long brewReadyStatisticStart = 0;    //used to determime the time it takes to reach brewReady==true
+unsigned long lastBrewReady = 0;
+unsigned long lastBrewEnd = 0;    //used to determime the time it takes to reach brewReady==true
 bool brewReady = false;
 const int expected_eeprom_version = 4;        // EEPROM values are saved according to this versions layout. Increase if a new layout is implemented.
 unsigned long eeprom_save_interval = 28*60*1000UL;  //save every 28min
@@ -268,19 +267,6 @@ const unsigned long loop_report_count = 100;
 /********************************************************
    DISPLAY
 ******************************************************/
-#include "icon.h"
-#if (ICON_COLLECTION == 1)
-#include "icon_smiley.h"
-#else
-#include "icon_simple.h"
-#endif
-#include <U8g2lib.h>
-#include <Wire.h>
-//#define OLED_RESET 16   // Output pin for disply reset pin
-#define OLED_SCL 5        // Output pin for dispaly clock pin
-#define OLED_SDA 4        // Output pin for dispaly data pin
-#define SCREEN_WIDTH 128  // OLED display width, in pixels
-#define SCREEN_HEIGHT 64  // OLED display height, in pixels
 #if (DISPLAY == 1)
 // Attention: refresh takes around 42ms!
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   //e.g. 1.3"
@@ -288,9 +274,12 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   /
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);  //e.g. 0.96"
 #endif
 unsigned long previousMillisDisplay = 0;  // initialisation at the end of init()
-const long intervalDisplay = 100;     // Update für Display   //TODO: Sync this with global isrCounter  //TODO 1000
+const long intervalDisplay = 1000;     // Update für Display   //TODO: Sync this with global isrCounter
 bool image_flip = true;
-unsigned int enable_screen_saver = ENABLE_SCREEN_SAVER;
+unsigned int enableScreenSaver = ENABLE_SCREEN_SAVER;
+bool screenSaverOn = false;
+const int brewReadyWaitPeriod = 120000;
+const int userActivityWaitPeriod = 180000;
 
 /********************************************************
    DALLAS TEMP
@@ -726,7 +715,7 @@ int checkControlButtons() {
   const int default_seperating_signal = 870;
   if ( millis() >= previousControlButtonCheck + 100 ) {  //250ms
     //previousControlButtonCheck = millis();
-    int signal = analogRead(analogPin);
+    int signal = analogRead(0);
     //DEBUG_print("ControlButton signal: %d\n", signal);
     if (signal > 10 && signal <= lower_seperating_signal) {
       previousControlButtonCheck = millis() + 180;
@@ -758,7 +747,7 @@ void brew() {
     
     if ( aktuelleZeit >= previousBrewCheck + 50 ) {  //50ms
       previousBrewCheck = aktuelleZeit;
-      brewswitch = analogRead(analogPin);
+      brewswitch = analogRead(pinBrewButton);
 
       //if (aktuelleZeit >= output_timestamp + 500) {
       //  DEBUG_print("brew(): brewswitch=%u | brewing=%u | waitingForBrewSwitchOff=%u\n", brewswitch, brewing, waitingForBrewSwitchOff);
@@ -766,6 +755,7 @@ void brew() {
       //}
       if (brewswitch > 700 && not (brewing == 0 && waitingForBrewSwitchOff) ) {
         totalbrewtime = (preinfusion + preinfusionpause + brewtime) * 1000;
+        userActivity = millis();
         
         if (brewing == 0) {
           brewing = 1;
@@ -802,6 +792,7 @@ void brew() {
       if (brewswitch <= 700) {
         if (waitingForBrewSwitchOff) {
           DEBUG_print("brewswitch=off\n");
+          userActivity = millis();
         }
         waitingForBrewSwitchOff = false;
         brewing = 0;
@@ -1031,7 +1022,7 @@ void updateState() {
         timerBrewDetection = 0 ;
         mqtt_publish("brewDetected", "0");
         activeState = 2;
-        brewReadyStatisticStart = millis();
+        lastBrewEnd = millis();
       }
       break;
     }
@@ -1096,6 +1087,7 @@ void updateState() {
             bezugsZeit = 0 ;
             lastBrewTime = millis() - lastBrewTimeOffset;
           }
+          userActivity = millis();
           timerBrewDetection = 1 ;
           mqtt_publish("brewDetected", "1");
           snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to step 4 (brew)");
@@ -1220,23 +1212,26 @@ void loop() {
   refreshTemp();        // save new temperature values
   testEmergencyStop();  // test if Temp is to high
   pidCompute();         // call PID for Output calculation
-  brew();   //start brewing if button pressed
+  brew();               //start brewing if button pressed
   if (millis() > lastCheckBrewReady + refreshTempInterval) {
     lastCheckBrewReady = millis();
     bool brewReadyCurrent = checkBrewReady(setPoint, marginOfFluctuation, 60);
     if (!brewReady && brewReadyCurrent) {
-      snprintf(debugline, sizeof(debugline), "brewReady (stable last 60 secs. Tuning took %lu secs)", (lastCheckBrewReady - brewReadyStatisticStart) / 1000);
+      snprintf(debugline, sizeof(debugline), "brewReady (stable last 60 secs. Tuning took %lu secs)", (lastCheckBrewReady - lastBrewEnd) / 1000);
       DEBUG_println(debugline);
       mqtt_publish("events", debugline);
+      lastBrewReady = millis() - 60000;
     }
     brewReady = brewReadyCurrent;
   }
   refreshBrewReadyHardwareLed(brewReady);
-  //TODO: Readd
+  #if (ENABLE_USER_MENU==1)
   int controlButtonPressed = checkControlButtons();
   if (controlButtonPressed != 0) {
     DEBUG_print("Pressed Button: %d\n", controlButtonPressed);
+    userActivity = millis();
   }
+  #endif
 
   if (!force_offline) {
     if (!wifi_working()) {
@@ -1632,217 +1627,6 @@ void print_settings() {
 }
 
 
-/***********************************
- * DISPLAY
- ***********************************/
-void u8g2_prepare(void) {
-  u8g2.setFont(u8g2_font_profont11_tf);
-  u8g2.setFontRefHeightExtendedText();
-  u8g2.setDrawColor(1);
-  u8g2.setFontPosTop();
-  u8g2.setFontDirection(0);
-}
-
-bool screen_saver_active() {
-  if (!enable_screen_saver) return false;
-  //TODO
-  return true;
-}
-
-void displaymessage(int activeState, char* displaymessagetext, char* displaymessagetext2) {
-  if (Display > 0) {
-    unsigned long currentMillisDisplay = millis();
-    if (currentMillisDisplay >= previousMillisDisplay + intervalDisplay || previousMillisDisplay == 0) {
-      previousMillisDisplay = currentMillisDisplay;
-      u8g2.clearBuffer();
-      u8g2.setBitmapMode(1);
-      //u8g2.drawFrame(0, 0, 128, 64);
-      
-      if (!screen_saver_active()) {
-        image_flip = !image_flip;
-        unsigned int align_right;
-        const unsigned int align_right_2digits = LCDWidth - 56;
-        const unsigned int align_right_3digits = LCDWidth - 56 - 12;
-        const unsigned int align_right_2digits_decimal = LCDWidth - 56 +28;
-
-        //display icons
-        switch(activeState) {
-          case 1:
-          case 2:
-            if (image_flip) {
-              u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_rotate_bits);
-            } else {
-              u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_bits);
-            }
-            break;
-          case 4: //brew
-            if (image_flip) {
-              u8g2.drawXBMP(0,0, icon_width, icon_height, brewing_bits);
-            } else {
-              u8g2.drawXBMP(0,0, icon_width, icon_height, brewing_rotate_bits);
-            }
-            break;
-          case 3: 
-            if (brewReady) {
-              if (image_flip) {
-                u8g2.drawXBMP(0,0, icon_width, icon_height, brew_ready_bits);
-              } else {
-                u8g2.drawXBMP(0,0, icon_width, icon_height, brew_ready_rotate_bits);
-              }
-            } else {  //inner zone
-              if (image_flip) {
-                u8g2.drawXBMP(0,0, icon_width, icon_height, brew_acceptable_bits);
-              } else {
-                u8g2.drawXBMP(0,0, icon_width, icon_height, brew_acceptable_rotate_bits);
-              }
-            }
-            break;
-          case 5:
-            if (image_flip) {
-              u8g2.drawXBMP(0,0, icon_width, icon_height, outer_zone_bits);
-            } else {
-              u8g2.drawXBMP(0,0, icon_width, icon_height, outer_zone_rotate_bits);
-            }
-            break;
-          case 7:  //steam possible
-            if (image_flip) {
-              u8g2.drawXBMP(0,0, icon_width, icon_height, steam_bits);
-            } else {
-              u8g2.drawXBMP(0,0, icon_width, icon_height, steam_rotate_bits);
-            }
-            break;
-          default:
-            if (MACHINE_TYPE == "rancilio") {
-              u8g2.drawXBMP(41,0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
-            } else if (MACHINE_TYPE == "gaggia") {
-              u8g2.drawXBMP(5, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);
-            }
-            break;
-        }
-  
-        //display current and target temperature
-        if (activeState > 0 && activeState != 4) {
-          if (Input - 100 > FLT_EPSILON) {
-            align_right = align_right_3digits;
-          } else {
-            align_right = align_right_2digits;
-          }
-          u8g2.setFont(u8g2_font_profont22_tf);
-          u8g2.setCursor(align_right, 3);
-          u8g2.print(Input, 1);
-          u8g2.setFont(u8g2_font_profont10_tf);
-          u8g2.print((char)176);
-          u8g2.println("C");
-          u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
-          u8g2.drawGlyph(align_right-11, 3+7, 0x0046);
-  
-          if (Input <= 105) { //only show setpoint if we are not steaming
-            if (setPoint >= 100) {
-              align_right = align_right_3digits;
-            } else {
-              align_right = align_right_2digits;
-            }
-            u8g2.setFont(u8g2_font_profont22_tf);
-            u8g2.setCursor(align_right, 20);
-            u8g2.print(setPoint, 1);
-            u8g2.setFont(u8g2_font_profont10_tf);
-            u8g2.print((char)176);
-            u8g2.println("C");
-            u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
-            u8g2.drawGlyph(align_right - 11 , 20+7, 0x047); 
-          }
-        } else if (activeState == 4) {
-          totalbrewtime = (preinfusion + preinfusionpause + brewtime) * 1000;
-          align_right = align_right_2digits_decimal;
-          u8g2.setFont(u8g2_font_profont22_tf);
-          u8g2.setCursor(align_right, 3);
-          if (bezugsZeit < 10000) u8g2.print("0");
-          // TODO: Use print(u8x8_u8toa(value, digits)) or print(u8x8_u16toa(value, digits)) to print numbers with constant width (numbers are prefixed with 0 if required).
-          u8g2.print(bezugsZeit / 1000);
-          u8g2.setFont(u8g2_font_profont10_tf);
-          u8g2.println("s");
-          if (totalbrewtime >0) { 
-            u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
-            u8g2.drawGlyph(align_right-11, 3+7, 0x0046);
-            u8g2.setFont(u8g2_font_profont22_tf);
-            u8g2.setCursor(align_right, 20);
-            u8g2.print(totalbrewtime / 1000);
-            u8g2.setFont(u8g2_font_profont10_tf);
-            u8g2.println("s");
-            u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
-            u8g2.drawGlyph(align_right-11 , 20+7, 0x047);
-          }
-        }
-      } else {
-        static unsigned int screen_saver_x_pos = 41;
-        static bool screen_saver_direction_right = true;
-        const int unsigned screen_saver_step = 4;
-        unsigned int logo_width = icon_width;
-        if ( enable_screen_saver == 3 && MACHINE_TYPE == "gaggia") {
-          logo_width = 125;  //hack which will result in logo only moving left
-          screen_saver_x_pos = 5;
-        }
-        if (screen_saver_direction_right) {
-          if (screen_saver_x_pos + screen_saver_step <= LCDWidth-logo_width ) {
-            screen_saver_x_pos += screen_saver_step;
-          } else {
-            screen_saver_x_pos -= screen_saver_step;
-            screen_saver_direction_right = false;
-          }
-        } else {
-          if (screen_saver_x_pos >= screen_saver_step ) {
-            screen_saver_x_pos -= screen_saver_step;
-          } else {
-            screen_saver_x_pos += screen_saver_step;
-            screen_saver_direction_right = true;
-          }
-        }
-        if ( enable_screen_saver == 1 ) {
-          u8g2.setPowerSave(1);  //TODO reenable
-        } else if ( enable_screen_saver == 2 ) {
-          u8g2.drawXBMP(screen_saver_x_pos, 0, icon_width, icon_height, brew_ready_bits);
-        } else if ( enable_screen_saver == 3 ) {
-          if (MACHINE_TYPE == "rancilio") {
-            u8g2.drawXBMP(screen_saver_x_pos, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
-          } else if (MACHINE_TYPE == "gaggia") {
-            u8g2.drawXBMP(screen_saver_x_pos, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);  //TODO fix
-          }
-        }
-      }
-      
-      //(optional) add 2 text lines 
-      u8g2.setFont(u8g2_font_profont11_tf);
-      u8g2.setCursor(ALIGN_CENTER(displaymessagetext), 44);  // 9 pixel space between lines
-      u8g2.print(displaymessagetext);
-      u8g2.setCursor(ALIGN_CENTER(displaymessagetext2), 53);
-      u8g2.print(displaymessagetext2);
-
-      //add status icons
-      #if (ENABLE_FAILURE_STATUS_ICONS == 1)
-      if (image_flip) {
-        byte icon_y = 64-(status_icon_height-1);
-        byte icon_counter = 0;
-        if ((!force_offline && !wifi_working()) || (force_offline && !FORCE_OFFLINE)) {
-          u8g2.drawXBMP(0, 64-status_icon_height+1, status_icon_width, status_icon_height, wifi_not_ok_bits);
-          u8g2.drawXBMP(icon_counter*(status_icon_width-1) , icon_y, status_icon_width, status_icon_height, wifi_not_ok_bits);
-          icon_counter++;
-        }
-        if (BLYNK_ENABLE && !blynk_working()) {
-          u8g2.drawXBMP(icon_counter*(status_icon_width-1), icon_y, status_icon_width, status_icon_height, blynk_not_ok_bits);
-          icon_counter++;
-        }
-        if (MQTT_ENABLE && !mqtt_working()) {
-          u8g2.drawXBMP(icon_counter*(status_icon_width-1), icon_y, status_icon_width, status_icon_height, mqtt_not_ok_bits);
-          icon_counter++;
-        }
-      }
-      #endif 
-
-      u8g2.sendBuffer();
-      
-    }
-  }
-}
 
 
 /***********************************
@@ -1896,7 +1680,7 @@ void setup() {
   delay(1000);
 
   //if brewswitch is already "on" on startup, then we brew should not start automatically
-  if (OnlyPID == 0 && (analogRead(analogPin) >= 700)) { 
+  if (OnlyPID == 0 && (analogRead(pinBrewButton) >= 700)) { 
     DEBUG_print("brewsitch is already on. Dont brew until it is turned off.\n");
     waitingForBrewSwitchOff=true; 
   }
