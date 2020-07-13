@@ -201,7 +201,7 @@ PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyP
 double brewtime          = BREWTIME;
 double preinfusion       = PREINFUSION;
 double preinfusionpause  = PREINFUSION_PAUSE;
-const int analogPin      = 0; // A0 pin to be used for button detection (either external multibuttons or brew-button)
+const int analogPin      = 0; // A0 pin to be used for button detection (either external multibutton or brew-button)
 int brewing              = 0;
 int brewswitch           = 0;
 bool waitingForBrewSwitchOff = false;
@@ -288,8 +288,9 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   /
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);  //e.g. 0.96"
 #endif
 unsigned long previousMillisDisplay = 0;  // initialisation at the end of init()
-const long intervalDisplay = 1000;     // Update für Display   //TODO: Sync this with global isrCounter
+const long intervalDisplay = 100;     // Update für Display   //TODO: Sync this with global isrCounter  //TODO 1000
 bool image_flip = true;
+unsigned int enable_screen_saver = ENABLE_SCREEN_SAVER;
 
 /********************************************************
    DALLAS TEMP
@@ -718,26 +719,31 @@ void refreshTemp() {
     Button Admin Menu
 ******************************************************/
 int checkControlButtons() {
+  //TODO add fail-safe if buttons are always detected as pressed
   //TODO add DEFINE
+  const int lower_seperating_signal = 300;
+  const int higher_seperating_signal = 520;
+  const int default_seperating_signal = 870;
   if ( millis() >= previousControlButtonCheck + 100 ) {  //250ms
     //previousControlButtonCheck = millis();
     int signal = analogRead(analogPin);
-    if (signal > 137-20 && signal < 137+20) {
-      previousControlButtonCheck = millis() + 130;
+    //DEBUG_print("ControlButton signal: %d\n", signal);
+    if (signal > 10 && signal <= lower_seperating_signal) {
+      previousControlButtonCheck = millis() + 180;
       return 1; 
-    } else if (signal > 418-20 && signal < 418+20) {
-      previousControlButtonCheck = millis() + 130;
+    } else if (signal > lower_seperating_signal && signal <= higher_seperating_signal) {
+      previousControlButtonCheck = millis() + 180;
       return 2; 
-    } else if (signal > 570-20 && signal < 570+20) {
-      previousControlButtonCheck = millis() + 130;
+    } else if (signal >higher_seperating_signal && signal <= default_seperating_signal) {
+      previousControlButtonCheck = millis() + 180;
       return 3; 
-    } else if (signal >850) {
+    } else if (signal >default_seperating_signal) {
       previousControlButtonCheck = millis();
       return 0;
-    } else {
-      previousControlButtonCheck = millis();
-      DEBUG_print("ControlButton signal: %d\n", signal);
-    }
+    } //else {
+      //previousControlButtonCheck = millis();
+      //DEBUG_print("Undefined ControlButton signal: %d\n", signal);
+    //}
   }
   return 0;
 }
@@ -1227,10 +1233,10 @@ void loop() {
   }
   refreshBrewReadyHardwareLed(brewReady);
   //TODO: Readd
-  //int controlButtonPressed = checkControlButtons();
-  //if (controlButtonPressed != 0) {
-  //  DEBUG_print("Pressed Button: %d\n", controlButtonPressed);
-  //}
+  int controlButtonPressed = checkControlButtons();
+  if (controlButtonPressed != 0) {
+    DEBUG_print("Pressed Button: %d\n", controlButtonPressed);
+  }
 
   if (!force_offline) {
     if (!wifi_working()) {
@@ -1637,129 +1643,173 @@ void u8g2_prepare(void) {
   u8g2.setFontDirection(0);
 }
 
+bool screen_saver_active() {
+  if (!enable_screen_saver) return false;
+  //TODO
+  return true;
+}
+
 void displaymessage(int activeState, char* displaymessagetext, char* displaymessagetext2) {
   if (Display > 0) {
     unsigned long currentMillisDisplay = millis();
     if (currentMillisDisplay >= previousMillisDisplay + intervalDisplay || previousMillisDisplay == 0) {
       previousMillisDisplay = currentMillisDisplay;
-      image_flip = !image_flip;
-      unsigned int align_right;
-      const unsigned int align_right_2digits = LCDWidth - 56;
-      const unsigned int align_right_3digits = LCDWidth - 56 - 12;
-      const unsigned int align_right_2digits_decimal = LCDWidth - 56 +28;
       u8g2.clearBuffer();
       u8g2.setBitmapMode(1);
       //u8g2.drawFrame(0, 0, 128, 64);
+      
+      if (!screen_saver_active()) {
+        image_flip = !image_flip;
+        unsigned int align_right;
+        const unsigned int align_right_2digits = LCDWidth - 56;
+        const unsigned int align_right_3digits = LCDWidth - 56 - 12;
+        const unsigned int align_right_2digits_decimal = LCDWidth - 56 +28;
 
-      //display icons
-      switch(activeState) {
-        case 1:
-        case 2:
-          if (image_flip) {
-            u8g2.drawXBMP(0,0, icon_width, icon_height, coldstart_rotate_bits);
-          } else {
-            u8g2.drawXBMP(0,0, icon_width, icon_height, coldstart_bits);
-          }
-          break;
-        case 4: //brew
-          if (image_flip) {
-            u8g2.drawXBMP(0,0, icon_width, icon_height, brewing_bits);
-          } else {
-            u8g2.drawXBMP(0,0, icon_width, icon_height, brewing_rotate_bits);
-          }
-          break;
-        case 3: 
-          if (brewReady) {
+        //display icons
+        switch(activeState) {
+          case 1:
+          case 2:
             if (image_flip) {
-              u8g2.drawXBMP(0,0, icon_width, icon_height, brew_ready_bits);
+              u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_rotate_bits);
             } else {
-              u8g2.drawXBMP(0,0, icon_width, icon_height, brew_ready_rotate_bits);
+              u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_bits);
             }
-          } else {  //inner zone
+            break;
+          case 4: //brew
             if (image_flip) {
-              u8g2.drawXBMP(0,0, icon_width, icon_height, brew_acceptable_bits);
+              u8g2.drawXBMP(0,0, icon_width, icon_height, brewing_bits);
             } else {
-              u8g2.drawXBMP(0,0, icon_width, icon_height, brew_acceptable_rotate_bits);
+              u8g2.drawXBMP(0,0, icon_width, icon_height, brewing_rotate_bits);
             }
-          }
-          break;
-        case 5:
-          if (image_flip) {
-            u8g2.drawXBMP(0,0, icon_width, icon_height, outer_zone_bits);
-          } else {
-            u8g2.drawXBMP(0,0, icon_width, icon_height, outer_zone_rotate_bits);
-          }
-          break;
-        case 7:  //steam possible
-          if (image_flip) {
-            u8g2.drawXBMP(0,0, icon_width, icon_height, steam_bits);
-          } else {
-            u8g2.drawXBMP(0,0, icon_width, icon_height, steam_rotate_bits);
-          }
-          break;
-        default:
-          if (MACHINE_TYPE == "rancilio") {
-            u8g2.drawXBMP(41,0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
-          } else if (MACHINE_TYPE == "gaggia") {
-            u8g2.drawXBMP(1, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);
-          }
-          break;
-      }
-
-      //display current and target temperature
-      if (activeState > 0 && activeState != 4) {
-        if (Input - 100 > FLT_EPSILON) {
-          align_right = align_right_3digits;
-        } else {
-          align_right = align_right_2digits;
+            break;
+          case 3: 
+            if (brewReady) {
+              if (image_flip) {
+                u8g2.drawXBMP(0,0, icon_width, icon_height, brew_ready_bits);
+              } else {
+                u8g2.drawXBMP(0,0, icon_width, icon_height, brew_ready_rotate_bits);
+              }
+            } else {  //inner zone
+              if (image_flip) {
+                u8g2.drawXBMP(0,0, icon_width, icon_height, brew_acceptable_bits);
+              } else {
+                u8g2.drawXBMP(0,0, icon_width, icon_height, brew_acceptable_rotate_bits);
+              }
+            }
+            break;
+          case 5:
+            if (image_flip) {
+              u8g2.drawXBMP(0,0, icon_width, icon_height, outer_zone_bits);
+            } else {
+              u8g2.drawXBMP(0,0, icon_width, icon_height, outer_zone_rotate_bits);
+            }
+            break;
+          case 7:  //steam possible
+            if (image_flip) {
+              u8g2.drawXBMP(0,0, icon_width, icon_height, steam_bits);
+            } else {
+              u8g2.drawXBMP(0,0, icon_width, icon_height, steam_rotate_bits);
+            }
+            break;
+          default:
+            if (MACHINE_TYPE == "rancilio") {
+              u8g2.drawXBMP(41,0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
+            } else if (MACHINE_TYPE == "gaggia") {
+              u8g2.drawXBMP(5, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);
+            }
+            break;
         }
-        u8g2.setFont(u8g2_font_profont22_tf);
-        u8g2.setCursor(align_right, 3);
-        u8g2.print(Input, 1);
-        u8g2.setFont(u8g2_font_profont10_tf);
-        u8g2.print((char)176);
-        u8g2.println("C");
-        u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
-        u8g2.drawGlyph(align_right-11, 3+7, 0x0046);
-
-        if (Input <= 105) { //only show setpoint if we are not steaming
-          if (setPoint >= 100) {
+  
+        //display current and target temperature
+        if (activeState > 0 && activeState != 4) {
+          if (Input - 100 > FLT_EPSILON) {
             align_right = align_right_3digits;
           } else {
             align_right = align_right_2digits;
           }
           u8g2.setFont(u8g2_font_profont22_tf);
-          u8g2.setCursor(align_right, 20);
-          u8g2.print(setPoint, 1);
+          u8g2.setCursor(align_right, 3);
+          u8g2.print(Input, 1);
           u8g2.setFont(u8g2_font_profont10_tf);
           u8g2.print((char)176);
           u8g2.println("C");
-          u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
-          u8g2.drawGlyph(align_right - 11 , 20+7, 0x047); 
-        }
-      } else if (activeState == 4) {
-        totalbrewtime = (preinfusion + preinfusionpause + brewtime) * 1000;
-        align_right = align_right_2digits_decimal;
-        u8g2.setFont(u8g2_font_profont22_tf);
-        u8g2.setCursor(align_right, 3);
-        if (bezugsZeit < 10000) u8g2.print("0");
-        // TODO: Use print(u8x8_u8toa(value, digits)) or print(u8x8_u16toa(value, digits)) to print numbers with constant width (numbers are prefixed with 0 if required).
-        u8g2.print(bezugsZeit / 1000);
-        u8g2.setFont(u8g2_font_profont10_tf);
-        u8g2.println("s");
-        if (totalbrewtime >0) { 
           u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
           u8g2.drawGlyph(align_right-11, 3+7, 0x0046);
+  
+          if (Input <= 105) { //only show setpoint if we are not steaming
+            if (setPoint >= 100) {
+              align_right = align_right_3digits;
+            } else {
+              align_right = align_right_2digits;
+            }
+            u8g2.setFont(u8g2_font_profont22_tf);
+            u8g2.setCursor(align_right, 20);
+            u8g2.print(setPoint, 1);
+            u8g2.setFont(u8g2_font_profont10_tf);
+            u8g2.print((char)176);
+            u8g2.println("C");
+            u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
+            u8g2.drawGlyph(align_right - 11 , 20+7, 0x047); 
+          }
+        } else if (activeState == 4) {
+          totalbrewtime = (preinfusion + preinfusionpause + brewtime) * 1000;
+          align_right = align_right_2digits_decimal;
           u8g2.setFont(u8g2_font_profont22_tf);
-          u8g2.setCursor(align_right, 20);
-          u8g2.print(totalbrewtime / 1000);
+          u8g2.setCursor(align_right, 3);
+          if (bezugsZeit < 10000) u8g2.print("0");
+          // TODO: Use print(u8x8_u8toa(value, digits)) or print(u8x8_u16toa(value, digits)) to print numbers with constant width (numbers are prefixed with 0 if required).
+          u8g2.print(bezugsZeit / 1000);
           u8g2.setFont(u8g2_font_profont10_tf);
           u8g2.println("s");
-          u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
-          u8g2.drawGlyph(align_right-11 , 20+7, 0x047);
+          if (totalbrewtime >0) { 
+            u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
+            u8g2.drawGlyph(align_right-11, 3+7, 0x0046);
+            u8g2.setFont(u8g2_font_profont22_tf);
+            u8g2.setCursor(align_right, 20);
+            u8g2.print(totalbrewtime / 1000);
+            u8g2.setFont(u8g2_font_profont10_tf);
+            u8g2.println("s");
+            u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
+            u8g2.drawGlyph(align_right-11 , 20+7, 0x047);
+          }
+        }
+      } else {
+        static unsigned int screen_saver_x_pos = 41;
+        static bool screen_saver_direction_right = true;
+        const int unsigned screen_saver_step = 4;
+        unsigned int logo_width = icon_width;
+        if ( enable_screen_saver == 3 && MACHINE_TYPE == "gaggia") {
+          logo_width = 125;  //hack which will result in logo only moving left
+          screen_saver_x_pos = 5;
+        }
+        if (screen_saver_direction_right) {
+          if (screen_saver_x_pos + screen_saver_step <= LCDWidth-logo_width ) {
+            screen_saver_x_pos += screen_saver_step;
+          } else {
+            screen_saver_x_pos -= screen_saver_step;
+            screen_saver_direction_right = false;
+          }
+        } else {
+          if (screen_saver_x_pos >= screen_saver_step ) {
+            screen_saver_x_pos -= screen_saver_step;
+          } else {
+            screen_saver_x_pos += screen_saver_step;
+            screen_saver_direction_right = true;
+          }
+        }
+        if ( enable_screen_saver == 1 ) {
+          u8g2.setPowerSave(1);  //TODO reenable
+        } else if ( enable_screen_saver == 2 ) {
+          u8g2.drawXBMP(screen_saver_x_pos, 0, icon_width, icon_height, brew_ready_bits);
+        } else if ( enable_screen_saver == 3 ) {
+          if (MACHINE_TYPE == "rancilio") {
+            u8g2.drawXBMP(screen_saver_x_pos, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
+          } else if (MACHINE_TYPE == "gaggia") {
+            u8g2.drawXBMP(screen_saver_x_pos, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);  //TODO fix
+          }
         }
       }
-
+      
       //(optional) add 2 text lines 
       u8g2.setFont(u8g2_font_profont11_tf);
       u8g2.setCursor(ALIGN_CENTER(displaymessagetext), 44);  // 9 pixel space between lines
@@ -1786,9 +1836,10 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
           icon_counter++;
         }
       }
-      #endif    
+      #endif 
 
       u8g2.sendBuffer();
+      
     }
   }
 }
@@ -1846,7 +1897,7 @@ void setup() {
 
   //if brewswitch is already "on" on startup, then we brew should not start automatically
   if (OnlyPID == 0 && (analogRead(analogPin) >= 700)) { 
-    DEBUG_print("brewsitch is already on. Dont brew until it is turned off.");
+    DEBUG_print("brewsitch is already on. Dont brew until it is turned off.\n");
     waitingForBrewSwitchOff=true; 
   }
 

@@ -25,6 +25,7 @@ extern RemoteDebug Debug;
 #endif
 
 #define LCDWidth                        u8g2.getDisplayWidth()
+#define LCDHeight                       u8g2.getDisplayHeight()
 #define ALIGN_CENTER(t)                 ((LCDWidth - (u8g2.getUTF8Width(t))) / 2)
 #define ALIGN_RIGHT(t)                  (LCDWidth - u8g2.getUTF8Width(t))
 #define ALIGN_RIGHT_2(t1,t2)            (LCDWidth - u8g2.getUTF8Width(t1) - u8g2.getUTF8Width(t2))
