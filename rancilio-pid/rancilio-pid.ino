@@ -60,11 +60,13 @@ unsigned int blynk_reconnectAttempts = 0;
 unsigned long blynk_reconnect_incremental_backoff = 180000 ; //Failsafe: add 180sec to reconnect time after each connect-failure.
 unsigned int blynk_max_incremental_backoff = 5 ; // At most backoff <mqtt_max_incremenatl_backoff>+1 * (<mqtt_reconnect_incremental_backoff>ms)
 
+WiFiClient espClient;
 
 // MQTT
 #if (MQTT_ENABLE==1)
 #include "src/PubSubClient/PubSubClient.h"
 //#include <PubSubClient.h>  // uncomment this line AND delete src/PubSubClient/ folder, if you want to use system lib
+PubSubClient mqtt_client(espClient);
 #elif (MQTT_ENABLE==2)
 //#include "src/uMQTTBroker/uMQTTBroker.h"
 #include "uMQTTBroker.h"
@@ -88,8 +90,6 @@ unsigned long mqtt_reconnect_incremental_backoff = 210000 ; //Failsafe: add 210s
 unsigned int mqtt_max_incremental_backoff = 5 ; // At most backoff <mqtt_max_incremenatl_backoff>+1 * (<mqtt_reconnect_incremental_backoff>ms)
 bool mqtt_disabled_temporary = false;
 
-WiFiClient espClient;
-PubSubClient mqtt_client(espClient);
  
 /********************************************************
    Vorab-Konfig
@@ -1290,7 +1290,9 @@ void loop() {
 
           mqtt_reconnect(false);
         } else {
-          if (MQTT_ENABLE == 1) mqtt_client.loop(); // mqtt client connected, do mqtt housekeeping
+          #if (MQTT_ENABLE == 1)
+          mqtt_client.loop(); // mqtt client connected, do mqtt housekeeping
+          #endif
           unsigned long now = millis();
           if (now >= lastMQTTStatusReportTime + lastMQTTStatusReportInterval) {
             lastMQTTStatusReportTime = now;

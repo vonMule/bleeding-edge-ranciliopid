@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.3.0
+Version 2.4.0
 
 based on the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de
 
@@ -78,6 +78,13 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.4.0 beta_1:
+  - Bugfix: Missing defs when MQTT_ENABLE=2
+- 2.4.0 beta_0:
+  - Added support for a customizable screen-saver (#define ENABLE_SCREEN_SAVER)
+  - (Silvia 5E) Added power-off countdown to hint the user when the maschine is going to shutdown (ENABLE_POWER_OFF_COUNTDOWN)
+  - (alpha) Intitial support for an user-menu (ENABLE_USER_MENU/pinBrewButton)
+  - Move display stuff into separate files
 - 2.3.0 master:
   - PID is completely auto-tuned and should work flawlessly after a few starts. No need to configure PID any longer. 
   - Bleeding-Edge settings can be configured remotely without requiring a running service (blynk, mqtt-server) running in your network or internet. (No extra raspi required)
