@@ -127,7 +127,7 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
             u8g2.drawGlyph(align_right - 11 , 20+7, 0x047); 
           }
         } else if (activeState == 4) {
-          totalbrewtime = (preinfusion + preinfusionpause + brewtime) * 1000;
+          totalbrewtime = (OnlyPID ? brewtime : preinfusion + preinfusionpause + brewtime) * 1000;
           align_right = align_right_2digits_decimal;
           u8g2.setFont(u8g2_font_profont22_tf);
           u8g2.setCursor(align_right, 3);
@@ -188,11 +188,11 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
 
       //power-off timer
       #if (ENABLE_POWER_OFF_COUNTDOWN > 0)
-      const unsigned int powerOffCountDownStart = 180;
+      const unsigned int powerOffCountDownStart = 300;
       const unsigned int align_right_countdown_min = LCDWidth - 52 ;
       const unsigned int align_right_countdown_sec = LCDWidth - 52 + 20;
       int power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ( (millis() - lastBrewEnd)/1000);
-      if (power_off_timer <= powerOffCountDownStart && displaymessagetext == "" && displaymessagetext2 == "" ) {
+      if (power_off_timer <= powerOffCountDownStart && brewing == 0 && displaymessagetext == "" && displaymessagetext2 == "" ) {
         u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
         u8g2.drawGlyph(align_right_countdown_min-15, 37+7, 0x004e);
         u8g2.setFont(u8g2_font_profont22_tf);

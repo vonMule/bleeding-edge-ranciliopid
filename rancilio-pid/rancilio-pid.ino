@@ -23,7 +23,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.4.0 beta_0";
+const char* sysVersion PROGMEM  = "2.4.0 beta_2";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -1007,7 +1007,7 @@ void updateState() {
       bPID.SetAutoTune(false);
       if ((!OnlyPID && !brewing) || 
            (OnlyPID && bezugsZeit >= lastBrewTimeOffset + 3 && 
-            (bezugsZeit >= brewtime*1000 || 
+            (bezugsZeit >= brewtime*1000 ||
               setPoint - Input < 0
             ) 
            )

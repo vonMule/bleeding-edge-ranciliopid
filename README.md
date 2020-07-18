@@ -78,6 +78,10 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.4.0 beta_2:
+  - No power-off countdown when brewing.
+  - Power-off countdown starts 5min before shutdown.
+  - (OnlyPid) Fix: End of BrewTimer correctly displayed.
 - 2.4.0 beta_1:
   - Bugfix: Missing defs when MQTT_ENABLE=2
 - 2.4.0 beta_0:
