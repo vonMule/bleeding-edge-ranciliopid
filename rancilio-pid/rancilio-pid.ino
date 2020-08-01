@@ -23,7 +23,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.4.0 beta_2";
+const char* sysVersion PROGMEM  = "2.4.0 beta_3";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -1086,6 +1086,7 @@ void updateState() {
           if (OnlyPID) {
             bezugsZeit = 0 ;
             lastBrewTime = millis() - lastBrewTimeOffset;
+            brewing = 1;
           }
           userActivity = millis();
           timerBrewDetection = 1 ;

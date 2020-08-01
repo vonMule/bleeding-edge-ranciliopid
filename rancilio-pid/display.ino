@@ -192,7 +192,7 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
       const unsigned int align_right_countdown_min = LCDWidth - 52 ;
       const unsigned int align_right_countdown_sec = LCDWidth - 52 + 20;
       int power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ( (millis() - lastBrewEnd)/1000);
-      if (power_off_timer <= powerOffCountDownStart && brewing == 0 && displaymessagetext == "" && displaymessagetext2 == "" ) {
+      if (power_off_timer <= powerOffCountDownStart && !brewing && displaymessagetext == "" && displaymessagetext2 == "" ) {
         u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
         u8g2.drawGlyph(align_right_countdown_min-15, 37+7, 0x004e);
         u8g2.setFont(u8g2_font_profont22_tf);
