@@ -1679,7 +1679,15 @@ void setup() {
     u8g2_prepare();
     u8g2.clearBuffer();
   }
-  displaymessage(0, (char*) DISPLAY_TEXT,  (char*) sysVersion);
+  
+  
+  //YYY
+  #if defined(OVERWRITE_VERSION_DISPLAY_TEXT)
+  displaymessage(0, (char*) DISPLAY_TEXT, (char*) OVERWRITE_VERSION_DISPLAY_TEXT);
+  #else
+  displaymessage(0, (char*) DISPLAY_TEXT, (char*) sysVersion);
+  #endif
+
   delay(1000);
 
   //if brewswitch is already "on" on startup, then we brew should not start automatically

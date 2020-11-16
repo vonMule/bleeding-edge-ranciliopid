@@ -83,6 +83,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 ## Changelog
 - 2.4.0 beta_4:
   - Special winter theme added. Activate with ICON_COLLECTION=2 in userConfig.h.
+  - Overwrite Version info at boot time via OVERWRITE_VERSION_DISPLAY_TEXT in userConfig.h.
 - 2.4.0 beta_3:
   - Bugfix: Fix brew detection (OnlyPid)
   - alpha code: initial infos about how to add a case with hardware-buttons to control basic settings directly at maschine.

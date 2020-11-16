@@ -52,6 +52,7 @@
 #define DISPLAY 0                         // 0=Deaktiviert, 1=SH1106_128X64, 2=SSD1306_128X64
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter"
 #define DISPLAY_TEXT "Bleeding-Edge PID"  // Text is displayed on bootup (max 21 chars)
+//#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)
 #define EMERGENCY_ICON "rancilio"         // icon displayed when temperature is >EMERGENCY_TEMP. Allowed values are "rancilio" or "steam"
 #define EMERGENCY_TEMP 116                // If temperature is higher then notifications are send via display/debug/mqtt.
                                           // Reason might be an error OR the user wants to steam milk.
