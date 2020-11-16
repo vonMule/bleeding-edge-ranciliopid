@@ -2,7 +2,9 @@
 #define _display_H
 
 #include "icon.h"
-#if (ICON_COLLECTION == 1)
+#if (ICON_COLLECTION == 2)
+#include "icon_winter.h"
+#elif (ICON_COLLECTION == 1)
 #include "icon_smiley.h"
 #else
 #include "icon_simple.h"
