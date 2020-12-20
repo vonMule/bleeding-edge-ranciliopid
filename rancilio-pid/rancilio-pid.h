@@ -4,7 +4,7 @@
 #define LIBRARY_VERSION	0.0.1
 
 #include "userConfig.h"
-#include "Mqtt.h"
+#include "MQTT.h"
 
 #include "src/RemoteDebug/RemoteDebug.h" //https://github.com/JoaoLopesF/RemoteDebug
 //#include <RemoteDebug.h>  // uncomment this line AND delete src/RemoteDebug/ folder, if you want to use system lib
@@ -39,5 +39,11 @@ double convertUtilisationToOutput(double);
 double pastTemperatureChange(int);
 
 bool almostEqual(float, float);
+
+void print_settings();
+
+void checkWifi();
+
+void checkWifi(bool, unsigned long);
 
 #endif
