@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.4.0
+Version 2.4.1
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
@@ -81,6 +81,9 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.4.1 master:
+  - It fixes some compiler errors and warnings I was seeing on my system. (Thanks nils-werner)
+  - It contains a small platformio.ini file for Platformio support. (Thanks nils-werner)
 - 2.4.0 master:
   - Special winter theme added. Activate with ICON_COLLECTION=2 in userConfig.h.
   - Added support for a customizable screen-saver (#define ENABLE_SCREEN_SAVER)
