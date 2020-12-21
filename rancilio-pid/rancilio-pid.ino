@@ -23,7 +23,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.4.0 beta_4";
+const char* sysVersion PROGMEM  = "2.4.0";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -1680,8 +1680,6 @@ void setup() {
     u8g2.clearBuffer();
   }
   
-  
-  //YYY
   #if defined(OVERWRITE_VERSION_DISPLAY_TEXT)
   displaymessage(0, (char*) DISPLAY_TEXT, (char*) OVERWRITE_VERSION_DISPLAY_TEXT);
   #else
