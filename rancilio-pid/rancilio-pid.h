@@ -49,4 +49,10 @@ double pastTemperatureChange(int);
 
 bool almostEqual(float, float);
 
+void print_settings();
+
+void checkWifi();
+
+void checkWifi(bool, unsigned long);
+
 #endif
