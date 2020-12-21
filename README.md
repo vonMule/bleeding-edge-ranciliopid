@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.3.0
+Version 2.4.0
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
@@ -81,6 +81,18 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.4.0 master:
+  - Special winter theme added. Activate with ICON_COLLECTION=2 in userConfig.h.
+  - Added support for a customizable screen-saver (#define ENABLE_SCREEN_SAVER)
+  - Overwrite Version info at boot time via OVERWRITE_VERSION_DISPLAY_TEXT in userConfig.h.
+  - Added power-off countdown to hint the user when the maschine is going to shutdown (ENABLE_POWER_OFF_COUNTDOWN) (Silvia 5E)
+  - Power-off countdown starts 5min before shutdown.
+  - Bugfix: Fix brew detection (OnlyPid)
+  - Bugfix: End of BrewTimer correctly displayed (OnlyPid)
+  - Bugfix: No power-off countdown when brewing.
+  - Move display stuff into separate files
+  - alpha code: Intitial support for an user-menu (ENABLE_USER_MENU/pinBrewButton)
+  - alpha code: Initial infos about how to add a case with hardware-buttons to control basic settings directly at maschine.
 - 2.3.0 master:
   - PID is completely auto-tuned and should work flawlessly after a few starts. No need to configure PID any longer. 
   - Bleeding-Edge settings can be configured remotely without requiring a running service (blynk, mqtt-server) running in your network or internet. (No extra raspi required)
