@@ -87,7 +87,6 @@ bool mqtt_reconnect(bool force_connect = false) {
     if (mqtt_client.connect(hostname, mqtt_username, mqtt_password, topic_will, 0, 0, "unexpected exit") == true) {
       DEBUG_print("Connected to mqtt server\n");
       mqtt_publish("events", "Connected to mqtt server");
-      mqtt_client.subscribe(topic_set);
       if (!mqtt_client.subscribe(topic_set)) { ERROR_print("Cannot subscribe to topic\n"); }
       mqtt_lastReconnectAttemptTime = 0;
       mqtt_reconnectAttempts = 0;
@@ -268,6 +267,7 @@ void mqtt_parse(char* topic_str, char* data_str) {
     if (data_double != steadyPower) {
       DEBUG_print("setting steadyPower=%s\n", data_str);
       steadyPower = data_double;
+      steadyPowerSaved = steadyPower; //prevent an additional mqtt /set call
       mqtt_publish("steadyPower", data_str);
       Blynk.virtualWrite(V41, String(steadyPower, 1));
       force_eeprom_sync = millis();
@@ -287,9 +287,9 @@ void mqtt_parse(char* topic_str, char* data_str) {
   }
   if (strcmp(configVar, "steadyPowerOffsetTime") == 0) {
     sscanf(data_str, "%d", &data_int);
-    if (data_double != steadyPowerOffsetTime) {
-      DEBUG_print("setting steadyPowerOffsetTime=%s\n", data_str);
-      steadyPowerOffsetTime = data_double;
+    if (data_int != steadyPowerOffsetTime) {
+      DEBUG_print("setting steadyPowerOffsetTime=%s (%d)\n", data_str, data_int);
+      steadyPowerOffsetTime = data_int;
       mqtt_publish("steadyPowerOffsetTime", data_str);
       Blynk.virtualWrite(V43, String(steadyPowerOffsetTime, 1));
       force_eeprom_sync = millis();
@@ -346,7 +346,7 @@ void mqtt_parse(char* topic_str, char* data_str) {
     if (data_double != aggoTn) {
       DEBUG_print("setting aggoTn=%s\n", data_str);
       aggoTn = data_double;
-      mqtt_publish("aggoTnTn", data_str);
+      mqtt_publish("aggoTn", data_str);
       Blynk.virtualWrite(V31, String(aggoTn, 1));
       force_eeprom_sync = millis();
     }
@@ -367,21 +367,21 @@ void mqtt_parse(char* topic_str, char* data_str) {
 
 
 void mqtt_publish_settings() {
-  mqtt_publish("brewtime", number2string(brewtime));
-  mqtt_publish("starttemp", number2string(starttemp));
-  mqtt_publish("setPoint", number2string(setPoint));
-  mqtt_publish("preinfusion", number2string(preinfusion));
-  mqtt_publish("preinfusionpause", number2string(preinfusionpause));
-  mqtt_publish("pidON", number2string(pidON));
-  mqtt_publish("brewDetectionSensitivity", number2string(brewDetectionSensitivity));
-  mqtt_publish("brewDetectionPower", number2string(brewDetectionPower));
-  mqtt_publish("steadyPower", number2string(steadyPower));
-  mqtt_publish("steadyPowerOffset", number2string(steadyPowerOffset));
-  mqtt_publish("steadyPowerOffsetTime", number2string(steadyPowerOffsetTime));
-  mqtt_publish("aggKp", number2string(aggKp));
-  mqtt_publish("aggTn", number2string(aggTn));
-  mqtt_publish("aggTv", number2string(aggTv));
-  mqtt_publish("aggoKp", number2string(aggoKp));
-  mqtt_publish("aggoTn", number2string(aggoTn));
-  mqtt_publish("aggoTv", number2string(aggoTv));
+  mqtt_publish("brewtime/set", number2string(brewtime));
+  mqtt_publish("starttemp/set", number2string(starttemp));
+  mqtt_publish("setPoint/set", number2string(setPoint));
+  mqtt_publish("preinfusion/set", number2string(preinfusion));
+  mqtt_publish("preinfusionpause/set", number2string(preinfusionpause));
+  mqtt_publish("pidON/set", number2string(pidON));
+  mqtt_publish("brewDetectionSensitivity/set", number2string(brewDetectionSensitivity));
+  mqtt_publish("brewDetectionPower/set", number2string(brewDetectionPower));
+  mqtt_publish("steadyPower/set", number2string(steadyPower));
+  mqtt_publish("steadyPowerOffset/set", number2string(steadyPowerOffset));
+  mqtt_publish("steadyPowerOffsetTime/set", number2string(steadyPowerOffsetTime));
+  mqtt_publish("aggKp/set", number2string(aggKp));
+  mqtt_publish("aggTn/set", number2string(aggTn));
+  mqtt_publish("aggTv/set", number2string(aggTv));
+  mqtt_publish("aggoKp/set", number2string(aggoKp));
+  mqtt_publish("aggoTn/set", number2string(aggoTn));
+  mqtt_publish("aggoTv/set", number2string(aggoTv));
 }

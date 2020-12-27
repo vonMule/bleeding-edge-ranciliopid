@@ -3,8 +3,7 @@
  *   
  * This enhancement implementation is based on the
  * great work of the rancilio-pid (http://rancilio-pid.de/)
- * team. Hopefully it will be merged upstream soon. In case
- * of questions just contact, Tobias <medlor@web.de>
+ * team. In case of questions just contact, Tobias <medlor@web.de>
  * 
  *****************************************************/
 
@@ -23,7 +22,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.4.1";
+const char* sysVersion PROGMEM  = "2.4.2_beta";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -174,8 +173,9 @@ const double outerZoneTemperatureDifference = 1;
    PID with Bias (steadyPower) Temperature Controller
 *****************************************************/
 #include "PIDBias.h"
-double steadyPower = STEADYPOWER; // in percent 
-double PreviousSteadyPower = 0;
+double steadyPower = STEADYPOWER; // in percent
+double steadyPowerSaved = steadyPower;
+double steadyPowerSavedInBlynk = 0;
 int burstShot      = 0;   // this is 1, when the user wants to immediatly set the heater power to the value specified in burstPower
 double burstPower  = 20;  // in percent
 
@@ -880,9 +880,9 @@ void sendToBlynk() {
     }
     //performance tests has shown to only send one api-call per sendToBlynk() 
     if (blynksendcounter == 1) {
-      if (steadyPower != PreviousSteadyPower) {
+      if (steadyPower != steadyPowerSavedInBlynk) {
         Blynk.virtualWrite(V41, steadyPower);  //auto-tuning params should be saved by Blynk.virtualWrite()
-        PreviousSteadyPower = steadyPower;
+        steadyPowerSavedInBlynk = steadyPower;
       } else {
         blynksendcounter++;
       }
@@ -965,12 +965,15 @@ void updateState() {
           double tempChange = pastTemperatureChange(10);
           if (Input - setPoint >= 0) {
             if (tempChange > 0.05 && tempChange <= 0.15) {
-              DEBUG_print("Auto-Tune starttemp(%0.2f -= %0.2f) | steadyPowerOffset=%0.2f | steadyPowerOffsetTime=%d\n", starttemp, 0.5, steadyPowerOffset, steadyPowerOffsetTime);  //ABC
+              DEBUG_print("Auto-Tune starttemp(%0.2f -= %0.2f) | steadyPowerOffset=%0.2f | steadyPowerOffsetTime=%d\n", starttemp, 0.5, steadyPowerOffset, steadyPowerOffsetTime);
               starttemp -= 0.5;
             } else if (tempChange > 0.15) {
               DEBUG_print("Auto-Tune starttemp(%0.2f -= %0.2f) | steadyPowerOffset=%0.2f | steadyPowerOffsetTime=%d\n", starttemp, 1.0, steadyPowerOffset, steadyPowerOffsetTime);
               starttemp -= 1;
             }
+          } else if (Input - setPoint >= -1.5 && tempChange >= 0.8) {  //
+            DEBUG_print("Auto-Tune starttemp(%0.2f -= %0.2f, too fast) | steadyPowerOffset=%0.2f | steadyPowerOffsetTime=%d\n", starttemp, 0.4, steadyPowerOffset, steadyPowerOffsetTime);
+            starttemp -= 0.4;
           } else if (Input - setPoint >= -1.5 && tempChange >= 0.45) {  // OK (-0.10)!
             DEBUG_print("Auto-Tune starttemp(%0.2f -= %0.2f, too fast) | steadyPowerOffset=%0.2f | steadyPowerOffsetTime=%d\n", starttemp, 0.2, steadyPowerOffset, steadyPowerOffsetTime);
             starttemp -= 0.2;
@@ -987,6 +990,10 @@ void updateState() {
             DEBUG_print("Auto-Tune starttemp(%0.2f -= %0.2f) | steadyPowerOffset=%0.2f | steadyPowerOffsetTime=%d\n", starttemp, 0.1, steadyPowerOffset, steadyPowerOffsetTime);
             starttemp -= 0.1;
           }
+          //persist starttemp auto-tuning setting
+          mqtt_publish("starttemp/set", number2string(starttemp));
+          mqtt_publish("starttemp", number2string(starttemp));
+          Blynk.virtualWrite(V12, String(starttemp, 1));
           force_eeprom_sync = millis();
         } else {
           DEBUG_print("Auto-Tune starttemp disabled\n");
@@ -1436,6 +1443,17 @@ void loop() {
     }
   }
 
+  //Persist steadyPower auto-tuning setting
+  if (steadyPower != steadyPowerSaved) {
+    steadyPowerSaved = steadyPower;
+    mqtt_publish("steadyPower/set", number2string(steadyPower));  //persist value over shutdown
+    mqtt_publish("steadyPower", number2string(steadyPower));
+    if (force_eeprom_sync == 0) {
+      force_eeprom_sync = millis() + 600000; // reduce writes on eeprom
+    }
+  }
+
+  //persist settings to eeprom on interval or when required
   if (!in_sensitive_phase() &&
       (millis() >= last_eeprom_save + eeprom_save_interval ||
        (force_eeprom_sync > 0 && (millis() >= force_eeprom_sync + force_eeprom_sync_waitTime))
@@ -1457,7 +1475,7 @@ void loop() {
 void sync_eeprom() { sync_eeprom(false, false); }
 void sync_eeprom(bool startup_read, bool force_read) {
   int current_version;
-  DEBUG_print("EEPROM: sync_eeprom(force_read=%d) called\n", force_read);
+  DEBUG_print("EEPROM: sync_eeprom(startup_read=%d, force_read=%d) called\n", startup_read, force_read);
   EEPROM.begin(1024);
   EEPROM.get(290, current_version);
   DEBUG_print("EEPROM: Detected Version=%d Expected Version=%d\n", current_version, expected_eeprom_version);
@@ -1468,7 +1486,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
 
   //if variables are not read from blynk previously, always get latest values from EEPROM
   if (force_read && (current_version == expected_eeprom_version)) {
-    DEBUG_print("EEPROM: Blynk not active or using mqtt. Reading settings from EEPROM\n");
+    DEBUG_print("EEPROM: Blynk not active and not using external mqtt server. Reading settings from EEPROM\n");
     EEPROM.get(0, aggKp);
     EEPROM.get(10, aggTn);
     EEPROM.get(20, aggTv);
@@ -1584,7 +1602,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
   if (BREWTIME != brewtime_config_saved) { brewtime = BREWTIME; EEPROM.put(340, brewtime); DEBUG_print("EEPROM: brewtime (%0.2f) is read from userConfig.h\n", brewtime); }
   if (PREINFUSION != preinfusion_config_saved) { preinfusion = PREINFUSION; EEPROM.put(350, preinfusion); }
   if (PREINFUSION_PAUSE != preinfusionpause_config_saved) { preinfusionpause = PREINFUSION_PAUSE; EEPROM.put(360, preinfusionpause); }
-  if (STARTTEMP != starttemp_config_saved) { starttemp = STARTTEMP; EEPROM.put(380, starttemp); }
+  if (STARTTEMP != starttemp_config_saved) { starttemp = STARTTEMP; EEPROM.put(380, starttemp); DEBUG_print("EEPROM: starttemp (%0.2f) is read from userConfig.h\n", starttemp); }
   if (BREWDETECTION_SENSITIVITY != brewDetectionSensitivity_config_saved) { brewDetectionSensitivity = BREWDETECTION_SENSITIVITY; EEPROM.put(430, brewDetectionSensitivity); }
   if (STEADYPOWER != steadyPower_config_saved) { steadyPower = STEADYPOWER; EEPROM.put(440, steadyPower); }
   if (STEADYPOWER_OFFSET != steadyPowerOffset_config_saved) { steadyPowerOffset = STEADYPOWER_OFFSET; EEPROM.put(450, steadyPowerOffset); }
@@ -1600,7 +1618,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
   if ( brewtime != brewtime_latest_saved) { EEPROM.put(40, brewtime); Blynk.virtualWrite(V8, brewtime); DEBUG_print("EEPROM: brewtime (%0.2f) is saved (previous:%0.2f)\n", brewtime, brewtime_latest_saved); }
   if ( preinfusion != preinfusion_latest_saved) { EEPROM.put(50, preinfusion); Blynk.virtualWrite(V9, preinfusion); }
   if ( preinfusionpause != preinfusionpause_latest_saved) { EEPROM.put(60, preinfusionpause); Blynk.virtualWrite(V10, preinfusionpause); }
-  if ( starttemp != starttemp_latest_saved) { EEPROM.put(80, starttemp); Blynk.virtualWrite(V12, starttemp); }
+  if ( starttemp != starttemp_latest_saved) { EEPROM.put(80, starttemp); Blynk.virtualWrite(V12, starttemp); DEBUG_print("EEPROM: starttemp (%0.2f) is saved\n", starttemp); }
   if ( aggoKp != aggoKp_latest_saved) { EEPROM.put(90, aggoKp); Blynk.virtualWrite(V30, aggoKp); }
   if ( aggoTn != aggoTn_latest_saved) { EEPROM.put(100, aggoTn); Blynk.virtualWrite(V31, aggoTn); }
   if ( aggoTv != aggoTv_latest_saved) { EEPROM.put(110, aggoTv); Blynk.virtualWrite(V32, aggoTv); }
@@ -1736,7 +1754,7 @@ void setup() {
             //read and use settings retained in mqtt and therefore dont use eeprom values
             eeprom_force_read = false;
             unsigned long started = millis();
-            while (mqtt_working() && (millis() < started + 1000))
+            while (mqtt_working() && (millis() < started + 2000))  //attention: delay might not be high enough over WAN
             {
               mqtt_client.loop();
             }
