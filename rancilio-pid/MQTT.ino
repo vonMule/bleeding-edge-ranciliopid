@@ -174,197 +174,141 @@ void mqtt_parse(char* topic_str, char* data_str) {
     return;
   }
   if (strcmp(configVar, "brewtime") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != brewtime) {
-      DEBUG_print("setting brewtime=%s\n", data_str);
-      brewtime = data_double;
-      mqtt_publish("brewtime", data_str);
+    if (persist_setting("brewtime", &brewtime, data_str)) {
       Blynk.virtualWrite(V8, String(brewtime, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "starttemp") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != starttemp) {
-      DEBUG_print("setting starttemp=%s\n", data_str);
-      starttemp = data_double;
-      mqtt_publish("starttemp", data_str);
+    if (persist_setting("starttemp", &starttemp, data_str)) {
       Blynk.virtualWrite(V12, String(starttemp, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "setPoint") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != setPoint) {
-      DEBUG_print("setting setPoint=%s\n", data_str);
-      setPoint = data_double;
-      mqtt_publish("setPoint", data_str);
+    if (persist_setting("setPoint", &setPoint, data_str)) {
       Blynk.virtualWrite(V7, String(setPoint, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "preinfusion") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != preinfusion) {
-      DEBUG_print("setting preinfusion=%s\n", data_str);
-      preinfusion = data_double;
-      mqtt_publish("preinfusion", data_str);
+    if (persist_setting("preinfusion", &preinfusion, data_str)) {
       Blynk.virtualWrite(V9, String(preinfusion, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "preinfusionpause") == 0) {
-    sscanf(data_str, "%lf", &preinfusionpause);
-    if (data_double != preinfusionpause) {
-      DEBUG_print("setting preinfusionpause=%s\n", data_str);
-      preinfusionpause = data_double;
-      mqtt_publish("preinfusionpause", data_str);
+    if (persist_setting("preinfusionpause", &preinfusionpause, data_str)) {
       Blynk.virtualWrite(V10, String(preinfusionpause, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "pidON") == 0) {
-    sscanf(data_str, "%d", &data_int);
-    if (data_int != pidON) {
-      DEBUG_print("setting pidON=%s\n", data_str);
-      pidON = data_int;
-      mqtt_publish("pidON", data_str);
+    if (persist_setting("pidON", &pidON, data_str)) {
       Blynk.virtualWrite(V13, String(pidON, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "brewDetectionSensitivity") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != brewDetectionSensitivity) {
-      DEBUG_print("setting brewDetectionSensitivity=%s\n", data_str);
-      brewDetectionSensitivity = data_double;
-      mqtt_publish("brewDetectionSensitivity", data_str);
+    if (persist_setting("brewDetectionSensitivity", &brewDetectionSensitivity, data_str)) {
       Blynk.virtualWrite(V34, String(brewDetectionSensitivity, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "brewDetectionPower") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != brewDetectionPower) {
-      DEBUG_print("setting brewDetectionPower=%s\n", data_str);
-      brewDetectionPower = data_double;
-      mqtt_publish("brewDetectionPower", data_str);
+    if (persist_setting("brewDetectionPower", &brewDetectionPower, data_str)) {
       Blynk.virtualWrite(V36, String(brewDetectionPower, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
-  
   if (strcmp(configVar, "steadyPower") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != steadyPower) {
-      DEBUG_print("setting steadyPower=%s\n", data_str);
-      steadyPower = data_double;
-      steadyPowerSaved = steadyPower; //prevent an additional mqtt /set call
-      mqtt_publish("steadyPower", data_str);
-      Blynk.virtualWrite(V41, String(steadyPower, 1));
-      force_eeprom_sync = millis();
+    if (persist_setting("steadyPower", &steadyPower, data_str)) {
+      //Blynk.virtualWrite(V41, String(steadyPower, 1));  //handled every few seconds by another func
     }
     return;
   }
   if (strcmp(configVar, "steadyPowerOffset") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != steadyPowerOffset) {
-      DEBUG_print("setting steadyPowerOffset=%s\n", data_str);
-      steadyPowerOffset = data_double;
-      mqtt_publish("steadyPowerOffset", data_str);
+    if (persist_setting("steadyPowerOffset", &steadyPowerOffset, data_str)) {
       Blynk.virtualWrite(V42, String(steadyPowerOffset, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "steadyPowerOffsetTime") == 0) {
-    sscanf(data_str, "%d", &data_int);
-    if (data_int != steadyPowerOffsetTime) {
-      DEBUG_print("setting steadyPowerOffsetTime=%s (%d)\n", data_str, data_int);
-      steadyPowerOffsetTime = data_int;
-      mqtt_publish("steadyPowerOffsetTime", data_str);
+    if (persist_setting("steadyPowerOffsetTime", &steadyPowerOffsetTime, data_str)) {
       Blynk.virtualWrite(V43, String(steadyPowerOffsetTime, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
-  
   if (strcmp(configVar, "aggKp") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != aggKp) {
-      DEBUG_print("setting aggKp=%s\n", data_str);
-      aggKp = data_double;
-      mqtt_publish("aggKp", data_str);
+    if (persist_setting("aggKp", &aggKp, data_str)) {
       Blynk.virtualWrite(V4, String(aggKp, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "aggTn") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != aggTn) {
-      DEBUG_print("setting aggTn=%s\n", data_str);
-      aggTn = data_double;
-      mqtt_publish("aggTn", data_str);
+    if (persist_setting("aggTn", &aggTn, data_str)) {
       Blynk.virtualWrite(V5, String(aggTn, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "aggTv") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != aggTv) {
-      DEBUG_print("setting aggTv=%s\n", data_str);
-      aggTv = data_double;
-      mqtt_publish("aggTv", data_str);
+    if (persist_setting("aggTv", &aggTv, data_str)) {
       Blynk.virtualWrite(V6, String(aggTv, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "aggoKp") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != aggoKp) {
-      DEBUG_print("setting aggoKp=%s\n", data_str);
-      aggoKp = data_double;
-      mqtt_publish("aggoKp", data_str);
+    if (persist_setting("aggoKp", &aggoKp, data_str)) {
       Blynk.virtualWrite(V30, String(aggoKp, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "aggoTn") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != aggoTn) {
-      DEBUG_print("setting aggoTn=%s\n", data_str);
-      aggoTn = data_double;
-      mqtt_publish("aggoTn", data_str);
+    if (persist_setting("aggoTn", &aggoTn, data_str)) {
       Blynk.virtualWrite(V31, String(aggoTn, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
   if (strcmp(configVar, "aggoTv") == 0) {
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != aggoTv) {
-      DEBUG_print("setting aggoTv=%s\n", data_str);
-      aggoTv = data_double;
-      mqtt_publish("aggoTv", data_str);
+    if (persist_setting("aggoTv", &aggoTv, data_str)) {
       Blynk.virtualWrite(V32, String(aggoTv, 1));
-      force_eeprom_sync = millis();
     }
     return;
   }
 }
 
+boolean persist_setting(char* type, double* value, char* data_str) {
+    double data_double;
+    sscanf(data_str, "%lf", &data_double);
+    if (strcmp(type, "steadyPower") == 0 && almostEqual(data_double, steadyPowerMQTTDisableUpdateUntilProcessed)) {
+      steadyPowerMQTTDisableUpdateUntilProcessed = 0;
+      steadyPowerMQTTDisableUpdateUntilProcessedTime = 0;
+    }
+    if (!almostEqual(data_double, *value)) {
+      //DEBUG_print("setting %s=%s (=%0.2f) (prev=%.2f)\n", type, data_str, data_double, *value);
+      *value = data_double;
+      if (strcmp(type, "steadyPower") == 0) {
+        steadyPowerSaved = *value; //prevent an additional mqtt "/set" call
+      }
+      mqtt_publish(type, data_str);
+      force_eeprom_sync = millis();
+      return true;
+    }
+    return false;
+}
+
+boolean persist_setting(char* type, int* value, char* data_str) {
+    int data_int;
+    sscanf(data_str, "%d", &data_int);
+    if (data_int != *value) {
+      //DEBUG_print("setting %s=%s (=%d) (prev=%d)\n", type, data_str, data_int, *value);
+      *value = data_int;
+      mqtt_publish(type, data_str);
+      force_eeprom_sync = millis();
+      return true;
+    }
+    return false;
+}
 
 void mqtt_publish_settings() {
   mqtt_publish("brewtime/set", number2string(brewtime));

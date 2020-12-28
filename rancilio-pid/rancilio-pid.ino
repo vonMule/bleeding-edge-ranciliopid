@@ -22,7 +22,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.4.2_beta";
+const char* sysVersion PROGMEM  = "2.4.2_beta_2";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -176,6 +176,8 @@ const double outerZoneTemperatureDifference = 1;
 double steadyPower = STEADYPOWER; // in percent
 double steadyPowerSaved = steadyPower;
 double steadyPowerSavedInBlynk = 0;
+double steadyPowerMQTTDisableUpdateUntilProcessed = 0;  //used as semaphore
+unsigned long steadyPowerMQTTDisableUpdateUntilProcessedTime = 0;
 int burstShot      = 0;   // this is 1, when the user wants to immediatly set the heater power to the value specified in burstPower
 double burstPower  = 20;  // in percent
 
@@ -990,11 +992,7 @@ void updateState() {
             DEBUG_print("Auto-Tune starttemp(%0.2f -= %0.2f) | steadyPowerOffset=%0.2f | steadyPowerOffsetTime=%d\n", starttemp, 0.1, steadyPowerOffset, steadyPowerOffsetTime);
             starttemp -= 0.1;
           }
-          //persist starttemp auto-tuning setting
-          mqtt_publish("starttemp/set", number2string(starttemp));
-          mqtt_publish("starttemp", number2string(starttemp));
-          Blynk.virtualWrite(V12, String(starttemp, 1));
-          force_eeprom_sync = millis();
+          mqtt_publish("starttemp/set", number2string(starttemp)); //persist starttemp auto-tuning setting
         } else {
           DEBUG_print("Auto-Tune starttemp disabled\n");
         }
@@ -1443,14 +1441,21 @@ void loop() {
     }
   }
 
-  //Persist steadyPower auto-tuning setting
-  if (steadyPower != steadyPowerSaved) {
+  //persist steadyPower auto-tuning setting
+  if (steadyPower != steadyPowerSaved && steadyPowerMQTTDisableUpdateUntilProcessed == 0) { //prevent race conditions by semaphore
     steadyPowerSaved = steadyPower;
-    mqtt_publish("steadyPower/set", number2string(steadyPower));  //persist value over shutdown
+    steadyPowerMQTTDisableUpdateUntilProcessed = steadyPower;
+    steadyPowerMQTTDisableUpdateUntilProcessedTime = millis();
+    mqtt_publish("steadyPower/set", number2string(steadyPower)); //persist value over shutdown
     mqtt_publish("steadyPower", number2string(steadyPower));
     if (force_eeprom_sync == 0) {
       force_eeprom_sync = millis() + 600000; // reduce writes on eeprom
     }
+  }
+  if ((steadyPowerMQTTDisableUpdateUntilProcessedTime >0) && (millis() >= steadyPowerMQTTDisableUpdateUntilProcessedTime + 20000)) {
+    ERROR_print("steadyPower setting not saved for over 20sec (steadyPowerMQTTDisableUpdateUntilProcessed=%0.2f)\n", steadyPowerMQTTDisableUpdateUntilProcessed);
+    steadyPowerMQTTDisableUpdateUntilProcessedTime = 0;
+    steadyPowerMQTTDisableUpdateUntilProcessed = 0;
   }
 
   //persist settings to eeprom on interval or when required
@@ -1754,7 +1759,7 @@ void setup() {
             //read and use settings retained in mqtt and therefore dont use eeprom values
             eeprom_force_read = false;
             unsigned long started = millis();
-            while (mqtt_working() && (millis() < started + 2000))  //attention: delay might not be high enough over WAN
+            while (mqtt_working() && (millis() < started + 2000))  //attention: delay might not be long enough over WAN
             {
               mqtt_client.loop();
             }
@@ -1811,9 +1816,26 @@ void setup() {
    *  Additionally this function honors changed values in userConfig.h (changed userConfig.h values have priority)
   ******************************************************/
   sync_eeprom(true, eeprom_force_read);
-  
+
   print_settings();
-  if (mqtt_working()) mqtt_publish_settings();
+
+  /********************************************************
+   * PUBLISH settings on MQTT (and wait for them to be processed!)
+   * + SAVE settings on MQTT-server if MQTT_ENABLE==1
+  ******************************************************/
+  steadyPowerSaved = steadyPower;
+  if (mqtt_working()) {
+    steadyPowerMQTTDisableUpdateUntilProcessed = steadyPower;
+    steadyPowerMQTTDisableUpdateUntilProcessedTime = millis();
+    mqtt_publish_settings();
+    #if (MQTT_ENABLE == 1)
+    unsigned long started = millis();
+    while ((millis() < started + 5000) && (steadyPowerMQTTDisableUpdateUntilProcessed != 0))
+    {
+      mqtt_client.loop();
+    }
+    #endif
+  }
 
   /********************************************************
      OTA
