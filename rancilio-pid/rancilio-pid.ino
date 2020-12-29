@@ -22,7 +22,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.4.2_beta_2";
+const char* sysVersion PROGMEM  = "2.4.2_beta_3";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -1442,7 +1442,7 @@ void loop() {
   }
 
   //persist steadyPower auto-tuning setting
-  if (steadyPower != steadyPowerSaved && steadyPowerMQTTDisableUpdateUntilProcessed == 0) { //prevent race conditions by semaphore
+  if (!almostEqual(steadyPower,steadyPowerSaved) && steadyPowerMQTTDisableUpdateUntilProcessed == 0) { //prevent race conditions by semaphore
     steadyPowerSaved = steadyPower;
     steadyPowerMQTTDisableUpdateUntilProcessed = steadyPower;
     steadyPowerMQTTDisableUpdateUntilProcessedTime = millis();
