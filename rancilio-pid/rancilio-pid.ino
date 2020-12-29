@@ -22,7 +22,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.4.2_beta_3";
+const char* sysVersion PROGMEM  = "2.4.2_beta_4";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -593,6 +593,7 @@ double temperature_simulate_steam() {
 
 double temperature_simulate_normal() {
     unsigned long now = millis();
+    if ( now <= 12000 ) return 85;
     if ( now <= 15000 ) return 88;
     if ( now <= 25000 ) return 91;
     if (now <= 28000) return 92;
@@ -992,7 +993,11 @@ void updateState() {
             DEBUG_print("Auto-Tune starttemp(%0.2f -= %0.2f) | steadyPowerOffset=%0.2f | steadyPowerOffsetTime=%d\n", starttemp, 0.1, steadyPowerOffset, steadyPowerOffsetTime);
             starttemp -= 0.1;
           }
-          mqtt_publish("starttemp/set", number2string(starttemp)); //persist starttemp auto-tuning setting
+          //persist starttemp auto-tuning setting
+          mqtt_publish("starttemp/set", number2string(starttemp));
+          mqtt_publish("starttemp", number2string(starttemp));
+          Blynk.virtualWrite(V12, String(starttemp, 1));
+          force_eeprom_sync = millis();
         } else {
           DEBUG_print("Auto-Tune starttemp disabled\n");
         }
