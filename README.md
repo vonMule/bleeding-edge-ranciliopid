@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.4.1
+Version 2.4.2
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
@@ -81,6 +81,13 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.4.2 master:
+  - Bugfix: Revert changes in regard to compiler warnings added in 2.4.1.
+  - Bugfix (MQTT_ENABLE=1): Auto-Tuning settings are persisted across restarts.
+  - Bugfix: steadyPowerOffsetTime is configurable via mqtt.
+  - Bugfix: aggoTn is now correctly published via mqtt.
+  - Added new circuit-diagrams (Thanks Tempcookies + Helge).
+  - MQTT code refactorings.
 - 2.4.1 master:
   - It fixes some compiler errors and warnings I was seeing on my system. (Thanks nils-werner)
   - It contains a small platformio.ini file for Platformio support. (Thanks nils-werner)
