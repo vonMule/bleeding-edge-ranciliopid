@@ -13,6 +13,7 @@
  
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
+#define PIDCONTROLMODE 1             // 0 = Only PID with no Preinfussion | 1 = PID + Preinfussion, Classic Switches | 2 = PID + Preinfussion, Controlmenus + Buttons
 #define ONLYPID 1             // 1=Only PID with no Preinfussion | 0=PID + Preinfussion
 #define TEMPSENSOR 2          // 1=DS19B20; 2=TSIC306
 #define TEMPSENSORRECOVERY 0  // 1 = on (default), 2= off. If off, temp sensor errors will stop the heater until power cycle
@@ -84,6 +85,13 @@
 #define AGGOKP 170      // Kp (Rancilio Silvia 5E: 170, ...)
 #define AGGOTN 40       // Tn (Rancilio Silvia 5E: 40, ...)
 #define AGGOTV 40       // Tv (Rancilio Silvia 5E: 40, ...)
+
+// Steam PID values
+
+#define SETPOINTSTEAM 145    // Steam Temperature SetPoint (ECM Casa Prima: 145, ...)
+#define AGGSTEAMKP 80        // Kp (ECM Casa Prima: 80, ...)
+#define AGGSTEAMTN 0        // Tn (ECM Casa Prima: 0, ...)
+#define AGGSTEAMTV 0        // Tv (ECM Casa Prima: 0, ...)
 
 
 /*******   
