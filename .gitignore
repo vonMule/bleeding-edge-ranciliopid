@@ -1,3 +1,4 @@
 userConfig.h
 *.bak
 *.swp
+.vscode
