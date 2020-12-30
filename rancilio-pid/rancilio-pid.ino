@@ -30,6 +30,7 @@ const char* sysVersion PROGMEM  = "2.4.0";
 ******************************************************/
 const int Display = DISPLAY;
 const int OnlyPID = ONLYPID;
+const int pidControlMode = PIDCONTROLMODE;
 const int TempSensor = TEMPSENSOR;
 const int TempSensorRecovery = TEMPSENSORRECOVERY;
 const int brewDetection = BREWDETECTION;
@@ -134,6 +135,8 @@ double previousOutput = 0;
 int pidMode = 1;                   //1 = Automatic, 0 = Manual
 
 double setPoint = SETPOINT;
+double setPointSteam = SETPOINTSTEAM
+double * activeSetPoint = &setPoint
 double starttemp = STARTTEMP;
 
 // State 1: Coldstart PID values
@@ -170,6 +173,17 @@ double aggoKi = aggoKp / aggoTn;
 double aggoKd = aggoTv * aggoKp ;
 const double outerZoneTemperatureDifference = 1;
 
+// State 6: Steam PID values
+double aggSteamKp = AGGSTEAMKP;
+double aggSteamTn = AGGSTEAMTN;
+double aggSteamTv = AGGSTEAMTV;
+#if (aggSteamTn == 0)
+double aggSteamKi = 0;
+#else
+double aggSteamKi = aggKp / aggTn;
+#endif
+double aggSteamKd = aggTv * aggKp ;
+
 /********************************************************
    PID with Bias (steadyPower) Temperature Controller
 *****************************************************/
@@ -191,7 +205,7 @@ unsigned long lastUpdateSteadyPowerOffset = 0;  //last time steadyPowerOffset wa
 bool MachineColdOnStart = true;
 double starttempOffset = 0;  //Increasing this lead to too high temp and emergency measures taking place. For my rancilio it is best to leave this at 0.
 
-PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyPowerOffset_Activated, &steadyPowerOffsetTime, &setPoint, aggKp, aggKi, aggKd);
+PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyPowerOffset_Activated, &steadyPowerOffsetTime, activeSetPoint, aggKp, aggKi, aggKd);
 
 /********************************************************
    Analog Schalter Read
@@ -737,6 +751,113 @@ int checkControlButtons() {
   return 0;
 }
 
+/********************************************************
+    PreInfusion, Brew , Steam, Hotwater if not Only PID
+    for Commandmenu & Switches
+******************************************************/
+
+#if (pidControlMode == 1 || pidControlMode == 2)
+
+void brew() {
+  // Function switches the valve and pump on,
+  // initiates the starttime and calculates the
+  // time brewing
+  DEBUG_print("Function call: brew()\n");
+
+  if (digitalRead(pinRelayPumpe) == relayOFF) {
+    digitalWrite(pinRelayPumpe, relayON);
+    DEBUG_print("pump relay: on.\n");
+  }
+  if (digitalRead(pinRelayVentil) == relayOFF) {
+    digitalWrite(pinRelayVentil, relayON);
+    DEBUG_print("pump relay: on.\n");
+  }
+  if (brewing == 0) {
+    brewing = 1;
+    startZeit = aktuelleZeit;
+    DEBUG_print("brewing:(%u)\n", brewing);
+    DEBUG_print("startZeit:(%lu)\n", startZeit);
+  }
+
+  bezugsZeit = aktuelleZeit - startZeit;
+  DEBUG_print("bezugsZeit:(%lu)\n", bezugsZeit);
+}
+
+void dispenseHotWater() {
+  // Function switches the pump on to dispense hot
+  // water
+  DEBUG_print("Function call: dispenseHotWater()\n");
+
+  if (digitalRead(pinRelayPumpe) == relayOFF) {
+    digitalWrite(pinRelayPumpe, relayON);
+    DEBUG_print("pump relay: on.\n");
+  }
+}
+
+void generateSteam() {
+  // Function resets the setpoint-, P-, I-, D-, Values
+  // of the PID Controller to generate steam
+  DEBUG_print("Function call: generateSteam()\n");
+
+  if (activeSetPoint != setPointSteam) {
+    activeSetpoint = &setPointSteam;
+    DEBUG_print("set pointer activesetpoint:
+    &setPointSteam\n");
+  }
+
+  if (
+    bPID.GetKp != aggSteamKp ||
+    bPID.GetKi != aggSteamKi ||
+    bPID.GetKd != aggSteamKd
+    ) {
+      bPID.SetTunings(aggSteamKp, aggSteamKi, aggSteamKd)
+      DEBUG_print("set PID-Values to P:%f, I:%f, D:%f\n",
+      bPID.GetKp, bPID.GetKi, bPID.GetKd);
+  }
+}
+
+
+
+void standby() {
+  // Checks standby parameters and reverts if necessary
+  // is supposed be called regularly
+  DEBUG_print("Function call: standby()\n");
+
+  if (digitalRead(pinRelayPumpe) == relayON) {
+    digitalWrite(pinRelayPumpe, relayOFF);
+    DEBUG_print("pump relay: off.\n");
+  }
+  if (digitalRead(pinRelayVentil) == relayON {
+    digitalWrite(pinRelayVentil, relayON);
+    DEBUG_print("valve relay: off.\n");
+  }
+  if (brewing == 1) {
+    brewing = 0;
+    DEBUG_print("brewing:(%u)\n", brewing);
+  }
+    if (bezugsZeit != 0) {
+    bezugsZeit = 0;
+    DEBUG_print("bezugsZeit:(%lu)\n", bezugsZeit);
+  }
+  if (activeSetPoint != setPoint) {
+    activeSetpoint = &setPoint;
+    DEBUG_print("set pointer activesetpoint:
+    &setPoint\n");
+  }
+
+  if (
+    bPID.GetKp != aggKp ||
+    bPID.GetKi != aggKi ||
+    bPID.GetKd != aggKd
+    ) {
+      bPID.SetTunings(aggKp, aggKi, aggKd)
+      DEBUG_print("set PID-Values to P:%f, I:%f, D:%f\n",
+      bPID.GetKp, bPID.GetKi, bPID.GetKd);
+  }
+
+}
+
+#endif
 
 /********************************************************
     PreInfusion, Brew , if not Only PID
@@ -760,8 +881,8 @@ void brew() {
         if (brewing == 0) {
           brewing = 1;
           startZeit = aktuelleZeit;
-          waitingForBrewSwitchOff = true;
-          DEBUG_print("brewswitch=on - Starting brew()\n");
+          waitingForBrewSwitchOff = true;         
+          
         }
         bezugsZeit = aktuelleZeit - startZeit; 
   
