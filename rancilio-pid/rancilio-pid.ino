@@ -224,6 +224,14 @@ unsigned long lastBrewMessage   = 0;
 
 unsigned long previousControlButtonCheck = 0;
 
+int switchUsed = 0; //Switch that is enabled, used in checkControlSwitch()
+int switchBrewLowerThreshold = SWITCHBREWLOWERTHRESHOLD; //Threshold checkControlSwitch()
+int switchBrewUpperThreshold = SWITCHBREWUPPERTHRESHOLD; //Threshold checkControlSwitch()
+int switchHotWaterLowerThreshold = SWITCHHOTWATERLOWERTHRESHOLD; //Threshold checkControlSwitch()
+int switchHotWaterUpperThreshold = SWITCHHOTWATERUPPERTHRESHOLD; //Threshold checkControlSwitch()
+int switchSteamLowerThreshold = SWITCHSTEAMLOWERTHRESHOLD; //Threshold checkControlSwitch()
+int switchSteamUpperThreshold = SWITCHSTEAMUPPERTHRESHOLD; //Threshold checkControlSwitch()
+
 /********************************************************
    Sensor check
 ******************************************************/
@@ -717,6 +725,35 @@ void refreshTemp() {
   }
 }
 
+checkControlSwitches() {
+  DEBUG_print("Function call: checkControlSwitches()\n");
+  if ( millis() >= previousControlButtonCheck + 100 ) {
+    int analogPinValue = analogRead(pinBrewButton);
+    DEBUG_print("analogPinValue: %u\n", analogPinValue);
+    if (switchBrewLowerThreshold < analogPinValue < switchBrewUpperThreshold) {
+      brewCoffee();
+      switchUsed = 1;
+      DEBUG_print("switchUsed: %u\n", switchUsed);
+    }
+    else if (switchHotWaterLowerThreshold < analogPinValue < switchHotWaterUpperThreshold) {
+      dispenseHotWater();
+      switchUsed = 2;
+      DEBUG_print("switchUsed: %u\n", switchUsed);
+    }
+    else if (switchSteamLowerThreshold < analogPinValue < switchSteamUpperThreshold) {
+      generateSteam();
+      switchUsed = 3;
+      DEBUG_print("switchUsed: %u\n", switchUsed);
+    }
+    else
+    {
+    standby();
+    switchUsed = 0;
+    DEBUG_print("switchUsed: %u\n", switchUsed);
+    }
+  
+  }
+}
 
 /********************************************************
     Button Admin Menu
@@ -758,7 +795,7 @@ int checkControlButtons() {
 
 #if (pidControlMode == 1 || pidControlMode == 2)
 
-void brew() {
+void brewCoffee() {
   // Function switches the valve and pump on,
   // initiates the starttime and calculates the
   // time brewing
@@ -796,7 +833,8 @@ void dispenseHotWater() {
 
 void generateSteam() {
   // Function resets the setpoint-, P-, I-, D-, Values
-  // of the PID Controller to generate steam
+  // of the PID Controller to generate steam.
+  // Sets active state to State 6.
   DEBUG_print("Function call: generateSteam()\n");
 
   if (activeSetPoint != setPointSteam) {
@@ -813,6 +851,11 @@ void generateSteam() {
       bPID.SetTunings(aggSteamKp, aggSteamKi, aggSteamKd)
       DEBUG_print("set PID-Values to P:%f, I:%f, D:%f\n",
       bPID.GetKp, bPID.GetKi, bPID.GetKd);
+  }
+
+  if (activeState != 6) {
+    activeState = 6;
+    DEBUG_print("set activeState:%u\n", activeState);
   }
 }
 
@@ -1163,6 +1206,14 @@ void updateState() {
         activeState = 3;
       }
       break;
+    }
+    case 6: //state 6 generating steam
+    {
+      bPID.SetAutoTune(false);  //do not tune during steam phase
+      bPID.SetSumOutputI(100);
+      if (switchUsed != 3 && Input < setPoint + 1) {
+        activeState = 3;
+      }
     }
     case 3: // normal PID mode
     default:
