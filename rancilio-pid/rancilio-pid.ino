@@ -135,8 +135,8 @@ double previousOutput = 0;
 int pidMode = 1;                   //1 = Automatic, 0 = Manual
 
 double setPoint = SETPOINT;
-double setPointSteam = SETPOINTSTEAM
-double * activeSetPoint = &setPoint
+double setPointSteam = SETPOINTSTEAM;
+double * activeSetPoint = &setPoint;
 double starttemp = STARTTEMP;
 
 // State 1: Coldstart PID values
@@ -155,7 +155,7 @@ double aggKi = 0;
 #else
 double aggKi = aggKp / aggTn;
 #endif
-double aggKd = aggTv * aggKp ;
+double aggKd = aggTv * aggKp;
 
 // State 4: Brew PID values
 // ... none ...
@@ -182,7 +182,7 @@ double aggSteamKi = 0;
 #else
 double aggSteamKi = aggKp / aggTn;
 #endif
-double aggSteamKd = aggTv * aggKp ;
+double aggSteamKd = aggTv * aggKp;
 
 /********************************************************
    PID with Bias (steadyPower) Temperature Controller
@@ -424,6 +424,20 @@ BLYNK_WRITE(V44) {
   burstPower = param.asDouble();
 }
 
+BLYNK_WRITE(V50) {
+  setPointSteam = param.asDouble();
+}
+BLYNK_WRITE(V51) {
+  aggSteamKp = param.asDouble();
+}
+BLYNK_WRITE(V52) {
+  aggSteamTn = param.asDouble();
+}
+BLYNK_WRITE(V53) {
+  aggSteamTv = param.asDouble();
+}
+
+
 /******************************************************
  * Type Definition of "sending" BLYNK PIN values from 
  * hardware to app/server (only defined if required)
@@ -456,8 +470,8 @@ void testEmergencyStop(){
       mqtt_publish("events", debugline);
       emergencyStop = true;
     }
-  } else if (emergencyStop == true && getCurrentTemperature() < 100) {
-    snprintf(debugline, sizeof(debugline), "EmergencyStop ended because temperature<100 (temperature=%0.2f)", getCurrentTemperature());
+  } else if (emergencyStop == true && getCurrentTemperature() < emergency_temperature) {
+    snprintf(debugline, sizeof(debugline), "EmergencyStop ended because temperature<%0.2f (temperature=%0.2f)", emergency_temperature, getCurrentTemperature());
     ERROR_println(debugline);
     mqtt_publish("events", debugline);
     emergencyStop = false;
@@ -725,7 +739,7 @@ void refreshTemp() {
   }
 }
 
-checkControlSwitches() {
+void checkControlSwitches() {
   DEBUG_print("Function call: checkControlSwitches()\n");
   if ( millis() >= previousControlButtonCheck + 100 ) {
     int analogPinValue = analogRead(pinBrewButton);
@@ -1213,6 +1227,7 @@ void updateState() {
       bPID.SetSumOutputI(100);
       if (switchUsed != 3 && Input < setPoint + 1) {
         activeState = 3;
+        DEBUG_print("activeState:%u\n", activeState);
       }
     }
     case 3: // normal PID mode
@@ -1406,6 +1421,10 @@ void loop() {
   }
   #endif
 
+  #if (pidControlMode==1)
+  checkControlSwitches();
+  #endif
+
   if (!force_offline) {
     if (!wifi_working()) {
       #if (MQTT_ENABLE == 2)
@@ -1538,6 +1557,17 @@ void loop() {
       if (pidMode == 1) bPID.SetMode(AUTOMATIC);
       bPID.SetTunings(aggoKp, aggoKi, aggoKd);
 
+    /* state 6: Steam mode active*/
+    } else if (activeState == 6) {
+      if (aggSteamTn != 0) {
+        aggSteamKi = aggSteamKp / aggSteamTn ;
+      } else {
+        aggSteamKi = 0;
+      }
+      aggSteamKd = aggSteamTv * aggSteamKp ;
+      if (pidMode == 1) bPID.SetMode(AUTOMATIC);
+      bPID.SetTunings(aggSteamKp, aggSteamKi, aggSteamKd);
+
     /* state 3: Inner zone reached = "normal" low power mode */
     } else {
       if (!pidMode) {
@@ -1660,6 +1690,11 @@ void sync_eeprom(bool startup_read, bool force_read) {
     //180 is used
     EEPROM.get(190, brewDetectionPower);
     EEPROM.get(200, pidON);
+
+    EEPROM.get(210, setPointSteam);
+    EEPROM.get(220, aggSteamKp);
+    EEPROM.get(230, aggSteamTn);
+    EEPROM.get(240, aggSteamTv);
     //Reminder: 290 is reserved for "version"
   }
   //always read the following values during setup() (which are not saved in blynk)
@@ -1687,6 +1722,10 @@ void sync_eeprom(bool startup_read, bool force_read) {
   int estimated_cycle_refreshTemp_latest_saved = 0;
   double brewDetectionPower_latest_saved = 0;
   int pidON_latest_saved = 0;
+  double setPointSteam_latest_saved;
+  double aggSteamKp_latest_saved;
+  double aggSteamTn_latest_saved;
+  double aggSteamTv_latest_saved;
   if (current_version == expected_eeprom_version) {
     EEPROM.get(0, aggKp_latest_saved);
     EEPROM.get(10, aggTn_latest_saved);
@@ -1707,6 +1746,10 @@ void sync_eeprom(bool startup_read, bool force_read) {
     EEPROM.get(180, estimated_cycle_refreshTemp_latest_saved);
     EEPROM.get(190, brewDetectionPower_latest_saved);
     EEPROM.get(200, pidON_latest_saved);
+    EEPROM.get(210, setPointSteam_latest_saved);
+    EEPROM.get(220, aggSteamKp_latest_saved);
+    EEPROM.get(230, aggSteamTn_latest_saved);
+    EEPROM.get(240, aggSteamTv_latest_saved);
   }
 
   //get saved userConfig.h values
@@ -1727,6 +1770,11 @@ void sync_eeprom(bool startup_read, bool force_read) {
   int steadyPowerOffsetTime_config_saved;
   double burstPower_config_saved;
   double brewDetectionPower_config_saved;
+  double setPointSteam_config_saved;
+  double aggSteamKp_config_saved;
+  double aggSteamTn_config_saved;
+  double aggSteamTv_config_saved;
+  
   EEPROM.get(300, aggKp_config_saved);
   EEPROM.get(310, aggTn_config_saved);
   EEPROM.get(320, aggTv_config_saved);
@@ -1744,6 +1792,12 @@ void sync_eeprom(bool startup_read, bool force_read) {
   EEPROM.get(460, steadyPowerOffsetTime_config_saved);
   EEPROM.get(470, burstPower_config_saved);
   EEPROM.get(480, brewDetectionPower_config_saved);
+  EEPROM.get(490, setPointSteam_config_saved);
+  EEPROM.get(500, aggSteamKp_config_saved);
+  EEPROM.get(510, aggSteamTn_config_saved);
+  EEPROM.get(520, aggSteamTv_config_saved);
+
+
 
   //use userConfig.h value if if differs from *_config_saved
   if (AGGKP != aggKp_config_saved) { aggKp = AGGKP; EEPROM.put(300, aggKp); }
@@ -1763,6 +1817,11 @@ void sync_eeprom(bool startup_read, bool force_read) {
   if (STEADYPOWER_OFFSET_TIME != steadyPowerOffsetTime_config_saved) { steadyPowerOffsetTime = STEADYPOWER_OFFSET_TIME; EEPROM.put(460, steadyPowerOffsetTime); }
   //if (BURSTPOWER != burstPower_config_saved) { burstPower = BURSTPOWER; EEPROM.put(470, burstPower); }
   if (BREWDETECTION_POWER != brewDetectionPower_config_saved) { brewDetectionPower = BREWDETECTION_POWER; EEPROM.put(480, brewDetectionPower); DEBUG_print("EEPROM: brewDetectionPower (%0.2f) is read from userConfig.h\n", brewDetectionPower); }
+  if (SETPOINTSTEAM != setPointSteam_config_saved) { setPoint = SETPOINT; EEPROM.put(490, setPointSteam); DEBUG_print("EEPROM: setPointSteam (%0.2f) is read from userConfig.h\n", setPointSteam); }
+  if (AGGKP != aggKpSteam_config_saved) { aggSteamKp = AGGSTEAMKP; EEPROM.put(300, aggSteamKp); }
+  if (AGGTN != aggTnSteam_config_saved) { aggSteamTn = AGGSTEAMTN; EEPROM.put(310, aggSteamTn); }
+  if (AGGTV != aggTvSteam_config_saved) { aggSteamTv = AGGSTEAMTV; EEPROM.put(320, aggSteamTv); }
+
 
   //save latest values to eeprom and sync back to blynk
   if ( aggKp != aggKp_latest_saved) { EEPROM.put(0, aggKp); Blynk.virtualWrite(V4, aggKp); }
@@ -1784,6 +1843,10 @@ void sync_eeprom(bool startup_read, bool force_read) {
   if ( estimated_cycle_refreshTemp != estimated_cycle_refreshTemp_latest_saved) { EEPROM.put(180, estimated_cycle_refreshTemp); DEBUG_print("EEPROM: estimated_cycle_refreshTemp (%u) is saved (previous:%u)\n", estimated_cycle_refreshTemp, estimated_cycle_refreshTemp_latest_saved); }
   if ( brewDetectionPower != brewDetectionPower_latest_saved) { EEPROM.put(190, brewDetectionPower); Blynk.virtualWrite(V36, brewDetectionPower); DEBUG_print("EEPROM: brewDetectionPower (%0.2f) is saved (previous:%0.2f)\n", brewDetectionPower, brewDetectionPower_latest_saved); }
   if ( pidON != pidON_latest_saved) { EEPROM.put(200, pidON); Blynk.virtualWrite(V13, pidON); DEBUG_print("EEPROM: pidON (%d) is saved (previous:%d)\n", pidON, pidON_latest_saved); }
+  if ( setPointSteam != setPointSteam_latest_saved) { EEPROM.put(210, setPoint); Blynk.virtualWrite(V50, setPointSteam); DEBUG_print("EEPROM: setPointSteam (%0.2f) is saved\n", setPointSteam); }
+  if ( aggSteamKp != aggSteamKp_latest_saved) { EEPROM.put(220, aggSteamKp); Blynk.virtualWrite(V51, aggSteamKp); }
+  if ( aggSteamTn != aggSteamTn_latest_saved) { EEPROM.put(230, aggSteamTn); Blynk.virtualWrite(V52, aggSteamTn); }
+  if ( aggSteamTv != aggSteamTv_latest_saved) { EEPROM.put(240, aggSteamTv); Blynk.virtualWrite(V53, aggSteamTv); }
   EEPROM.commit();
   DEBUG_print("EEPROM: sync_eeprom() finished.\n");
 }
@@ -1794,6 +1857,7 @@ void print_settings() {
   DEBUG_print("aggKp: %0.2f | aggTn: %0.2f | aggTv: %0.2f\n", aggKp, aggTn, aggTv);
   DEBUG_print("aggoKp: %0.2f | aggoTn: %0.2f | aggoTv: %0.2f\n", aggoKp, aggoTn, aggoTv);
   DEBUG_print("setPoint: %0.2f | starttemp: %0.2f | burstPower: %0.2f\n", setPoint, starttemp, burstPower);
+  DEBUG_print("setPointSteam: %0.2f | aggSteamKp: %0.2f | aggSteamTn: %0.2f | aggSteamTv: %0.2f\n"setPointSteam, aggSteamKp, aggSteamTn, aggSteamTv);
   DEBUG_print("brewDetection: %d | brewDetectionSensitivity: %0.2f | brewDetectionPower: %0.2f\n", brewDetection, brewDetectionSensitivity, brewDetectionPower);
   DEBUG_print("brewtime: %0.2f | preinfusion: %0.2f | preinfusionpause: %0.2f\n", brewtime, preinfusion, preinfusionpause);
   DEBUG_print("steadyPower: %0.2f | steadyPowerOffset: %0.2f | steadyPowerOffsetTime: %d\n", steadyPower, steadyPowerOffset, steadyPowerOffsetTime);
