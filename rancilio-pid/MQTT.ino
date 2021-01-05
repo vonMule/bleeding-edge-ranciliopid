@@ -362,7 +362,57 @@ void mqtt_parse(char* topic_str, char* data_str) {
       force_eeprom_sync = millis();
     }
     return;
+    
   }
+   if (strcmp(configVar, "setPointSteam") == 0) {
+    sscanf(data_str, "%lf", &data_double);
+    if (data_double != setPointSteam) {
+      DEBUG_print("setting setPointSteam=%s\n", data_str);
+      setPointSteam = data_double;
+      mqtt_publish("setPointSteam", data_str);
+      Blynk.virtualWrite(V50, String(setPointSteam, 1));
+      force_eeprom_sync = millis();
+    }
+    return;
+    
+  }
+   if (strcmp(configVar, "aggSteamKp") == 0) {
+    sscanf(data_str, "%lf", &data_double);
+    if (data_double != aggSteamKp) {
+      DEBUG_print("setting aggSteamKp=%s\n", data_str);
+      aggoTv = data_double;
+      mqtt_publish("aggSteamKp", data_str);
+      Blynk.virtualWrite(V51, String(aggSteamKp, 1));
+      force_eeprom_sync = millis();
+    }
+    return;
+    
+  }
+   if (strcmp(configVar, "aggSteamTn") == 0) {
+    sscanf(data_str, "%lf", &data_double);
+    if (data_double != aggSteamTn) {
+      DEBUG_print("setting aggSteamTn=%s\n", data_str);
+      aggSteamTn = data_double;
+      mqtt_publish("aggSteamTn", data_str);
+      Blynk.virtualWrite(V52, String(aggoTv, 1));
+      force_eeprom_sync = millis();
+    }
+    return;
+    
+  }
+   if (strcmp(configVar, "aggSteamTv") == 0) {
+    sscanf(data_str, "%lf", &data_double);
+    if (data_double != aggSteamTv) {
+      DEBUG_print("setting aggSteamTv=%s\n", data_str);
+      aggSteamTv = data_double;
+      mqtt_publish("aggSteamTv", data_str);
+      Blynk.virtualWrite(V53, String(aggSteamTv, 1));
+      force_eeprom_sync = millis();
+    }
+    return;
+    
+  }
+
 }
 
 
@@ -384,4 +434,8 @@ void mqtt_publish_settings() {
   mqtt_publish("aggoKp", number2string(aggoKp));
   mqtt_publish("aggoTn", number2string(aggoTn));
   mqtt_publish("aggoTv", number2string(aggoTv));
+  mqtt_publish("setPointSteam", number2string(setPointSteam));
+  mqtt_publish("aggSteamKp", number2string(aggSteamKp));
+  mqtt_publish("aggSteamTn", number2string(aggSteamTn));
+  mqtt_publish("aggSteamTv", number2string(aggSteamTv));
 }
