@@ -1721,10 +1721,11 @@ void sync_eeprom(bool startup_read, bool force_read) {
   int estimated_cycle_refreshTemp_latest_saved = 0;
   double brewDetectionPower_latest_saved = 0;
   int pidON_latest_saved = 0;
-  double setPointSteam_latest_saved;
-  double aggSteamKp_latest_saved;
-  double aggSteamTn_latest_saved;
-  double aggSteamTv_latest_saved;
+  double setPointSteam_latest_saved = 0;
+  double aggSteamKp_latest_saved = 0;
+  double aggSteamTn_latest_saved = 0;
+  double aggSteamTv_latest_saved = 0;
+  
   if (current_version == expected_eeprom_version) {
     EEPROM.get(0, aggKp_latest_saved);
     EEPROM.get(10, aggTn_latest_saved);
@@ -1817,9 +1818,9 @@ void sync_eeprom(bool startup_read, bool force_read) {
   //if (BURSTPOWER != burstPower_config_saved) { burstPower = BURSTPOWER; EEPROM.put(470, burstPower); }
   if (BREWDETECTION_POWER != brewDetectionPower_config_saved) { brewDetectionPower = BREWDETECTION_POWER; EEPROM.put(480, brewDetectionPower); DEBUG_print("EEPROM: brewDetectionPower (%0.2f) is read from userConfig.h\n", brewDetectionPower); }
   if (SETPOINTSTEAM != setPointSteam_config_saved) { setPoint = SETPOINT; EEPROM.put(490, setPointSteam); DEBUG_print("EEPROM: setPointSteam (%0.2f) is read from userConfig.h\n", setPointSteam); }
-  if (AGGKP != aggKpSteam_config_saved) { aggSteamKp = AGGSTEAMKP; EEPROM.put(300, aggSteamKp); }
-  if (AGGTN != aggTnSteam_config_saved) { aggSteamTn = AGGSTEAMTN; EEPROM.put(310, aggSteamTn); }
-  if (AGGTV != aggTvSteam_config_saved) { aggSteamTv = AGGSTEAMTV; EEPROM.put(320, aggSteamTv); }
+  if (AGGKP != aggSteamKp_config_saved) { aggSteamKp = AGGSTEAMKP; EEPROM.put(300, aggSteamKp); }
+  if (AGGTN != aggSteamTn_config_saved) { aggSteamTn = AGGSTEAMTN; EEPROM.put(310, aggSteamTn); }
+  if (AGGTV != aggSteamTv_config_saved) { aggSteamTv = AGGSTEAMTV; EEPROM.put(320, aggSteamTv); }
 
 
   //save latest values to eeprom and sync back to blynk
