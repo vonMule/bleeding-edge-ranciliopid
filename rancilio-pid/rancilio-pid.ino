@@ -738,36 +738,6 @@ void refreshTemp() {
   }
 }
 
-void checkControlSwitches() {
-  DEBUG_print("Function call: checkControlSwitches()\n");
-  if ( millis() >= previousControlButtonCheck + 100 ) {
-    int analogPinValue = analogRead(pinBrewButton);
-    DEBUG_print("analogPinValue: %u\n", analogPinValue);
-    if (switchBrewLowerThreshold < analogPinValue < switchBrewUpperThreshold) {
-      brewCoffee();
-      switchUsed = 1;
-      DEBUG_print("switchUsed: %u\n", switchUsed);
-    }
-    else if (switchHotWaterLowerThreshold < analogPinValue < switchHotWaterUpperThreshold) {
-      dispenseHotWater();
-      switchUsed = 2;
-      DEBUG_print("switchUsed: %u\n", switchUsed);
-    }
-    else if (switchSteamLowerThreshold < analogPinValue < switchSteamUpperThreshold) {
-      generateSteam();
-      switchUsed = 3;
-      DEBUG_print("switchUsed: %u\n", switchUsed);
-    }
-    else
-    {
-    standby();
-    switchUsed = 0;
-    DEBUG_print("switchUsed: %u\n", switchUsed);
-    }
-  
-  }
-}
-
 /********************************************************
     Button Admin Menu
 ******************************************************/
@@ -911,6 +881,36 @@ void standby() {
       bPID.GetKp, bPID.GetKi, bPID.GetKd);
   }
 
+}
+
+void checkControlSwitches() {
+  DEBUG_print("Function call: checkControlSwitches()\n");
+  if ( millis() >= previousControlButtonCheck + 100 ) {
+    int analogPinValue = analogRead(pinBrewButton);
+    DEBUG_print("analogPinValue: %u\n", analogPinValue);
+    if (switchBrewLowerThreshold < analogPinValue < switchBrewUpperThreshold) {
+      brewCoffee();
+      switchUsed = 1;
+      DEBUG_print("switchUsed: %u\n", switchUsed);
+    }
+    else if (switchHotWaterLowerThreshold < analogPinValue < switchHotWaterUpperThreshold) {
+      dispenseHotWater();
+      switchUsed = 2;
+      DEBUG_print("switchUsed: %u\n", switchUsed);
+    }
+    else if (switchSteamLowerThreshold < analogPinValue < switchSteamUpperThreshold) {
+      generateSteam();
+      switchUsed = 3;
+      DEBUG_print("switchUsed: %u\n", switchUsed);
+    }
+    else
+    {
+    standby();
+    switchUsed = 0;
+    DEBUG_print("switchUsed: %u\n", switchUsed);
+    }
+  
+  }
 }
 
 #endif
