@@ -423,7 +423,6 @@ BLYNK_WRITE(V43) {
 BLYNK_WRITE(V44) {
   burstPower = param.asDouble();
 }
-
 BLYNK_WRITE(V50) {
   setPointSteam = param.asDouble();
 }
