@@ -1857,7 +1857,7 @@ void print_settings() {
   DEBUG_print("aggKp: %0.2f | aggTn: %0.2f | aggTv: %0.2f\n", aggKp, aggTn, aggTv);
   DEBUG_print("aggoKp: %0.2f | aggoTn: %0.2f | aggoTv: %0.2f\n", aggoKp, aggoTn, aggoTv);
   DEBUG_print("setPoint: %0.2f | starttemp: %0.2f | burstPower: %0.2f\n", setPoint, starttemp, burstPower);
-  DEBUG_print("setPointSteam: %0.2f | aggSteamKp: %0.2f | aggSteamTn: %0.2f | aggSteamTv: %0.2f\n"setPointSteam, aggSteamKp, aggSteamTn, aggSteamTv);
+  DEBUG_print("setPointSteam: %0.2f | aggSteamKp: %0.2f | aggSteamTn: %0.2f | aggSteamTv: %0.2f\n", setPointSteam, aggSteamKp, aggSteamTn, aggSteamTv);
   DEBUG_print("brewDetection: %d | brewDetectionSensitivity: %0.2f | brewDetectionPower: %0.2f\n", brewDetection, brewDetectionSensitivity, brewDetectionPower);
   DEBUG_print("brewtime: %0.2f | preinfusion: %0.2f | preinfusionpause: %0.2f\n", brewtime, preinfusion, preinfusionpause);
   DEBUG_print("steadyPower: %0.2f | steadyPowerOffset: %0.2f | steadyPowerOffsetTime: %d\n", steadyPower, steadyPowerOffset, steadyPowerOffsetTime);
