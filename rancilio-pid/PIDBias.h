@@ -23,7 +23,7 @@ class PIDBias
   #define MANUAL	0
 
   //commonly used functions **************************************************************************
-    PIDBias(double*, double*, double*, double*, unsigned long*, int*, double*, double, double, double);
+    PIDBias(double*, double*, double*, double*, unsigned long*, int*, double**, double, double, double);
 
     void SetMode(int Mode);               // * sets PIDBias to either Manual (0) or Auto (non-0)
 
@@ -102,7 +102,7 @@ class PIDBias
 
   double *myInput;              // * Pointers to the Input, Output, and Setpoint variables
   double *myOutput;             //   This creates a hard link between the variables and the 
-  double *mySetpoint;           //   PIDBias, freeing the user from having to constantly tell us
+  double **mySetpoint;           //   PIDBias, freeing the user from having to constantly tell us
                                 //   what these values are.  with pointers we'll just know.
   double *mySteadyPower;
 	unsigned long lastTime;
