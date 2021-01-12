@@ -172,6 +172,7 @@ double aggoKi = aggoKp / aggoTn;
 #endif
 double aggoKd = aggoTv * aggoKp ;
 const double outerZoneTemperatureDifference = 1;
+const double steamZoneTemperatureDifference = 3;
 
 // State 6: Steam PID values
 double aggSteamKp = AGGSTEAMKP;
@@ -224,7 +225,7 @@ unsigned long lastBrewMessage   = 0;
 
 unsigned long previousControlButtonCheck = 0;
 
-int switchUsed = 0; //Switch that is enabled, used in checkControlSwitch()
+int activeSwitch = 0; //Switch that is enabled, used in checkControlSwitch()
 int switchBrewLowerThreshold = SWITCHBREWLOWERTHRESHOLD; //Threshold checkControlSwitch()
 int switchBrewUpperThreshold = SWITCHBREWUPPERTHRESHOLD; //Threshold checkControlSwitch()
 int switchHotWaterLowerThreshold = SWITCHHOTWATERLOWERTHRESHOLD; //Threshold checkControlSwitch()
@@ -781,8 +782,7 @@ void brewCoffee() {
   // initiates the starttime and calculates the
   // time brewing
   unsigned long aktuelleZeit = millis();
-  DEBUG_print("Function call: brew()\n");
-
+  
   if (digitalRead(pinRelayPumpe) == relayOFF) {
     digitalWrite(pinRelayPumpe, relayON);
     DEBUG_print("pump relay: on.\n");
@@ -857,30 +857,30 @@ void standby() {
   }
 }
 
-void checkControlSwitches() { 
-  if ( millis() >= previousControlButtonCheck + 100 ) {
+void checkControlSwitches() {
+   
+  if ( millis() >= previousControlButtonCheck ) {
     //DEBUG_print("Function call: checkControlSwitches()\n");
-    previousControlButtonCheck = millis() + 180;
+    previousControlButtonCheck = millis() + 200;
     int analogPinValue = analogRead(pinBrewButton);
-
     if (switchBrewLowerThreshold < analogPinValue && analogPinValue < switchBrewUpperThreshold) {
       brewCoffee();
-      switchUsed = 1;
+      activeSwitch = 1;
     }
     else if (switchHotWaterLowerThreshold < analogPinValue && analogPinValue < switchHotWaterUpperThreshold) {
       dispenseHotWater();
-      switchUsed = 2;
+      activeSwitch = 2;
     }
     else if (switchSteamLowerThreshold < analogPinValue && analogPinValue < switchSteamUpperThreshold) {
       generateSteam();
-      switchUsed = 3;
+      activeSwitch = 3;
     }
-    else
-    {
+    else {
     standby();
-    switchUsed = 0;
+      if (activeSwitch != 0) {
+        activeSwitch = 0;
+      }
     }
-  
   }
 }
 
@@ -1193,7 +1193,17 @@ void updateState() {
     {
       bPID.SetAutoTune(false);  //do not tune during steam phase
       bPID.SetSumOutputI(100);
+
+      if (activeSwitch != 3 && Input <= (setPoint + 1)) {
+        snprintf(debugline, sizeof(debugline), "** End of Coolingphase. Transition to step 3 (normal mode)");
+        DEBUG_println(debugline);
+        mqtt_publish("events", debugline);
+        bPID.SetSumOutputI(0);
+        timerBrewDetection = 0;
+        activeState = 3;
+      }
     }
+
     case 3: // normal PID mode
     default:
     {
@@ -1251,10 +1261,21 @@ void updateState() {
         }
       }
 
+      /* STATE 6 (Steam) DETECTION */
+
+      if (Input > setPoint + steamZoneTemperatureDifference && activeState != 6) {
+        snprintf(debugline, sizeof(debugline), "Steaming Detected. Transition to state 6 (Steam)");
+          DEBUG_println(debugline);
+          mqtt_publish("events", debugline);
+          activeState = 6;
+          break;
+      }
+
       /* STATE 5 (OUTER ZONE) DETECTION */
       if ( Input > starttemp - coldStartStep1ActivationOffset && 
            (fabs(Input - setPoint) > outerZoneTemperatureDifference ) &&
-           switchUsed != 3) { 
+           activeState != 6) {
+
         //DEBUG_print("Out Zone Detection: Avg(3)=%0.2f | Avg(5)=%0.2f Avg(20)=%0.2f Avg(2)=%0.2f\n", getAverageTemperature(3), getAverageTemperature(5), getAverageTemperature(20), getAverageTemperature(2));  
         snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to step 5 (outerZone)");
         DEBUG_println(debugline);
@@ -1269,7 +1290,7 @@ void updateState() {
   }
   
   // steadyPowerOffset_Activated handling
-  if ( steadyPowerOffset_Activated >0 ) {
+  if ( steadyPowerOffset_Activated > 0 ) {
     if (Input - setPoint >= 1) {
       steadyPowerOffset_Activated = 0;
       snprintf(debugline, sizeof(debugline), "ATTENTION: Disabled steadyPowerOffset because its too large or starttemp too high");
@@ -1535,8 +1556,13 @@ void loop() {
       }
       aggSteamKd = aggSteamTv * aggSteamKp ;
       if (pidMode == 1) {
-      bPID.SetMode(AUTOMATIC);
-      bPID.SetTunings(aggSteamKp, aggSteamKi, aggSteamKd);
+      if (pidMode == 1) bPID.SetMode(AUTOMATIC);
+      if (Input >= setPoint && activeSwitch != 3 && bPID.GetKd() != 0) {
+        bPID.SetTunings(aggoKp, aggoKi, 0); //Avoid kd generating output while cooling down afer steamphase
+        snprintf(debugline, sizeof(debugline), "** generateSteam() disabled . Cooling phase Kd = 0");
+        DEBUG_println(debugline);
+        mqtt_publish("events", debugline);
+      }
       }
     /* state 3: Inner zone reached = "normal" low power mode */
     } else {
@@ -1545,7 +1571,7 @@ void loop() {
       } else {
         bPID.SetMode(AUTOMATIC);
         if (aggTn != 0) {
-          aggKi = aggKp / aggTn ;
+          aggKi = aggKp / aggTn;
         } else {
           aggKi = 0 ;
         }

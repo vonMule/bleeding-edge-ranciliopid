@@ -119,8 +119,8 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
           u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
           u8g2.drawGlyph(align_right-11, 3+7, 0x0046);
   
-          if (Input <= setPoint + 5 && PidControlMode != 0) { //only show setpoint if we are not steaming
-            if (*activeSetPoint >= 100) {
+          if (Input <= *activeSetPoint + 5 || activeState == 6) { //only show setpoint if we are not steaming
+            if (*activeSetPoint >= 100 ) {
               align_right = align_right_3digits;
             } else {
               align_right = align_right_2digits;
