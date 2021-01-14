@@ -79,6 +79,12 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
               u8g2.drawXBMP(0,0, icon_width, icon_height, outer_zone_rotate_bits);
             }
             break;
+          case 6:  //steam possible
+            if (image_flip) {
+              u8g2.drawXBMP(0,0, icon_width, icon_height, steam_bits);
+            } else {
+              u8g2.drawXBMP(0,0, icon_width, icon_height, steam_rotate_bits);
+            }            
           case 7:  //steam possible
             if (image_flip) {
               u8g2.drawXBMP(0,0, icon_width, icon_height, steam_bits);
@@ -91,6 +97,8 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
               u8g2.drawXBMP(41,0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
             } else if (MACHINE_TYPE == "gaggia") {
               u8g2.drawXBMP(5, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);
+            } else if (MACHINE_TYPE == "ecm") {
+              u8g2.drawXBMP(11, 0, ecm_logo_width, ecm_logo_height, ecm_logo_bits);
             }
             break;
         }
@@ -111,15 +119,15 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
           u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
           u8g2.drawGlyph(align_right-11, 3+7, 0x0046);
   
-          if (Input <= 105) { //only show setpoint if we are not steaming
-            if (setPoint >= 100) {
+          if (Input <= *activeSetPoint + 5 || activeState == 6) { //only show setpoint if we are not steaming
+            if (*activeSetPoint >= 100 ) {
               align_right = align_right_3digits;
             } else {
               align_right = align_right_2digits;
             }
             u8g2.setFont(u8g2_font_profont22_tf);
             u8g2.setCursor(align_right, 20);
-            u8g2.print(setPoint, 1);
+            u8g2.print(*activeSetPoint, 1);
             u8g2.setFont(u8g2_font_profont10_tf);
             u8g2.print((char)176);
             u8g2.println("C");
@@ -156,6 +164,9 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
         if ( enableScreenSaver == 3 && MACHINE_TYPE == "gaggia") {
           logo_width = 125;  //hack which will result in logo only moving left
           screen_saver_x_pos = 5;
+        } if ( enableScreenSaver == 3 && MACHINE_TYPE == "ecm") {
+          logo_width = 125;  //hack which will result in logo only moving left
+          screen_saver_x_pos = 11;
         }
         if (screen_saver_direction_right) {
           if (screen_saver_x_pos + screen_saver_step <= LCDWidth-logo_width ) {
@@ -181,6 +192,8 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
             u8g2.drawXBMP(screen_saver_x_pos, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
           } else if (MACHINE_TYPE == "gaggia") {
             u8g2.drawXBMP(screen_saver_x_pos, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);  //TODO fix
+          } else if (MACHINE_TYPE == "ecm") {
+            u8g2.drawXBMP(screen_saver_x_pos, 0, ecm_logo_width, ecm_logo_height, ecm_logo_bits);  //TODO fix
           }
         }
         screenSaverOn = true;

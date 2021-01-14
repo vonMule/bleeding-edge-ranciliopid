@@ -9,14 +9,15 @@
 /********************************************************
  * General settings
  *****************************************************/
-#define MACHINE_TYPE "rancilio"  // supported values are "rancilio" and "gaggia".
+#define MACHINE_TYPE "rancilio"  // supported values are "rancilio", "gaggia" and "ecm".
  
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
-#define ONLYPID 1             // 1=Only PID with no Preinfussion | 0=PID + Preinfussion
+#define PIDCONTROLMODE 1      // 0 = Only PID with no Preinfussion | 1 = PID + Preinfussion, Classic Switches | 2 = PID + Preinfussion, Controlmenus + Buttons
+#define ONLYPID 0             // 1=Only PID with no Preinfussion | 0=PID + Preinfussion
 #define TEMPSENSOR 2          // 1=DS19B20; 2=TSIC306
-#define TEMPSENSORRECOVERY 0  // 1 = on (default), 2= off. If off, temp sensor errors will stop the heater until power cycle
-#define TRIGGERTYPE HIGH      // LOW = low trigger, HIGH = high trigger relay
+#define TEMPSENSORRECOVERY 1  // 1 = on (default), 2= off. If off, temp sensor errors will stop the heater until power cycle
+#define TRIGGERTYPE LOW       // LOW = low trigger, HIGH = high trigger relay
 #define OTA true              // true=activate update via OTA
 #define GRAFANA 0             // 0=default(off), 1=enable grafana visualisation by Markus (simply ask him for free access)
 
@@ -34,6 +35,27 @@
 
 //#define DEBUGMODE              // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
 
+/*******   
+ * Classic Control can be used if the Arduino should control the entire espressomachine.
+ * It is usable with any espressomachine that has next to the On/off-switch 3 additional
+ * Switches for Brewing, Steam and Hotwater...
+ * The On/off switch is hardwired to the powercord and switches Power for the whole machine.
+ * The 3 switches are wired to the A0 analog Input of the Arduino via voltage dividers,
+ * See the wiring diagrams for additional info.
+ *******/
+
+#define SWITCHBREWLOWERTHRESHOLD        245 //Digital threshold at analog input A0 
+                                            // between 0-1024 that enables the brew function
+#define SWITCHBREWUPPERTHRESHOLD        260 //Digital threshold at analog input A0 
+                                            // between 0-1024 that enables the brew function
+#define SWITCHHOTWATERLOWERTHRESHOLD    802 //Digital threshold at analog input A0 
+                                            // between 0-1024 that enables the brew function
+#define SWITCHHOTWATERUPPERTHRESHOLD    815 //Digital threshold at analog input A0 
+                                            // between 0-1024 that enables the brew function
+#define SWITCHSTEAMLOWERTHRESHOLD       525 //Digital threshold at analog input A0 
+                                            // between 0-1024 that enables the brew function
+#define SWITCHSTEAMUPPERTHRESHOLD       540 //Digital threshold at analog input A0 
+                                            // between 0-1024 that enables the brew function
 
 /*******   
  * Hardware GPIO Pin Mapping (just change values but don't comment)
@@ -49,15 +71,15 @@
 /*******   
  * Display Settings
  *******/       
-#define DISPLAY 0                         // 0=Deaktiviert, 1=SH1106_128X64, 2=SSD1306_128X64
+#define DISPLAY 1                         // 0=Deaktiviert, 1=SH1106_128X64, 2=SSD1306_128X64
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter"
 #define DISPLAY_TEXT "Bleeding-Edge PID"  // Text is displayed on bootup (max 21 chars)
 //#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)
-#define EMERGENCY_ICON "rancilio"         // icon displayed when temperature is >EMERGENCY_TEMP. Allowed values are "rancilio" or "steam"
-#define EMERGENCY_TEMP 116                // If temperature is higher then notifications are send via display/debug/mqtt.
+#define EMERGENCY_ICON "steam"            // icon displayed when temperature is >EMERGENCY_TEMP. Allowed values are "rancilio" or "steam"
+#define EMERGENCY_TEMP 150                // If temperature is higher then notifications are send via display/debug/mqtt.
                                           // Reason might be an error OR the user wants to steam milk.
 #define ENABLE_FAILURE_STATUS_ICONS 1     // 1 = on (default), 0 = off. If enabled show status icons if services are offline.
-#define ENABLE_SCREEN_SAVER 3             // 0=Disable, 1=Enable(blank screen), 2=Enable(use BrewReady Collection Icon), 3=Enable(Use Maschine logo)
+#define ENABLE_SCREEN_SAVER 2             // 0=Disable, 1=Enable(blank screen), 2=Enable(use BrewReady Collection Icon), 3=Enable(Use Maschine logo)
 #define ENABLE_POWER_OFF_COUNTDOWN 0      // 0 = off (default) | 1...n If maschine is inactive for this amount of seconds, we expect the maschine
                                           // to shutdown (Silvia 5E: 1800). Show countdown for the last 3 minutes.
 #define ENABLE_USER_MENU  0               // 0 = off | 1 = on (only for ONLYPID=1) USE GPIO A0 (ADC0) PIN to detect the hardware buttons
@@ -71,8 +93,8 @@
                                       // How long should this additional power be delivered (in s) (Rancilio Silvia 5E: 850, ...)
 #define STEADYPOWER_OFFSET 3.0        // How much power should be added? (in %) (Rancilio Silvia 5E: 2.9, ...)
 
-#define SETPOINT 93     // Temperature SetPoint
-#define STARTTEMP 80.6    // If temperature is below this value then Coldstart state should be triggered
+#define SETPOINT 94     // Temperature SetPoint
+#define STARTTEMP 80.6  // If temperature is below this value then Coldstart state should be triggered
                         // (Rancilio Silvia 5E: 80.6 , ...)
 
 // Inner Zone PID values
@@ -84,6 +106,13 @@
 #define AGGOKP 170      // Kp (Rancilio Silvia 5E: 170, ...)
 #define AGGOTN 40       // Tn (Rancilio Silvia 5E: 40, ...)
 #define AGGOTV 40       // Tv (Rancilio Silvia 5E: 40, ...)
+
+// Steam PID values
+
+#define SETPOINT_STEAM 145    // Steam Temperature SetPoint (ECM Casa Prima: 145, ...)
+#define AGGSTEAMKP 170        // Kp (ECM Casa Prima: 170, ...)
+#define AGGSTEAMTN 40         // Tn (ECM Casa Prima: 40, ...)
+#define AGGSTEAMTV 40         // Tv (ECM Casa Prima: 40, ...)
 
 
 /*******   
@@ -113,15 +142,14 @@
 #define BLYNK_ENABLE 0       // 1=on (default. Blynk PID values overwrite userConfig.h settings) | 0=off (userConfig.h PID settings are used)
 #define BLYNKAUTH "blynkauthcode"
 #define BLYNKADDRESS "any.blynk.server.adress"   // IP-Address of locally installed blynk server
-#define BLYNKPORT 8080
+#define BLYNKPORT 9443
 
 // MQTT
-#define MQTT_ENABLE 2        // 0 = off (no MQTT at all) | 1=MQTT client  | 2=MQTT Server if you dont have a mqtt server running on another system
+#define MQTT_ENABLE 1        // 0 = off (no MQTT at all) | 1=MQTT client  | 2=MQTT Server if you dont have a mqtt server running on another system
 #define MQTT_USERNAME "myuser"
 #define MQTT_PASSWORD "mypass"
-#define MQTT_TOPIC_PREFIX "custom/Küche."  // topic will be "<MQTT_TOPIC_PREFIX><HOSTNAME>/<READING>"
+#define MQTT_TOPIC_PREFIX "custom/Küche."  // topic will be "<MQTT_TOPIC_PREFIX><HOSTNAME>/<READING>" <HOSTNAME> is defined in //Wifi section
 #define MQTT_SERVER_IP "192.168.x.x"       // (MQTT_ENABLE=1) IP-Address of locally installed mqtt server
 #define MQTT_SERVER_PORT 1883              // (MQTT_ENABLE=1)
-
 
 #endif // _userConfig_H
