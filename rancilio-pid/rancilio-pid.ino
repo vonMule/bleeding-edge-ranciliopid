@@ -61,6 +61,7 @@ unsigned int blynk_max_incremental_backoff = 5 ; // At most backoff <mqtt_max_in
 
 WiFiClient espClient;
 
+
 // MQTT
 #if (MQTT_ENABLE==1)
 #include "src/PubSubClient/PubSubClient.h"
@@ -88,6 +89,13 @@ unsigned int mqtt_reconnectAttempts = 0;
 unsigned long mqtt_reconnect_incremental_backoff = 210000 ; //Failsafe: add 210sec to reconnect time after each connect-failure.
 unsigned int mqtt_max_incremental_backoff = 5 ; // At most backoff <mqtt_max_incremenatl_backoff>+1 * (<mqtt_reconnect_incremental_backoff>ms)
 bool mqtt_disabled_temporary = false;
+
+// LEDs WS2812b based
+#if (BREW_READY_LED==2)
+  #define FASTLED_ESP8266_RAW_PIN_ORDER
+  #include <FastLED.h>
+  CRGB leds[BREW_READY_LED_NUMBER];
+#endif
 
  
 /********************************************************
@@ -531,8 +539,22 @@ bool checkBrewReady(double setPoint, float marginOfFluctuation, int lookback) {
 void refreshBrewReadyHardwareLed(bool brewReady) {
   static bool lastBrewReady = false;
   if (brew_ready_led_enabled && brewReady != lastBrewReady) {
+    if(brew_ready_led_enabled == 1){
       digitalWrite(pinLed, brewReady);
       lastBrewReady = brewReady;
+    }
+    #if (BREW_READY_LED==2)
+      if(brew_ready_led_enabled == 2){
+        if(brewReady){
+          fill_solid(leds, BREW_READY_LED_NUMBER, CRGB(100, 100, 100));
+          FastLED.show(); 
+        }
+        else{
+          fill_solid(leds, BREW_READY_LED_NUMBER, CRGB(255, 255, 255));
+          FastLED.show(); 
+        }
+      }
+    #endif
   }
 }
 
@@ -1695,9 +1717,14 @@ void setup() {
   digitalWrite(pinRelayPumpe, relayOFF);
   pinMode(pinRelayHeater, OUTPUT);
   digitalWrite(pinRelayHeater, LOW);
-  #ifdef BREW_READY_LED
-  pinMode(pinLed, OUTPUT);
-  digitalWrite(pinLed, LOW);
+  #if (BREW_READY_LED==1)
+    pinMode(pinLed, OUTPUT);
+    digitalWrite(pinLed, LOW);
+  #endif
+  #if (BREW_READY_LED==2)
+    FastLED.addLeds<WS2812B, pinLed, GRB>(leds, BREW_READY_LED_NUMBER);
+    fill_solid(leds, BREW_READY_LED_NUMBER, CRGB(255, 255, 255));
+    FastLED.show(); 
   #endif
 
   DEBUG_print("\nMachine: %s\nVersion: %s\n", MACHINE_TYPE, sysVersion);

@@ -29,9 +29,10 @@
                                       // (ONLYPID=0) BREWDETECTION_POWER is active during the whole brew.
                                       // (ONLYPID=1) BREWDETECTION_POWER is only active when current temperature is 1.5 Celcius below SETPOINT.
 
-#define BREW_READY_DETECTION 0.3 // 0=off | 0.x=If measured temperature of the last 6 seconds has been within this defined margin around the SET_POINT, we are able to brew. (recommended value 0.3)
-#define BREW_READY_LED 0         // 0=off | 1=LED at GPO pinLed will lighten when BREW_READY_DETECTION triggers
-
+#define BREW_READY_DETECTION 0.3  // 0=off | 0.x=If measured temperature of the last 6 seconds has been within this defined margin around the SET_POINT, we are able to brew. (recommended value 0.3)
+#define BREW_READY_LED 0          // 0=off | 1=LED at GPO pinLed OR | 2=WS2812b LEDs
+                                  // will lighten when BREW_READY_DETECTION triggers
+#define BREW_READY_LED_NUMBER 0   // (BREW_READY_LED==2) Number of WS2812b-based LEDs
 //#define DEBUGMODE              // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
 
 
