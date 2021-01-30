@@ -1107,7 +1107,6 @@ void updateState() {
       } 
       
       /* STATE 1 (COLDSTART) DETECTION */
-      /* TOBIAS READD
       if (Input <= starttemp - coldStartStep1ActivationOffset) {
         snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to step 1 (coldstart)");
         DEBUG_println(debugline);
@@ -1119,7 +1118,6 @@ void updateState() {
         activeState = 1;
         break;
       }
-      */
 
       /* STATE 4 (BREW) DETECTION */
       if (brewDetectionSensitivity != 0 && brewDetection == 1) {
