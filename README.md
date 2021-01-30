@@ -82,7 +82,30 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 
 ## Changelog
 - 2.5.0 beta 1:
-  - TBD
+  - Attention: userConfig.h settings have been changed.
+  - Merged PR by finnito which changed/extended: (MANY THANKS FINNITO)
+    - Added support for ECM espresso maschine including logo.
+    - Added/Extended support for special functions (steam, hotwater, brew).
+    - Added custom steam functionality.
+    - Extended support to call special functions based on Pin A0 (analog levels) which can be used by eg. hardware buttons.
+    - Updated IoTMqttPanel config: IoTMQTTPanel-rancilio_v2.5.0_v1.json
+    - Added new state to state maschine (6=steam).
+  - Refactored/Extended finnito's code to integrate our new actionController():
+    - fully dynamic mapping of any(!) available analog/digital gpio port to custom functions, which are currently:
+      - BREWING   := start brewing
+      - HOTWATER  := start pouring hotwater
+      - STEAMING  := heat up maschine for streaming
+      - HEATER    := activate heater (not yet)
+      - PUMP      := activate pump
+      - VALVE     := activate Valve
+      - CLEANING  := activate cleaning mode (not yet)
+      - TEMP_INC  := increase setPoint (not yet)
+      - TEMP_DEC  := decrease setPoint (not yet)
+    - while also supporting the switch types: toggles (eg switches) and triggers (eg push buttons)
+    - mqtt support to controll these functions will also be supported (not yet)
+  - Removed EMERGENCY_ICON userConfig variable.
+  - Change default of userConfig EMERGENCY_TEMP from 116 to 125.
+  - Change default of userConfig TEMPSENSORRECOVERY from 1 to 0.
 - 2.4.0 master:
   - Special winter theme added. Activate with ICON_COLLECTION=2 in userConfig.h.
   - Added support for a customizable screen-saver (#define ENABLE_SCREEN_SAVER)

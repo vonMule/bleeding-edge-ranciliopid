@@ -4,7 +4,7 @@
 #define LIBRARY_VERSION	0.0.1
 
 #include "userConfig.h"
-#if (ONLYPID==0 && pinBrewButton==0)
+#if (ONLYPID==0 && pinBrewButton==0)  //TOBIAS remove this check
 #undef ENABLE_USER_MENU
 #define ENABLE_USER_MENU 0
 #endif

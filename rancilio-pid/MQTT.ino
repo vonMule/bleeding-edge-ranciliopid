@@ -364,7 +364,7 @@ void mqtt_parse(char* topic_str, char* data_str) {
     return;
     
   }
-   if (strcmp(configVar, "setPointSteam") == 0) {
+   if (strcmp(configVar, "setPointSteam") == 0) {  //TOBIAS: update wiki (blynk address,..)
     sscanf(data_str, "%lf", &data_double);
     if (data_double != setPointSteam) {
       DEBUG_print("setting setPointSteam=%s\n", data_str);
