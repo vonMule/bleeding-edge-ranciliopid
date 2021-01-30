@@ -1,5 +1,5 @@
 /********************************************************
- * Version 2.5.0
+ * Version 2.6.0 beta1
  * Config must be configured by the user
  *****************************************************/
 
@@ -13,7 +13,6 @@
  
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
-#define PIDCONTROLMODE 1      // 0 = Only PID with no Preinfussion | 1 = PID + Preinfussion, Classic Switches | 2 = PID + Preinfussion, Controlmenus + Buttons
 #define ONLYPID 1             // 1=Only PID with no Preinfussion | 0=PID + Preinfussion
 #define TEMPSENSOR 2          // 1=DS19B20; 2=TSIC306
 #define TEMPSENSORRECOVERY 0  // 1 = on, 2= off (default). If off, temp sensor errors will stop the heater until power cycle
@@ -37,39 +36,44 @@
 
 
 /*******   
- * Classic Control can be used if the Arduino should control the entire espressomachine.
- * It is usable with any espressomachine that has next to the On/off-switch 3 additional
- * Switches for Brewing, Steam and Hotwater...
- * The On/off switch is hardwired to the powercord and switches Power for the whole machine.
- * The 3 switches are wired to the A0 analog Input of the Arduino via voltage dividers,
- * See the wiring diagrams for additional info.
- *******/
- //TOBIAS add dynamic defines including mapping to special functions
-
-#define SWITCHBREWLOWERTHRESHOLD        245 //Digital threshold at analog input A0 
-                                            // between 0-1024 that enables the brew function
-#define SWITCHBREWUPPERTHRESHOLD        260 //Digital threshold at analog input A0 
-                                            // between 0-1024 that enables the brew function
-#define SWITCHHOTWATERLOWERTHRESHOLD    802 //Digital threshold at analog input A0 
-                                            // between 0-1024 that enables the hotwater function
-#define SWITCHHOTWATERUPPERTHRESHOLD    815 //Digital threshold at analog input A0 
-                                            // between 0-1024 that enables the hotwater function
-#define SWITCHSTEAMLOWERTHRESHOLD       525 //Digital threshold at analog input A0 
-                                            // between 0-1024 that enables the steam function
-#define SWITCHSTEAMUPPERTHRESHOLD       540 //Digital threshold at analog input A0 
-                                            // between 0-1024 that enables the steam function
-
-
-/*******   
  * Hardware GPIO Pin Mapping (just change values but don't comment)
  *******/
 #define pinTemperature    2    // read temperature (TSIC)
 #define pinRelayHeater    14   // trigger relais used to heat water
 #define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve
 #define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump
-#define pinBrewButton     0    // (ONLYPID=0) 0 = default (A0/ADC0) GPIO Port to use to detect brew button press
+
 #define pinLed            15   // (BREW_READY_LED=1) brewReady LED (16 is also "free" to use)
 
+/*******   
+ * GPIO Pin Usage: Here you can define how the GPIO boards (analog/digital) shall be used to execute functions. 
+ * 
+ * Parsing rules:
+ *  - left to right: First ACTION_BLOCK which matches the gpio-value is executed and following actions ignored
+ *  - gpio-values not matching any ACTION_BLOCKs are ignored
+ *
+ * Format of CONTROLS_CONFIG:
+ *  CONTROLS_CONFIG = "<GPIO_CONFIG_BLOCK_1>#<GPIO_CONFIG_BLOCK_2>#<unlimited number of blocks>"
+ *     GPIO_CONFIG_BLOCK_1 = "<GPIO_Number>:<analog|digital>:<toggle|trigger>|<ACTION_BLOCK_1>;<ACTION_BLOCK_2>;<unlimited number of blocks>"
+ *        GPIO number: ESP8266/nodemcu: A0 = 17 && esp32: https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
+ *        "toggle" keeps its state and "trigger" only shortly changes its state before it resets.
+ *        ACTION_BLOCK = "<lowerBoundary>-<upperBoundary>:<ACTION>"
+ *            ACTION = BREWING|HOTWATER|STEAMING|PUMP|VALVE|... (see controls.h for a full list of supported actions)
+ *            
+ *    
+ *    Examples:
+ *    a) Hardware Switch (On/Off) on A0(GPIO17) which controls BREWING when gpio-value >= 700.
+ *    #define CONTROLS_CONFIG "17:analog:toggle|700-1024:BREWING#"
+ *    
+ *    b) Hardware Toggle via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
+ *    #define CONTROLS_CONFIG "17:analog:toggle|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
+ *    
+ *    c) Hardware Switches via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
+ *    #define CONTROLS_CONFIG "17:analog:toggle|245-260:BREWING;525-540:STEAMING;802-815:HOTWATER#"
+ *******/
+#define DEBUG_FORCE_GPIO_CHECK   0  // 0=off (default). 1=on. If on, PID is disabled and only trigger/toogles are detected and printed in DEBUG log.
+//#define CONTROLS_CONFIG "17:analog:toggle|700-1024:BREWING#"  //when a simple switch is connected on port A0 and this switch is used to trigger BREWING.
+#define CONTROLS_CONFIG "17:analog:toggle|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
 
 /*******   
  * Display Settings
@@ -78,7 +82,6 @@
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter"
 #define DISPLAY_TEXT "Bleeding-Edge PID"  // Text is displayed on bootup (max 21 chars)
 //#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)
-#define EMERGENCY_ICON "default"          // icon displayed when temperature is >EMERGENCY_TEMP. Allowed values are "default" or "steam"
 #define EMERGENCY_TEMP 116                // If temperature is higher then notifications are send via display/debug/mqtt.
                                           // Reason might be an error OR the user wants to steam milk.
 #define ENABLE_FAILURE_STATUS_ICONS 1     // 1 = on (default), 0 = off. If enabled show status icons if services are offline.
@@ -111,7 +114,7 @@
 #define AGGOTV 40       // Tv (Rancilio Silvia 5E: 40, ...)
 
 // Steam PID values
-#define SETPOINT_STEAM 117    // Steam Temperature SetPoint (Rancilio: 117, ECM Casa Prima: 145, ...)
+#define SETPOINT_STEAM 116    // Steam Temperature SetPoint (Rancilio: 116, ECM Casa Prima: 145, ...)
 #define AGGSTEAMKP 170        // Kp (Rancilio 5E: ?, ECM Casa Prima: 170, ...)
 #define AGGSTEAMTN 40         // Tn (Rancilio 5E: ?, ECM Casa Prima: 40, ...)
 #define AGGSTEAMTV 40         // Tv (Rancilio 5E: ?, ECM Casa Prima: 40, ...)

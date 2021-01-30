@@ -1,7 +1,6 @@
 #ifndef _control_H
 #define _control_H
 
-
 //supported actions
 #define UNDEFINED_ACTION  0
 #define BREWING   1
@@ -14,18 +13,17 @@
 #define TEMP_INC  8
 #define TEMP_DEC  9
 
-// actionState contain the status (on/off/..) of each actions
-#define MAX_NUM_ACTIONS 20
-int actionState[MAX_NUM_ACTIONS];
-
-
-// gpioLastAction contain the last known action executed (per gpio port)
-#define MAX_NUM_GPIO 35
-int gpioLastAction[MAX_NUM_GPIO];
+/*
+ * TODO:
+ * - Add MQTT Integration
+ * - FIX STEAMING PID
+ * - Add further functions
+ * - Code cleanup
+ */
 
 typedef struct controlMap
 {
-      int port;    //TOBIAS: better gpio
+      int gpio;
       char* portType;  //analog/digital
       char* type;      //trigger/switch
       int lowerBoundary;
@@ -35,19 +33,23 @@ typedef struct controlMap
       struct controlMap* nextControlMap;
 } controlMap;
 
-/*
-typedef struct actionState
-{
-      char* action;  //brewing / steaming
-      int state;     // 0/1 (/...)
-      //char* callableFunction;  //done by stateMaschine
-      struct controlMap* nextControlMap;
-} actionState;
-*/
+unsigned long previousCheckControls = 0;
+#define FREQUENCYCHECKCONTROLS 300  // TOBIAS: change to 50 or 200? make dynamical!
+
+// actionState contain the status (on/off/..) of each actions
+#define MAX_NUM_ACTIONS 20
+int actionState[MAX_NUM_ACTIONS];
+
+// gpioLastAction contain the last known action executed (per gpio)
+#define MAX_NUM_GPIO 35
+int gpioLastAction[MAX_NUM_GPIO];
 
 controlMap* parseControlsConfig();
 void printControlsConfig(controlMap*);
-
 void checkControls(controlMap*);
+
+int simulatedBrewSwitch = 0;
+
+
 
 #endif

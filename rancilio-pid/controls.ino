@@ -1,6 +1,8 @@
-unsigned long previousCheckControls = 0;
-#define FREQUENCYCHECKCONTROLS 1000  // TOBIAS: change to 50 or 200?
-
+/********************************************************
+ * BLEEDING EDGE RANCILIO-PID. 
+ * https://github.com/medlor/bleeding-edge-ranciliopid   
+ *****************************************************/
+ 
 void splitStringBySeperator(char* source, char seperator, char** resultLeft, char** resultRight) {
     char* separator1 = strchr(source, seperator);
     if (separator1 != 0)
@@ -48,12 +50,11 @@ controlMap* parseControlsConfig() {
     controlMap* controlsConfig = NULL;
     controlMap* lastControlMap = NULL;
 
-    //controlMap controlConfigA0[count+1]; // = controlMap[count+1];
     snprintf(debugline, sizeof(debugline), "inside parseControlsConfig():");
     DEBUG_println(debugline);
 
     // Read each controlsConfigPin pair 
-    // eg. A0:toggle|245-260:brewCoffee;525-540:steam;802-815:hotwater;#"
+    // eg. CONTROLS_CONFIG "17:analog:toggle|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
     char* controlsConfigDefine = (char*) malloc(strlen(CONTROLS_CONFIG));
     strncpy(controlsConfigDefine, CONTROLS_CONFIG, strlen(CONTROLS_CONFIG));
     char* controlsConfigBlock;
@@ -73,12 +74,12 @@ controlMap* parseControlsConfig() {
         snprintf(debugline, sizeof(debugline), "controlsConfigBlockDefinition=%s controlsConfigActionMappings=%s", controlsConfigBlockDefinition, controlsConfigActionMappings);
         DEBUG_println(debugline);
 
-        int controlsConfigPort = -1;
+        int controlsConfigGpio = -1;
         char* controlsConfigPortType = NULL;
         char* controlsConfigType = NULL;
-        splitStringBySeperator(controlsConfigBlock, ':', &controlsConfigPort, &controlsConfigPortType);
+        splitStringBySeperator(controlsConfigBlock, ':', &controlsConfigGpio, &controlsConfigPortType);
         splitStringBySeperator(controlsConfigPortType, ':', &controlsConfigPortType, &controlsConfigType);
-        snprintf(debugline, sizeof(debugline), "controlsConfigPort=%i controlsConfigPortType=%s controlsConfigType=%s", controlsConfigPort, controlsConfigPortType, controlsConfigType);
+        snprintf(debugline, sizeof(debugline), "controlsConfigGpio=%i controlsConfigPortType=%s controlsConfigType=%s", controlsConfigGpio, controlsConfigPortType, controlsConfigType);
         DEBUG_println(debugline);
 
         char* p = controlsConfigActionMappings;
@@ -104,13 +105,13 @@ controlMap* parseControlsConfig() {
             nextControlMap->action = UNDEFINED_ACTION;
             continue;
           }
-          if (controlsConfigPort >= MAX_NUM_GPIO) {
+          if (controlsConfigGpio >= MAX_NUM_GPIO) {
             ERROR_println("More gpio used as allowed in MAX_NUM_GPIO");
-            nextControlMap->port = 0;
+            nextControlMap->gpio = 0;
             continue;
           }
           nextControlMap = (controlMap*) calloc(1, sizeof (struct controlMap));
-          nextControlMap->port = controlsConfigPort;
+          nextControlMap->gpio = controlsConfigGpio;
           nextControlMap->portType = controlsConfigPortType; 
           nextControlMap->type = controlsConfigType; 
           nextControlMap->lowerBoundary = lowerBoundary; 
@@ -139,7 +140,7 @@ void printControlsConfig(controlMap* controlsConfig) {
   }
   controlMap* ptr = controlsConfig;
   do {
-    snprintf(debugline, sizeof(debugline), "%2i(%7s,%7s): %4u-%-4u -> %s", ptr->port, ptr->portType, ptr->type, ptr->lowerBoundary, ptr->upperBoundary, convertDefineToAction(ptr->action));
+    snprintf(debugline, sizeof(debugline), "%2i(%7s,%7s): %4u-%-4u -> %s", ptr->gpio, ptr->portType, ptr->type, ptr->lowerBoundary, ptr->upperBoundary, convertDefineToAction(ptr->action));
     DEBUG_println(debugline);
   } while ((ptr = ptr->nextControlMap) != NULL);
 }
@@ -153,16 +154,41 @@ void configureControlsHardware(controlMap* controlsConfig) {
   controlMap* ptr = controlsConfig;
   int port = -1;
   do {
-    if (ptr->port == port) {continue;}
-    port = ptr->port;
-    snprintf(debugline, sizeof(debugline), "Set Hardware GPIO %2i to INPUT", ptr->port);
+    if (ptr->gpio == port) {continue;}
+    port = ptr->gpio;
+    snprintf(debugline, sizeof(debugline), "Set Hardware GPIO %2i to INPUT", ptr->gpio);
     DEBUG_println(debugline);
     if ( strcmp(ptr->portType, "analog") == 0) {
-      pinMode(ptr->port, INPUT);
+      pinMode(ptr->gpio, INPUT);
       //add stuff here?
     } else {
-      pinMode(ptr->port, INPUT);
+      pinMode(ptr->gpio, INPUT);
     }
+  } while ((ptr = ptr->nextControlMap) != NULL);
+}
+
+
+
+void debugControlHardware(controlMap* controlsConfig) {
+  if (!controlsConfig) {
+    DEBUG_println("controlsConfig is empty");
+    return;
+  }
+  controlMap* ptr = controlsConfig;
+  int port = -1;
+  int valueRead = -1;
+  DEBUG_println("-------------------------------------");
+  do {
+    if (ptr->gpio == port) {continue;}
+    port = ptr->gpio;
+    if ( strcmp(ptr->portType, "analog") == 0) {
+      valueRead = analogRead(ptr->gpio);
+    } else {
+      valueRead = digitalRead(ptr->gpio);
+    }
+    snprintf(debugline, sizeof(debugline), "GPIO %2i: %d", ptr->gpio, valueRead);
+    DEBUG_println(debugline);
+ 
   } while ((ptr = ptr->nextControlMap) != NULL);
 }
 
@@ -195,7 +221,7 @@ int getActionOfControl(controlMap* controlsConfig, int port, int value) {
   if (!controlsConfig) { return UNDEFINED_ACTION; }
   controlMap* ptr = controlsConfig;
   do {
-    if (port == ptr->port) {
+    if (port == ptr->gpio) {
       if (value >= ptr->lowerBoundary && value <= ptr->upperBoundary) {
         return ptr->action;
       }
@@ -203,11 +229,6 @@ int getActionOfControl(controlMap* controlsConfig, int port, int value) {
   } while ((ptr = ptr->nextControlMap) != NULL);
   return UNDEFINED_ACTION;
 }
-
-// maschine states used by state-maschine: brewing, steaming, ... -> actionState
-// GPIO state to save current and lastAction
-//int gpio_16_lastAction = UNDEFINED_ACTION;
-//int gpio_17_lastAction = UNDEFINED_ACTION;
 
 
 void actionController(int action, int newState) {  
@@ -232,48 +253,10 @@ void actionController(int action, int newState) {
     if (action == HOTWATER) { actionController(BREWING, 0); actionController(CLEANING, 0); hotwaterAction(newState); }
     else if (action == BREWING) { actionController(HOTWATER, 0); actionController(CLEANING, 0); brewingAction(newState); }
     else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); steamingAction(newState); }
-    else if (action == CLEANING) { actionController(BREWING, 0); actionController(STEAMING, 0); actionController(HOTWATER, 0); cleaningAction(newState); }
+    else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); cleaningAction(newState); }
   }
+  userActivity = millis();
 }
-
-
-
-/*
-void* executeActionOfControl(controlMap* controlsConfig, int port, int value) {
-  if (!controlsConfig) { return; }
-  controlMap* ptr = controlsConfig;
-  char *gpio_17_new_action = NULL;
-  do {
-    if (port == ptr->port) {
-      if (value >= ptr->lowerBoundary && value <= ptr->upperBoundary) {
-        if (ptr->type == "trigger") {
-          sample_action = sample_action == 0 ? 1 : 0; 
-        }
-        else if (ptr->type == "toggle") {
-          //sample_action = sample_action == 0 ? 1 : 0; 
-          gpio_17_new_action = ptr->action;
-          
-        } else {
-          snprintf(debugline, sizeof(debugline), "type (%s) unknown?", ptr->type);
-          DEBUG_println(debugline);
-        }
-      }
-    }
-  } while ((ptr = ptr->nextControlMap) != NULL);
-  if (gpio_17_new_state == NULL) {
-    snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=off", ptr->port, gpio_17_new_action);
-    DEBUG_println(debugline);
-  }
-  else if (strcmp(gpio_17_new_action, gpio_17_latest_state) != 0) {
-    snprintf(debugline, sizeof(debugline), "GPIO %d: no change in state", ptr->port);
-    DEBUG_println(debugline);
-  } else {
-    snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=unchanged", ptr->port, gpio_17_new_action);
-    DEBUG_println(debugline);
-  }
-  return;
-}
-*/
 
 
 void checkControls(controlMap* controlsConfig) {
@@ -281,160 +264,92 @@ void checkControls(controlMap* controlsConfig) {
   unsigned long aktuelleZeit = millis();
   if ( aktuelleZeit >= previousCheckControls + FREQUENCYCHECKCONTROLS ) {
     previousCheckControls = aktuelleZeit;
-    DEBUG_println("inside checkControls()");
+    //DEBUG_println("inside checkControls()");
     
     controlMap* ptr = controlsConfig;
     int currentAction = -1;
     int portRead = -1;
     int valueRead = -1;
     do {
-      if (ptr->port == portRead) {continue;}
-      portRead = ptr->port;
+      if (ptr->gpio == portRead) {continue;}
+      portRead = ptr->gpio;
       
       if ( strcmp(ptr->portType, "analog") == 0) {
-        valueRead = analogRead(ptr->port);  //analog pin
+        valueRead = analogRead(ptr->gpio);  //analog pin
       } else {
-        valueRead = digitalRead(ptr->port); //digital pin
+        valueRead = digitalRead(ptr->gpio); //digital pin
       }
 
       //process button press
       currentAction = getActionOfControl(controlsConfig, portRead, valueRead);
       if (strcmp(ptr->type, "trigger") == 0) {
         if (currentAction == UNDEFINED_ACTION) {  //no boundaries match -> button not pressed anymore
-          if (gpioLastAction[ptr->port] != UNDEFINED_ACTION) {
-            //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=released", ptr->port, convertDefineToAction(gpio_16_lastAction));
+          if (gpioLastAction[ptr->gpio] != UNDEFINED_ACTION) {
+            //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=released", ptr->gpio, convertDefineToAction(gpio_16_lastAction));
             //DEBUG_println(debugline);
           }
-          gpioLastAction[ptr->port] = UNDEFINED_ACTION;
-        } else if ((gpioLastAction[ptr->port] == UNDEFINED_ACTION) && (currentAction != gpioLastAction[ptr->port])) {
-          gpioLastAction[ptr->port] = currentAction;
+          gpioLastAction[ptr->gpio] = UNDEFINED_ACTION;
+        } else if ((gpioLastAction[ptr->gpio] == UNDEFINED_ACTION) && (currentAction != gpioLastAction[ptr->gpio])) {
+          gpioLastAction[ptr->gpio] = currentAction;
           actionController(currentAction, -1);
         } else {  //if button is still pressed
-          //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=unchanged", ptr->port, convertDefineToAction(currentAction));
+          //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=unchanged", ptr->gpio, convertDefineToAction(currentAction));
           //DEBUG_println(debugline);
         }
         
       } else if (strcmp(ptr->type, "toggle") == 0) {
         if (currentAction == UNDEFINED_ACTION) {  //no boundaries match -> toggle is in "off" position
-          if (gpioLastAction[ptr->port] != UNDEFINED_ACTION) {  //disable old action
-            actionController(gpioLastAction[ptr->port], 0);
+          if (gpioLastAction[ptr->gpio] != UNDEFINED_ACTION) {  //disable old action
+            actionController(gpioLastAction[ptr->gpio], 0);
           }
-          gpioLastAction[ptr->port] = UNDEFINED_ACTION;
-        } else if ((gpioLastAction[ptr->port] == UNDEFINED_ACTION) && (currentAction != UNDEFINED_ACTION)) {
-          gpioLastAction[ptr->port] = currentAction;
+          gpioLastAction[ptr->gpio] = UNDEFINED_ACTION;
+        } else if ((gpioLastAction[ptr->gpio] == UNDEFINED_ACTION) && (currentAction != UNDEFINED_ACTION)) {
+          gpioLastAction[ptr->gpio] = currentAction;
           actionController(currentAction, 1);
-        } else if ((gpioLastAction[ptr->port] != UNDEFINED_ACTION) && (currentAction != gpioLastAction[ptr->port])) {  //another action if same port is triggered
-          //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=%d", ptr->port, convertDefineToAction(gpio_17_lastAction), 0);  //disable old action
+        } else if ((gpioLastAction[ptr->gpio] != UNDEFINED_ACTION) && (currentAction != gpioLastAction[ptr->gpio])) {  //another action if same port is triggered
+          //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=%d", ptr->gpio, convertDefineToAction(gpio_17_lastAction), 0);  //disable old action
           //DEBUG_println(debugline);
-          actionController(gpioLastAction[ptr->port], 0);
-          gpioLastAction[ptr->port] = currentAction;
+          actionController(gpioLastAction[ptr->gpio], 0);
+          gpioLastAction[ptr->gpio] = currentAction;
           actionController(currentAction, 1);
-        } else if (currentAction == gpioLastAction[ptr->port]) {
-          //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=unchanged", ptr->port, convertDefineToAction(currentAction));
+        } else if (currentAction == gpioLastAction[ptr->gpio]) {
+          //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=unchanged", ptr->gpio, convertDefineToAction(currentAction));
           //DEBUG_println(debugline);
         }
-       
       } else {
         snprintf(debugline, sizeof(debugline), "type (%s) unknown?", ptr->type);
         DEBUG_println(debugline);
       }
-      
-      
     } while ((ptr = ptr->nextControlMap) != NULL);
   }
 }
 
 
-/*
-void checkControlsOLD(controlMap* controlsConfig) {
-  if (!controlsConfig) { return; }
-  unsigned long aktuelleZeit = millis();
-  if ( aktuelleZeit >= previousCheckControls + FREQUENCYCHECKCONTROLS ) {
-    previousCheckControls = aktuelleZeit;
-
-    DEBUG_println("inside checkControls()");
-
-    int portRead = -1;
-    int valueRead = -1;
-    controlMap* ptr = controlsConfig;
-    do {
-      //snprintf(debugline, sizeof(debugline), "%2i(%7s %7s): %4i-%-4i -> %s", ptr->port, ptr->portType, ptr->type, ptr->lowerBoundary, ptr->upperBoundary, ptr->action);
-      //DEBUG_println(debugline);
-      
-      //if (ptr->port == -1) break;
-      if (ptr->port != portRead) {  //other gpio in loop found
-        portRead = ptr->port;
-        
-        if ( strcmp(ptr->portType, "analog") == 0) {
-          valueRead = analogRead(ptr->port);  //analog pin
-
-          if (ptr->value >=0 && valueRead >= ptr->value +10 || valueRead <= ptr->value -10) {
-            snprintf(debugline, sizeof(debugline), "DETECTED %s: gpio=%i readValue=%i (oldValue=%i)", getActionOfControl(controlsConfig, ptr->port, valueRead), ptr->port, valueRead, ptr->value);
-            DEBUG_println(debugline);
-            executeActionOfControl(controlsConfig, ptr->port, valueRead);
-          }
-          ptr->value = valueRead;
-          
-        } else {
-          valueRead = digitalRead(ptr->port); //digital pin
-
-          if (ptr->value >=0 && valueRead != ptr->value) {
-            snprintf(debugline, sizeof(debugline), "DETECTED %s: gpio=%i readValue=%i (oldValue=%i)", getActionOfControl(controlsConfig, ptr->port, valueRead), ptr->port, valueRead, ptr->value);
-            DEBUG_println(debugline);
-            executeActionOfControl(controlsConfig, ptr->port, valueRead);
-          }
-          ptr->value = valueRead;
-        }
-        
-      } else {  //still the same gpio port in loop
-        //generate event TOBIAS YYY2
-        if (valueRead >= ptr->value +10 || valueRead <= ptr->value -10) {
-           snprintf(debugline, sizeof(debugline), "DETECTED: gpio=%i readValue=%i (oldValue=%i)", ptr->port, valueRead, ptr->value);
-            DEBUG_println(debugline);
-          ptr->value = valueRead;
-        }
-      }
-      
-    } while ((ptr = ptr->nextControlMap) != NULL);
-
-  }
-}
-*/
-
+/********************************************************
+ * helper functions to execute actions
+*********************************************************/
 void brewingAction(int state) {
-  brewing = state;
+  if (OnlyPID) return;
+  simulatedBrewSwitch = state;
 }
 
 void hotwaterAction(int state) {
   // Function switches the pump on to dispense hot water
-  if (state == 1 && digitalRead(pinRelayPumpe) == relayOFF) {
+  if (OnlyPID) return;
+  if (state == 1) { // && digitalRead(pinRelayPumpe) == relayOFF) {
     digitalWrite(pinRelayPumpe, relayON);
-    DEBUG_print("pump relay: on.\n");
-  } else if (state == 0 && digitalRead(pinRelayPumpe) == relayON) {
+    DEBUG_print("hotwaterAction(): pump relay: on\n");
+  } else if (state == 0) { //&& digitalRead(pinRelayPumpe) == relayON) {
     digitalWrite(pinRelayPumpe, relayOFF);
-    DEBUG_print("pump relay: off.\n");
+    DEBUG_print("hotwaterAction(): pump relay: off\n");
   }
 }
 
 void steamingAction(int state) { 
-  // Function resets the setpoint-, P-, I-, D-, Values
-  // of the PID Controller to generate steam.
-  // Sets active state to State 6.
-  /*
-  if (*activeSetPoint != setPointSteam) {  ///YYY1
-    activeSetPoint = &setPointSteam;
-    DEBUG_print("set activeSetPoint: %0.2f Steam\n", setPointSteam);
-  }
-  */
-  steaming = state; 
-  /*
-  if (activeState != 6) {
-    activeState = 6;  //YYY  //not ideal to have state maschine status changed externally
-    DEBUG_print("set activeState: 6 Steam\n");
-  }
-  */
+  steaming = state; //disabled because not yet ready/tested
 }
 
 void cleaningAction(int state) { 
+  if (OnlyPID) return;
   int cleaning = state; 
 }

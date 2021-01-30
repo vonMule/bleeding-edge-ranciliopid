@@ -23,14 +23,14 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.5.0 beta1";
+const char* sysVersion PROGMEM  = "2.6.0 beta1";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
 ******************************************************/
 const int Display = DISPLAY;
 const int OnlyPID = ONLYPID;
-const int PidControlMode = PIDCONTROLMODE;
+//const int PidControlMode = PIDCONTROLMODE;
 const int TempSensor = TEMPSENSOR;
 const int TempSensorRecovery = TEMPSENSORRECOVERY;
 const int brewDetection = BREWDETECTION;
@@ -208,35 +208,30 @@ double starttempOffset = 0;  //Increasing this lead to too high temp and emergen
 PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyPowerOffset_Activated, &steadyPowerOffsetTime, &activeSetPoint, aggKp, aggKi, aggKd);
 
 /********************************************************
-   Analog Schalter Read
+   BREWING / PREINFUSSION
 ******************************************************/
 double brewtime          = BREWTIME;
 double preinfusion       = PREINFUSION;
 double preinfusionpause  = PREINFUSION_PAUSE;
-int brewing              = 0;
-int steaming             = 0;
-int brewswitch           = 0;
+int brewing              = 0;  //Attention: For OnlyPID==0 brewing must only be changed in brew()!
 bool waitingForBrewSwitchOff = false;
+int brewState            = 0;
 unsigned long totalbrewtime = 0;
 unsigned long bezugsZeit = 0;
 unsigned long startZeit  = 0;
 unsigned long previousBrewCheck = 0;
 unsigned long lastBrewMessage   = 0;
 
-unsigned long previousControlButtonCheck = 0;
-
-int activeSwitch = 0; //Switch that is enabled, used in checkControlSwitch()
-int switchBrewLowerThreshold = SWITCHBREWLOWERTHRESHOLD; //Threshold checkControlSwitch()
-int switchBrewUpperThreshold = SWITCHBREWUPPERTHRESHOLD; //Threshold checkControlSwitch()
-int switchHotWaterLowerThreshold = SWITCHHOTWATERLOWERTHRESHOLD; //Threshold checkControlSwitch()
-int switchHotWaterUpperThreshold = SWITCHHOTWATERUPPERTHRESHOLD; //Threshold checkControlSwitch()
-int switchSteamLowerThreshold = SWITCHSTEAMLOWERTHRESHOLD; //Threshold checkControlSwitch()
-int switchSteamUpperThreshold = SWITCHSTEAMUPPERTHRESHOLD; //Threshold checkControlSwitch()
+/********************************************************
+   STEAMING
+******************************************************/
+int steaming             = 0;
+unsigned long lastSteamMessage = 0;
 
 /********************************************************
    Sensor check
 ******************************************************/
-bool sensorError = false;
+bool sensorError    = false;
 int error           = 0;
 int maxErrorCounter = 10 ;  //define maximum number of consecutive polls (of intervaltempmes* duration) to have errors
 
@@ -337,6 +332,7 @@ const int isrCounterFrame = 1000;
 #include "controls.h"
 
 controlMap* controlsConfig = NULL;
+unsigned long lastCheckGpio = 0;
 
 /********************************************************
    BLYNK
@@ -748,195 +744,87 @@ void refreshTemp() {
   }
 }
 
-/********************************************************
-    Button Admin Menu
-******************************************************/
-int checkControlButtons() {
-  //TODO add fail-safe if buttons are always detected as pressed
-  //TODO add DEFINE
-  const int lower_seperating_signal = 110;
-  const int higher_seperating_signal = 320;
-  const int default_seperating_signal = 630;
-  if ( millis() >= previousControlButtonCheck + 100 ) {  //250ms
-    //previousControlButtonCheck = millis();
-    int signal = analogRead(0);
-    //DEBUG_print("ControlButton signal: %d\n", signal);
-    if (signal > 10 && signal <= lower_seperating_signal) {
-      previousControlButtonCheck = millis() + 180;
-      return 1; 
-    } else if (signal > lower_seperating_signal && signal <= higher_seperating_signal) {
-      previousControlButtonCheck = millis() + 180;
-      return 2; 
-    } else if (signal >higher_seperating_signal && signal <= default_seperating_signal) {
-      previousControlButtonCheck = millis() + 180;
-      return 3; 
-    } else if (signal >default_seperating_signal) {
-      previousControlButtonCheck = millis();
-      return 0;
-    } //else {
-      //previousControlButtonCheck = millis();
-      //DEBUG_print("Undefined ControlButton signal: %d\n", signal);
-    //}
-  }
-  return 0;
-}
-
-/********************************************************
-    PreInfusion, Brew , Steam, Hotwater if not Only PID
-    for Commandmenu & Switches
-******************************************************/
-
-void brewCoffee() {  //TOBIAS combine this func with brew()  YYY2
-  // Function switches the valve and pump on,
-  // initiates the starttime and calculates the
-  // time brewing
-  unsigned long aktuelleZeit = millis();
-  
-  if (digitalRead(pinRelayPumpe) == relayOFF) {
-    digitalWrite(pinRelayPumpe, relayON);
-    DEBUG_print("pump relay: on.\n");
-  }
-  if (digitalRead(pinRelayVentil) == relayOFF) {
-    digitalWrite(pinRelayVentil, relayON);
-    DEBUG_print("ventil relay: on.\n");
-  }
-  if (brewing == 0) {
-    brewing = 1;
-    startZeit = aktuelleZeit;
-    activeState = 4;  //YYY //not ideal to have state maschine status changed externally
-    DEBUG_print("activeState:(%u)\n", activeState);
-    DEBUG_print("brewing:(%u)\n", brewing);
-    DEBUG_print("startZeit:(%lu)\n", startZeit);
-  }
-
-  bezugsZeit = aktuelleZeit - startZeit;
-  DEBUG_print("totalbrewtime:(%lu)\n", bezugsZeit);
-}
-
-
-
-
-
-void standby() {
-  // Checks standby parameters and reverts if necessary
-  // is supposed be called regularly
-
-  if (digitalRead(pinRelayPumpe) == relayON) {
-    digitalWrite(pinRelayPumpe, relayOFF);
-    DEBUG_print("pump relay: off.\n");
-  }
-  if (digitalRead(pinRelayVentil) == relayON) {
-    digitalWrite(pinRelayVentil, relayOFF);
-    DEBUG_print("valve relay: off.\n");
-  }
-  if (brewing == 1) {
-    brewing = 0;
-    DEBUG_print("brewing: %u\n", brewing);
-  }
-  if (bezugsZeit != 0) {
-    bezugsZeit = 0;
-    DEBUG_print("bezugsZeit: %lu\n", bezugsZeit);
-  }
-  if (steaming == 1) {
-    steaming = 0;
-    DEBUG_print("steaming: %u\n", steaming);
-  }
-}
-
-/*
-void checkControlSwitches() {
-   
-  if ( millis() >= previousControlButtonCheck ) {
-    //DEBUG_print("Function call: checkControlSwitches()\n");
-    previousControlButtonCheck = millis() + 200;
-    int analogPinValue = analogRead(pinBrewButton);
-    if (switchBrewLowerThreshold < analogPinValue && analogPinValue < switchBrewUpperThreshold) {
-      brewCoffee();
-      activeSwitch = 1;
-    }
-    else if (switchHotWaterLowerThreshold < analogPinValue && analogPinValue < switchHotWaterUpperThreshold) {
-      dispenseHotWater();
-      activeSwitch = 2;
-    }
-    else if (switchSteamLowerThreshold < analogPinValue && analogPinValue < switchSteamUpperThreshold) {
-      generateSteam();
-      activeSwitch = 3;
-    }
-    else {
-    standby();
-      if (activeSwitch != 0) {
-        activeSwitch = 0;
-      }
-    }
-  }
-}
-*/
 
 /********************************************************
     PreInfusion, Brew , if not Only PID
 ******************************************************/
 void brew() {  //YYY2
-  if (OnlyPID == 0) {
+  if (!OnlyPID) {
     unsigned long aktuelleZeit = millis();
-    
-    if ( aktuelleZeit >= previousBrewCheck + 50 ) {  //50ms
-      previousBrewCheck = aktuelleZeit;
-      brewswitch = analogRead(pinBrewButton);
-
+    //if ( aktuelleZeit >= previousBrewCheck + 50 ) {  //50ms needed at all? TOBIAS
+    //  previousBrewCheck = aktuelleZeit;
       //if (aktuelleZeit >= output_timestamp + 500) {
-      //  DEBUG_print("brew(): brewswitch=%u | brewing=%u | waitingForBrewSwitchOff=%u\n", brewswitch, brewing, waitingForBrewSwitchOff);
+      //  DEBUG_print("brew(): brewswitch=%u | brewing=%u | waitingForBrewSwitchOff=%u\n", simulatedBrewSwitch, brewing, waitingForBrewSwitchOff);
       //  output_timestamp = aktuelleZeit;
       //}
-      if (brewswitch > 700 && not (brewing == 0 && waitingForBrewSwitchOff) ) {
+      //ORIG: if (simulatedBrewSwitch && not (brewing == 0 && waitingForBrewSwitchOff) ) {
+      if (simulatedBrewSwitch && (brewing == 1 || waitingForBrewSwitchOff == false) ) {
         totalbrewtime = (preinfusion + preinfusionpause + brewtime) * 1000;
-        userActivity = millis();
+        //userActivity = millis();
         
         if (brewing == 0) {
-          brewing = 1;
+          brewing = 1;  // Attention: For OnlyPID==0 brewing must only be changed in this function! Not externally.
           startZeit = aktuelleZeit;
           waitingForBrewSwitchOff = true;         
           
         }
         bezugsZeit = aktuelleZeit - startZeit; 
   
-        //if (aktuelleZeit >= lastBrewMessage + 500) {
-        //  lastBrewMessage = aktuelleZeit;
-        //  DEBUG_print("brew(): bezugsZeit=%lu totalbrewtime=%lu\n", bezugsZeit/1000, totalbrewtime/1000);
-        //}
+        if (aktuelleZeit >= lastBrewMessage + 500) {
+          lastBrewMessage = aktuelleZeit;
+          DEBUG_print("brew(): bezugsZeit=%lu totalbrewtime=%lu\n", bezugsZeit/1000, totalbrewtime/1000);
+        }
         if (bezugsZeit <= totalbrewtime) {
           if (bezugsZeit <= preinfusion*1000) {
-            //DEBUG_println("preinfusion");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayON);
+            if (brewState != 1) {
+              brewState = 1;
+              DEBUG_println("preinfusion");
+              digitalWrite(pinRelayVentil, relayON);
+              digitalWrite(pinRelayPumpe, relayON);
+            }
           } else if (bezugsZeit > preinfusion*1000 && bezugsZeit <= (preinfusion + preinfusionpause)*1000) {
-            //DEBUG_println("Pause");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayOFF);
+            if (brewState != 2) {
+              brewState = 2;
+              DEBUG_println("Pause");
+              digitalWrite(pinRelayVentil, relayON);
+              digitalWrite(pinRelayPumpe, relayOFF);
+            }
           } else if (bezugsZeit > (preinfusion + preinfusionpause)*1000) {
-            //DEBUG_println("Brew");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayON);
+            if (brewState != 3) {
+              brewState = 3;
+              DEBUG_println("Brew");
+              digitalWrite(pinRelayVentil, relayON);
+              digitalWrite(pinRelayPumpe, relayON);
+            }
           }
         } else {
+          brewState = 0;
           DEBUG_print("End brew()\n");
           brewing = 0;
-        }
-      }
-  
-      if (brewswitch <= 700) {
-        if (waitingForBrewSwitchOff) {
-          DEBUG_print("brewswitch=off\n");
-          userActivity = millis();
-        }
-        waitingForBrewSwitchOff = false;
-        brewing = 0;
-        bezugsZeit = 0;
-      }
-      if (brewing == 0) {
           digitalWrite(pinRelayVentil, relayOFF);
           digitalWrite(pinRelayPumpe, relayOFF);
+        }
+      } else if (simulatedBrewSwitch && !brewing) {  //corner-case: switch=On but brewing==0
+        waitingForBrewSwitchOff = true;  //just to be sure
+        //digitalWrite(pinRelayVentil, relayOFF);  //already handled by brewing var
+        //digitalWrite(pinRelayPumpe, relayOFF);
+        bezugsZeit = 0;
+        brewState = 0;        
+      } else if (!simulatedBrewSwitch) {
+        if (waitingForBrewSwitchOff) {
+          DEBUG_print("simulatedBrewSwitch=off\n");
+          //userActivity = millis();
+        }
+        waitingForBrewSwitchOff = false;
+        if (brewing == 1) {
+          digitalWrite(pinRelayVentil, relayOFF);
+          digitalWrite(pinRelayPumpe, relayOFF);
+          brewing = 0;
+        }
+        bezugsZeit = 0;
+        brewState = 0;
       }
-    }
+    //}
   }
 }
 
@@ -1198,6 +1086,7 @@ void updateState() {
         timerBrewDetection = 0;
         activeState = 3;  //TODO perhaps add special "steam-2-cooldown" state to optimize time reaching setPoint after cooldown.
       }
+      break;
     }
 
     case 3: // normal PID mode
@@ -1218,6 +1107,7 @@ void updateState() {
       } 
       
       /* STATE 1 (COLDSTART) DETECTION */
+      /* TOBIAS READD
       if (Input <= starttemp - coldStartStep1ActivationOffset) {
         snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to step 1 (coldstart)");
         DEBUG_println(debugline);
@@ -1229,6 +1119,7 @@ void updateState() {
         activeState = 1;
         break;
       }
+      */
 
       /* STATE 4 (BREW) DETECTION */
       if (brewDetectionSensitivity != 0 && brewDetection == 1) {
@@ -1383,31 +1274,8 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
 void loop() {
   refreshTemp();        // save new temperature values
   testEmergencyStop();  // test if Temp is to high
-  pidCompute();         // call PID for Output calculation
 
-  //YYY2
-  #if (ENABLE_USER_MENU==1)
-    int controlButtonPressed = checkControlButtons();
-    if (controlButtonPressed != 0) {
-      DEBUG_print("Pressed Button: %d\n", controlButtonPressed);
-      userActivity = millis();
-    }
-  #endif
-
-  checkControls(controlsConfig);  //transform controls to events
-
-  //processEvents();
-
-  #if PIDCONTROLMODE == 0
-    //brew();               //start brewing if button pressed
-  #endif
-
-  //#if PIDCONTROLMODE == 1
-    //checkControlSwitches();
-  //#endif
-
-
-
+  //brewReady
   if (millis() > lastCheckBrewReady + refreshTempInterval) {
     lastCheckBrewReady = millis();
     bool brewReadyCurrent = checkBrewReady(setPoint, marginOfFluctuation, 60);
@@ -1421,6 +1289,7 @@ void loop() {
   }
   refreshBrewReadyHardwareLed(brewReady);
 
+  //network related stuff
   if (!force_offline) {
     if (!wifi_working()) {
       #if (MQTT_ENABLE == 2)
@@ -1496,6 +1365,23 @@ void loop() {
     }
   }
 
+  #if (DEBUG_FORCE_GPIO_CHECK == 1)
+  if (millis() > lastCheckGpio + 3000) {
+    lastCheckGpio = millis();
+    debugControlHardware(controlsConfig);
+  }
+  return;
+  #endif
+  
+  pidCompute();         // call PID for Output calculation
+  
+  checkControls(controlsConfig);  //transform controls to actions
+  
+  if (!OnlyPID) {
+    //ideally brew() should be controlled in our state-maschine (TODO)
+    brew();               //start brewing if button pressed
+  }
+
   //check if PID should run or not. If not, set to manuel and force output to zero
   if (pidON == 0 && pidMode == 1) {
     pidMode = 0;
@@ -1560,7 +1446,7 @@ void loop() {
       }
       if (pidMode == 1) bPID.SetMode(AUTOMATIC);
 
-    /* state 6: Steam mode active*/
+    /* state 6: Steaming state active*/
     } else if (activeState == 6) {
       bPID.SetMode(MANUAL);
       if (!pidMode) {
@@ -1568,12 +1454,22 @@ void loop() {
       } else {
         //POC code !!! alpha! //YYY1
         //TODO x-point controlling or use PID w/ 1sec timer
-        
-        Output = 0;
+
         if (Input <= setPointSteam) {
           Output = windowSize;  //full heat when temp below steam-temp
         } else if (Input > setPointSteam && pastTemperatureChange(2) < 0 ) {  //full heat when >setPointSteam BUT temp goes down!
           Output = windowSize;
+        } else {
+          Output = 0;
+        }
+        if (millis() >= lastSteamMessage + 1000) {
+          lastSteamMessage = millis();
+          DEBUG_print("*nput=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f\n", 
+            Input,
+            (*activeSetPoint - Input),
+            pastTemperatureChange(2),
+            convertOutputToUtilisation(Output)
+          );
         }
       }
 
@@ -1961,8 +1857,8 @@ void setup() {
   printControlsConfig(controlsConfig);
   configureControlsHardware(controlsConfig);
 
-  //if brewswitch is already "on" on startup, then we brew should not start automatically
-  if (OnlyPID == 0 && (analogRead(pinBrewButton) >= 700)) { 
+  //if simulatedBrewSwitch is already "on" on startup, then we brew should not start automatically
+  if (OnlyPID == 0 && (simulatedBrewSwitch)) { 
     DEBUG_print("brewsitch is already on. Dont brew until it is turned off.\n");
     waitingForBrewSwitchOff=true; 
   }
