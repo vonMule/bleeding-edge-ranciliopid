@@ -81,9 +81,15 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.6.0 beta 2:
+  - !!ATTENTION: THIS VERSION IS NOT YET TESTED!!
+  - !!ATTENTION: THIS VERSION IS NOT YET TESTED!!
+  - !!ATTENTION: THIS VERSION IS NOT YET TESTED!!
+  - Bugfix: DEBUG_FORCE_GPIO_CHECK working.
+  - Bugfix: Reduce number of generated logs.
+  - Changed EMERGENCY_TEMP default from 125 to 128.
+  - Changed SETPOINT_STEAM default from 116 to 114.
 - 2.6.0 beta 1:
-  - !!ATTENTION: THIS VERSION IS NOT YET TESTED!!
-  - !!ATTENTION: THIS VERSION IS NOT YET TESTED!!
   - !!ATTENTION: THIS VERSION IS NOT YET TESTED!!
   - Merged PR by finnito which changed/extended: (MANY THANKS FINNITO)
     - Added support for ECM espresso maschine including logo.

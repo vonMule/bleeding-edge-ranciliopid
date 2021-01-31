@@ -23,7 +23,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.6.0 beta1";
+const char* sysVersion PROGMEM  = "2.6.0 beta2";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -1363,8 +1363,10 @@ void loop() {
     }
   }
 
+  Debug.handle();
+    
   #if (DEBUG_FORCE_GPIO_CHECK == 1)
-  if (millis() > lastCheckGpio + 3000) {
+  if (millis() > lastCheckGpio + 2000) {
     lastCheckGpio = millis();
     debugControlHardware(controlsConfig);
   }
@@ -1436,9 +1438,12 @@ void loop() {
       aggoKd = aggoTv * aggoKp ;
       if (Input >= (setPoint + 5 * outerZoneTemperatureDifference) && bPID.GetKd() != 0) {  //TOBIAS: is 5 a good value? perhaps make this configureable
         bPID.SetTunings(aggoKp, aggoKi, 0); //Avoid kd generating output while cooling down after steam phase
-        snprintf(debugline, sizeof(debugline), "** steaming disabled (>>brewSetPoint). Cooling phase Kd = 0");
-        DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        if (millis() >= lastSteamMessage + 2500) {
+          lastSteamMessage = millis();
+          snprintf(debugline, sizeof(debugline), "** steaming disabled (>>brewSetPoint). Cooling phase Kd = 0");  //CCC
+          DEBUG_println(debugline);
+          mqtt_publish("events", debugline);
+        }
       } else {
         bPID.SetTunings(aggoKp, aggoKi, aggoKd);
       }
@@ -1573,7 +1578,6 @@ void loop() {
     sync_eeprom();
     interrupts();
   }
-  Debug.handle();
 }
 
 

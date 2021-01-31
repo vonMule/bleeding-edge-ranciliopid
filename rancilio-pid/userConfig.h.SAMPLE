@@ -65,8 +65,8 @@
  *    a) Hardware Switch (On/Off) on A0(GPIO17) which controls BREWING when gpio-value >= 700.
  *    #define CONTROLS_CONFIG "17:analog:toggle|700-1024:BREWING#"
  *    
- *    b) Hardware Toggle via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
- *    #define CONTROLS_CONFIG "17:analog:toggle|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
+ *    b) Hardware Buttons via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
+ *    #define CONTROLS_CONFIG "17:analog:trigger|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
  *    
  *    c) Hardware Switches via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
  *    #define CONTROLS_CONFIG "17:analog:toggle|245-260:BREWING;525-540:STEAMING;802-815:HOTWATER#"
