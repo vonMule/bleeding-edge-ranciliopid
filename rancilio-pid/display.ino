@@ -84,7 +84,8 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
               u8g2.drawXBMP(0,0, icon_width, icon_height, steam_bits);
             } else {
               u8g2.drawXBMP(0,0, icon_width, icon_height, steam_rotate_bits);
-            }            
+            }
+            break;         
           default:
             if (MACHINE_TYPE == "rancilio") {
               u8g2.drawXBMP(41,0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
