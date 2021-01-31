@@ -81,9 +81,12 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.6.0 beta 3:
+  - !!ATTENTION: THIS VERSION IS NOT FULLY TESTED!!
+  - Add MQTT Support to control actions using topics ../actions/<ACTION> with supported payloads of 0|1|-1. 
+    Example: "custom/Küche.Rancilio2/actions/STEAMING"
+  - Sample Config for IoTMQTTPanel: IoTMQTTPanel-210031_225507_v2.6.0beta3.json .
 - 2.6.0 beta 2:
-  - !!ATTENTION: THIS VERSION IS NOT YET TESTED!!
-  - !!ATTENTION: THIS VERSION IS NOT YET TESTED!!
   - !!ATTENTION: THIS VERSION IS NOT YET TESTED!!
   - Bugfix: DEBUG_FORCE_GPIO_CHECK working.
   - Bugfix: Reduce number of generated logs.

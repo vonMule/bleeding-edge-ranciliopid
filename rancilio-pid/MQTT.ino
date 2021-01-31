@@ -11,6 +11,11 @@ char* bool2string(bool in) {
     return "0";
   }
 }
+char* int2string(int state) {
+  char str[7];
+  sprintf(str, "%d", state);
+  return str;
+}
 char number2string_double[22];
 char* number2string(double in) {
   snprintf(number2string_double, sizeof(number2string_double), "%0.2f", in);
@@ -87,8 +92,8 @@ bool mqtt_reconnect(bool force_connect = false) {
     if (mqtt_client.connect(hostname, mqtt_username, mqtt_password, topic_will, 0, 0, "unexpected exit") == true) {
       DEBUG_print("Connected to mqtt server\n");
       mqtt_publish("events", "Connected to mqtt server");
-      mqtt_client.subscribe(topic_set);
-      if (!mqtt_client.subscribe(topic_set)) { ERROR_print("Cannot subscribe to topic\n"); }
+      publishActions();
+      if (!mqtt_client.subscribe(topic_set) || !mqtt_client.subscribe(topic_actions)) { ERROR_print("Cannot subscribe to topic\n"); }
       mqtt_lastReconnectAttemptTime = 0;
       mqtt_reconnectAttempts = 0;
     } else {
@@ -110,7 +115,11 @@ void mqtt_callback(char* topic, byte* data, unsigned int length) {
   os_memcpy(data_str, data, length);
   data_str[length] = '\0';
   //DEBUG_print("MQTT: %s = %s\n", topic_str, data_str);
-  mqtt_parse(topic_str, data_str);
+  if(strstr(topic_str, "/actions/") != NULL) {
+    mqtt_parse_actions(topic_str, data_str);
+  } else {
+    mqtt_parse(topic_str, data_str);
+  }
 }
 
 /* ------------------------------ */
@@ -155,10 +164,38 @@ void mqtt_callback(uint32_t *client, const char* topic, uint32_t topic_len, cons
   os_memcpy(data_str, data, length);
   data_str[length] = '\0';
   //DEBUG_print("MQTT: %s = %s\n", topic_str, data_str);
-  mqtt_parse(topic_str, data_str);
+  if(strstr(topic_str, "/actions/") != NULL) {
+    mqtt_parse_actions(topic_str, data_str);
+  } else {
+    mqtt_parse(topic_str, data_str);
+  }
 }
 
 #endif
+
+void mqtt_parse_actions(char* topic_str, char* data_str) {
+  char topic_pattern[255];
+  char actionParsed[120];
+  char *endptr;
+  //DEBUG_print("mqtt_parse_actions(%s, %s)\n", topic_str, data_str);
+  snprintf(topic_pattern, sizeof(topic_pattern), "%s%s/actions/%%[^\\/]", mqtt_topic_prefix, hostname);
+  //DEBUG_print("topic_pattern=%s\n",topic_pattern);
+  if (sscanf( topic_str, topic_pattern , &actionParsed) != 1) {
+    DEBUG_print("Ignoring un-parsable topic (%s)\n", topic_str);
+    return;
+  }
+  int action = convertActionToDefine(actionParsed);
+  if (action == UNDEFINED_ACTION) {
+    DEBUG_print("Ignoring topic (%s) because of unknown action(%s)\n", topic_str, actionParsed);
+    return;
+  }
+  int data_int = (int)strtol(data_str, &endptr, 10);
+  if (*endptr != '\0') {
+    DEBUG_print("Ignoring topic (%s) because data(%s) cannot be convered to int\n", topic_str, data_str);
+    return;
+  }
+  actionController(action, data_int, false);
+}
 
 void mqtt_parse(char* topic_str, char* data_str) {
   char topic_pattern[255];

@@ -146,6 +146,17 @@ void printControlsConfig(controlMap* controlsConfig) {
 }
 
 
+void publishActions() {
+  char topicAction[32];
+  for (int i=0; i< MAX_NUM_ACTIONS; i++) {
+    char *action = convertDefineToAction(i);
+    if ( strcmp(action, "UNDEFINED_ACTION") != 0) {
+      sprintf(topicAction, "actions/%s", action);
+      mqtt_publish(topicAction, int2string(actionState[i]));
+    }
+  }
+}
+
 void configureControlsHardware(controlMap* controlsConfig) {
   if (!controlsConfig) {
     DEBUG_println("controlsConfig is empty");
@@ -232,6 +243,11 @@ int getActionOfControl(controlMap* controlsConfig, int port, int value) {
 
 
 void actionController(int action, int newState) {  
+  actionController(action, newState, true); 
+}
+
+
+void actionController(int action, int newState, bool publishAction) {  
   //newState := if newState >=0 set value to newState. If newState == -1 -> toggle between 0/1
   int oldState = actionState[action];
   if (newState == -1) {
@@ -243,18 +259,19 @@ void actionController(int action, int newState) {
       newState = 0; //fallback/safe-guard
     }
   }
-  actionState[action] = newState;
-  
-  snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
-  DEBUG_println(debugline);
+  //actionState[action] = newState;
+  //snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
+  //DEBUG_println(debugline);
   //call special helper functions when state changes
   //actionState logic should remain in actionController() function and not the helper functions
   if (newState != oldState) {
-    if (action == HOTWATER) { actionController(BREWING, 0); actionController(CLEANING, 0); hotwaterAction(newState); }
-    else if (action == BREWING) { actionController(HOTWATER, 0); actionController(CLEANING, 0); brewingAction(newState); }
-    else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); steamingAction(newState); }
-    else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); cleaningAction(newState); }
+    if (action == HOTWATER) { actionController(BREWING, 0); actionController(CLEANING, 0); actionState[action] = newState; hotwaterAction(newState); if (publishAction) mqtt_publish("actions/HOTWATER", int2string(newState));}
+    else if (action == BREWING) { actionController(STEAMING, 0); actionController(HOTWATER, 0); actionController(CLEANING, 0); actionState[action] = newState; brewingAction(newState); if (publishAction) mqtt_publish("actions/BREWING", int2string(newState));}
+    else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionState[action] = newState; steamingAction(newState); if (publishAction) mqtt_publish("actions/STEAMING", int2string(newState));}
+    else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionState[action] = newState; cleaningAction(newState); if (publishAction) mqtt_publish("actions/CLEANING", int2string(newState));}
   }
+  snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
+  DEBUG_println(debugline);
   userActivity = millis();
 }
 
@@ -345,11 +362,10 @@ void hotwaterAction(int state) {
   }
 }
 
-void steamingAction(int state) { 
+void steamingAction(int state) {
   steaming = state; //disabled because not yet ready/tested
 }
 
 void cleaningAction(int state) { 
-  if (OnlyPID) return;
   int cleaning = state; 
 }

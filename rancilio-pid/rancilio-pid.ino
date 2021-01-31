@@ -23,7 +23,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.6.0 beta2";
+const char* sysVersion PROGMEM  = "2.6.0 beta3";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -79,6 +79,7 @@ const char* mqtt_password = MQTT_PASSWORD;
 const char* mqtt_topic_prefix = MQTT_TOPIC_PREFIX;
 char topic_will[256];
 char topic_set[256];
+char topic_actions[256];
 unsigned long lastMQTTStatusReportTime = 0;
 unsigned long lastMQTTStatusReportInterval = 5000; //mqtt send status-report every 5 second
 const bool mqtt_flag_retained = true;
@@ -330,7 +331,6 @@ const int isrCounterFrame = 1000;
    CONTROLS
 ******************************************************/
 #include "controls.h"
-
 controlMap* controlsConfig = NULL;
 unsigned long lastCheckGpio = 0;
 
@@ -1438,7 +1438,7 @@ void loop() {
       aggoKd = aggoTv * aggoKp ;
       if (Input >= (setPoint + 5 * outerZoneTemperatureDifference) && bPID.GetKd() != 0) {  //TOBIAS: is 5 a good value? perhaps make this configureable
         bPID.SetTunings(aggoKp, aggoKi, 0); //Avoid kd generating output while cooling down after steam phase
-        if (millis() >= lastSteamMessage + 2500) {
+        if (millis() >= lastSteamMessage + 5000) {
           lastSteamMessage = millis();
           snprintf(debugline, sizeof(debugline), "** steaming disabled (>>brewSetPoint). Cooling phase Kd = 0");  //CCC
           DEBUG_println(debugline);
@@ -1894,6 +1894,7 @@ void setup() {
       #if (MQTT_ENABLE == 1)
         snprintf(topic_will, sizeof(topic_will), "%s%s/%s", mqtt_topic_prefix, hostname, "will");
         snprintf(topic_set, sizeof(topic_set), "%s%s/+/%s", mqtt_topic_prefix, hostname, "set");
+        snprintf(topic_actions, sizeof(topic_actions), "%s%s/actions/+", mqtt_topic_prefix, hostname);
         mqtt_client.setServer(mqtt_server_ip, mqtt_server_port);
         mqtt_client.setCallback(mqtt_callback);
         if (!mqtt_reconnect(true)) {
@@ -1920,9 +1921,10 @@ void setup() {
         const unsigned int max_retained_topics = 30;
         const unsigned int mqtt_service_port = 1883;
         snprintf(topic_set, sizeof(topic_set), "%s%s/+/%s", mqtt_topic_prefix, hostname, "set");
+        snprintf(topic_actions, sizeof(topic_actions), "%s%s/actions/+", mqtt_topic_prefix, hostname);
         MQTT_server_onData(mqtt_callback);
         if (MQTT_server_start(mqtt_service_port, max_subscriptions, max_retained_topics)) {
-          if (!MQTT_local_subscribe((unsigned char *)topic_set, 0)) {
+          if (!MQTT_local_subscribe((unsigned char *)topic_set, 0) || !MQTT_local_subscribe((unsigned char *)topic_actions, 0)) {
             ERROR_print("Cannot subscribe to local MQTT service\n");
           }
         } else {
