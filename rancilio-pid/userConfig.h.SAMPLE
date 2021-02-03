@@ -30,7 +30,7 @@
                                       // (ONLYPID=1) BREWDETECTION_POWER is only active when current temperature is 1.5 Celcius below SETPOINT.
 
 #define BREW_READY_DETECTION 0.3 // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (recommended value 0.3)
-#define BREW_READY_LED 0         // 0=off | 1=LED at GPO pinLed will lighten when BREW_READY_DETECTION triggers
+#define ENABLE_HARDWARE_LED 0     // 0=off | 1=LED at GPO PinLed will lighten when BREW_READY_DETECTION triggers or temperature>SETPOINT_STEAM
 
 //#define DEBUGMODE              // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
 
@@ -43,7 +43,7 @@
 #define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve
 #define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump
 
-#define pinLed            15   // (BREW_READY_LED=1) brewReady LED (16 is also "free" to use)
+#define pinLed            15   // (ENABLE_HARDWARE_LED=1) Hardware LED (16 is also "free" to use)
 
 /*******   
  * GPIO Pin Usage: Here you can define how the GPIO boards (analog/digital) shall be used to execute functions. 
@@ -79,6 +79,7 @@
  * Display Settings
  *******/       
 #define DISPLAY 0                         // 0=Deaktiviert, 1=SH1106_128X64, 2=SSD1306_128X64
+#define ROTATE_DISPLAY 0                  // 0=Off (Default), 1=180 degree clockwise rotation
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter"
 #define DISPLAY_TEXT "Bleeding-Edge PID"  // Text is displayed on bootup (max 21 chars)
 //#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)

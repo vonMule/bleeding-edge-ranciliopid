@@ -81,6 +81,10 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.6.0 beta 4:
+  - !!ATTENTION: THIS VERSION IS NOT FULLY TESTED!!
+  - New feature: Set userConfig.h ROTATE_DISPLAY to rotate display 180 degree.
+  - New feature: BrewReadyLed (now called HardwareLed) configured with ENABLE_HARDWARE_LED also lights up when temp>steamTemp.
 - 2.6.0 beta 3:
   - !!ATTENTION: THIS VERSION IS NOT FULLY TESTED!!
   - Add MQTT Support to control actions using topics ../actions/<ACTION> with supported payloads of 0|1|-1. 

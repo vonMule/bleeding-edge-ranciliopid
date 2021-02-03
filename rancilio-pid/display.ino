@@ -99,7 +99,7 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
   
         //display current and target temperature
         if (activeState > 0 && activeState != 4) {
-          if (Input - 100 > FLT_EPSILON) {
+          if (Input - 100 > -FLT_EPSILON) {
             align_right = align_right_3digits;
           } else {
             align_right = align_right_2digits;

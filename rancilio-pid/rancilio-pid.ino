@@ -23,7 +23,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.6.0 beta3";
+const char* sysVersion PROGMEM  = "2.6.0 beta4";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -254,10 +254,10 @@ const unsigned int emergency_temperature = 120;             // fallback
 #endif
 double brewDetectionSensitivity = BREWDETECTION_SENSITIVITY ; // if temperature decreased within the last 6 seconds by this amount, then we detect a brew.
 #ifdef BREW_READY_DETECTION
-const int brew_ready_led_enabled = BREW_READY_LED;
+const int enabledHardwareLed = ENABLE_HARDWARE_LED;
 float marginOfFluctuation = float(BREW_READY_DETECTION);
 #else
-const int brew_ready_led_enabled = 0;   // 0 = disable functionality
+const int enabledHardwareLed = 0;   // 0 = disable functionality
 float marginOfFluctuation = 0;          // 0 = disable functionality
 #endif
 char* blynkReadyLedColor = "#000000";
@@ -567,11 +567,11 @@ bool checkBrewReady(double setPoint, float marginOfFluctuation, int lookback) {
   return true;
 }
 
-void refreshBrewReadyHardwareLed(bool brewReady) {
-  static bool lastBrewReady = false;
-  if (brew_ready_led_enabled && brewReady != lastBrewReady) {
-      digitalWrite(pinLed, brewReady);
-      lastBrewReady = brewReady;
+void setHardwareLed(bool mode) {
+  static bool previousMode = false;
+  if (enabledHardwareLed && mode != previousMode) {
+      digitalWrite(pinLed, mode);
+      previousMode = mode;
   }
 }
 
@@ -1055,10 +1055,12 @@ void updateState() {
       } else {
         bPID.SetFilterSumOutputI(9);
       }
+
       if ( fabs(Input - *activeSetPoint) < outerZoneTemperatureDifference || steaming == 1) {
         snprintf(debugline, sizeof(debugline), "** End of outerZone. Transition to step 3 (normal mode)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
+        if (pidMode == 1) bPID.SetMode(AUTOMATIC);
         bPID.SetSumOutputI(0);
         bPID.SetAutoTune(true);
         timerBrewDetection = 0 ;
@@ -1169,6 +1171,10 @@ void updateState() {
         mqtt_publish("events", debugline);
         bPID.SetSumOutputI(0);
         activeState = 5;
+        if (Input > setPoint) {  // if we are above setPoint always disable heating (primary useful after steaming)  YYY1
+          bPID.SetAutoTune(false);
+          bPID.SetMode(MANUAL);
+        }
         break;
       }
 
@@ -1285,7 +1291,7 @@ void loop() {
     }
     brewReady = brewReadyCurrent;
   }
-  refreshBrewReadyHardwareLed(brewReady);
+  setHardwareLed(brewReady || Input >=setPointSteam);
 
   //network related stuff
   if (!force_offline) {
@@ -1436,19 +1442,23 @@ void loop() {
         aggoKi = 0;
       }
       aggoKd = aggoTv * aggoKp ;
+      /*
       if (Input >= (setPoint + 5 * outerZoneTemperatureDifference) && bPID.GetKd() != 0) {  //TOBIAS: is 5 a good value? perhaps make this configureable
         bPID.SetTunings(aggoKp, aggoKi, 0); //Avoid kd generating output while cooling down after steam phase
-        if (millis() >= lastSteamMessage + 5000) {
+        if (millis() >= lastSteamMessage + 20000) {
           lastSteamMessage = millis();
           snprintf(debugline, sizeof(debugline), "** steaming disabled (>>brewSetPoint). Cooling phase Kd = 0");  //CCC
           DEBUG_println(debugline);
           mqtt_publish("events", debugline);
         }
+      */
+      if (Input > setPoint) {
+        Output = 0;
       } else {
         bPID.SetTunings(aggoKp, aggoKi, aggoKd);
+        if (pidMode == 1) bPID.SetMode(AUTOMATIC);
       }
-      if (pidMode == 1) bPID.SetMode(AUTOMATIC);
-
+      
     /* state 6: Steaming state active*/
     } else if (activeState == 6) {
       bPID.SetMode(MANUAL);
@@ -1460,7 +1470,7 @@ void loop() {
 
         if (Input <= setPointSteam) {
           Output = windowSize;  //full heat when temp below steam-temp
-        } else if (Input > setPointSteam && pastTemperatureChange(2) < 0 ) {  //full heat when >setPointSteam BUT temp goes down!
+        } else if (Input > setPointSteam && (pastTemperatureChange(2) < 0) ) {  //full heat when >setPointSteam BUT temp goes down!
           Output = windowSize;
         } else {
           Output = 0;
@@ -1834,7 +1844,7 @@ void setup() {
   digitalWrite(pinRelayPumpe, relayOFF);
   pinMode(pinRelayHeater, OUTPUT);
   digitalWrite(pinRelayHeater, LOW);
-  #ifdef BREW_READY_LED
+  #ifdef ENABLE_HARDWARE_LED
   pinMode(pinLed, OUTPUT);
   digitalWrite(pinLed, LOW);
   #endif
@@ -1844,6 +1854,7 @@ void setup() {
     //u8g2.setBusClock(400000);  //any use?
     u8g2.begin();
     u8g2_prepare();
+    u8g2.setFlipMode(ROTATE_DISPLAY);
     u8g2.clearBuffer();
   }
   
