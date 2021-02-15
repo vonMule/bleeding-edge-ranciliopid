@@ -175,7 +175,6 @@ int PIDBias::Compute()
         *mySteadyPower = 4.8; 
       }
 
-      //TODO safe-guard against always moving up because of steadyPower (eg no steadyPower above error < 5)
 
       //If we are above setpoint, we dont want to overly reduce output when temperature is moving downwards
       if ( error < 0 ) {
@@ -222,6 +221,12 @@ int PIDBias::Compute()
         burstOutput = 0;
       }
 
+      //safe-guard against getting unusually hot (eg. steadyPower too high or no water in tank
+      if (error < -10) {
+        ERROR_print("Overwrite output=0 because we are too high (%0.2f) above setPoint (%0.2f)\n", error * -1, **mySetpoint);
+        output = 0;
+      }
+      
       if (output > outMax) output = outMax;
       else if(output < outMin) output = outMin;
       *myOutput = output;

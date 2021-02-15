@@ -13,14 +13,6 @@
 #define TEMP_INC  8
 #define TEMP_DEC  9
 
-/*
- * TODO:
- * - Add MQTT Integration
- * - FIX STEAMING PID
- * - Add further functions
- * - Code cleanup
- */
-
 typedef struct controlMap
 {
       int gpio;
@@ -34,7 +26,7 @@ typedef struct controlMap
 } controlMap;
 
 unsigned long previousCheckControls = 0;
-#define FREQUENCYCHECKCONTROLS 300  // TOBIAS: change to 50 or 200? make dynamical!
+#define FREQUENCYCHECKCONTROLS 100  // TOBIAS: change to 50 or 200? make dynamical!
 
 // actionState contain the status (on/off/..) of each actions
 #define MAX_NUM_ACTIONS 20

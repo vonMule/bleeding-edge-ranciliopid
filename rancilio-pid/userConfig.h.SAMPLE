@@ -1,5 +1,5 @@
 /********************************************************
- * Version 2.6.0 beta1
+ * Version 2.6.0 beta
  * Config must be configured by the user
  *****************************************************/
 
@@ -22,17 +22,17 @@
 
 #define BREWTIME        30.0  // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
 
-#define BREWDETECTION 1               // 0 = disable | 1 = on (Software/Hardware)
+#define BREWDETECTION 2               // 0 = off | 1 = on using Hardware (ONLYPID=0 or ONLYPID=1_using_ControlAction_BREWING) | 2 = on using Software (ONLYPID=1 auto-detection)
 #define BREWDETECTION_SENSITIVITY 0.6 // If temperature drops in the past 3 seconds by this number (Celcius), then a brew is detected (BREWDETECTION must be 1)
 #define BREWDETECTION_WAIT 90         // (ONLYPID=1) 50=default: Software based BrewDetection is disabled after brewing for this number (seconds)
 #define BREWDETECTION_POWER 50        // heater utiilization (in percent) during brew (BREWDETECTION must be 1)
                                       // (ONLYPID=0) BREWDETECTION_POWER is active during the whole brew.
                                       // (ONLYPID=1) BREWDETECTION_POWER is only active when current temperature is 1.5 Celcius below SETPOINT.
 
-#define BREW_READY_DETECTION 0.3 // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (recommended value 0.3)
+#define BREW_READY_DETECTION 0.3  // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (recommended value 0.3)
 #define ENABLE_HARDWARE_LED 0     // 0=off | 1=LED at GPO PinLed will lighten when BREW_READY_DETECTION triggers or temperature>SETPOINT_STEAM
 
-//#define DEBUGMODE              // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
+//#define DEBUGMODE               // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
 
 
 /*******   
@@ -83,13 +83,12 @@
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter"
 #define DISPLAY_TEXT "Bleeding-Edge PID"  // Text is displayed on bootup (max 21 chars)
 //#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)
-#define EMERGENCY_TEMP 116                // If temperature is higher then notifications are send via display/debug/mqtt.
-                                          // Reason might be an error OR the user wants to steam milk.
+#define EMERGENCY_TEMP 130                // If temperature is higher then notifications are send via display/debug/mqtt and PID is temporary disabled.
+                                          // Set this to the higest temperature supported by your maschine minus a few degress. (Silvia 5E: 135)
 #define ENABLE_FAILURE_STATUS_ICONS 1     // 1 = on (default), 0 = off. If enabled show status icons if services are offline.
 #define ENABLE_SCREEN_SAVER 3             // 0=Disable, 1=Enable(blank screen), 2=Enable(use BrewReady Collection Icon), 3=Enable(Use Maschine logo)
 #define ENABLE_POWER_OFF_COUNTDOWN 0      // 0 = off (default) | 1...n If maschine is inactive for this amount of seconds, we expect the maschine
                                           // to shutdown (Silvia 5E: 1800). Show countdown for the last 3 minutes.
-#define ENABLE_USER_MENU  0               // 0 = off | 1 = on (only for ONLYPID=1) USE GPIO A0 (ADC0) PIN to detect the hardware buttons
 
 /*******   
  * General PID values
@@ -100,9 +99,10 @@
                                       // How long should this additional power be delivered (in s) (Rancilio Silvia 5E: 850, ...)
 #define STEADYPOWER_OFFSET 3.0        // How much power should be added? (in %) (Rancilio Silvia 5E: 2.9, ...)
 
-#define SETPOINT 93     // Temperature SetPoint
-#define STARTTEMP 80.6  // If temperature is below this value then Coldstart state should be triggered
-                        // (Rancilio Silvia 5E: 80.6 , ...)
+#define SETPOINT 93           // Temperature SetPoint
+#define SETPOINT_STEAM 118    // Steam Temperature SetPoint (Rancilio: 118, ECM Casa Prima: 145, ...)
+#define STARTTEMP 80.6        // If temperature is below this value then Coldstart state should be triggered
+                              // (Rancilio Silvia 5E: 80.6 , ...)
 
 // Inner Zone PID values
 #define AGGKP 80        // Kp (Rancilio Silvia 5E: 80, ...)
@@ -114,18 +114,11 @@
 #define AGGOTN 40       // Tn (Rancilio Silvia 5E: 40, ...)
 #define AGGOTV 40       // Tv (Rancilio Silvia 5E: 40, ...)
 
-// Steam PID values
-#define SETPOINT_STEAM 116    // Steam Temperature SetPoint (Rancilio: 116, ECM Casa Prima: 145, ...)
-#define AGGSTEAMKP 170        // Kp (Rancilio 5E: ?, ECM Casa Prima: 170, ...)
-#define AGGSTEAMTN 40         // Tn (Rancilio 5E: ?, ECM Casa Prima: 40, ...)
-#define AGGSTEAMTV 40         // Tv (Rancilio 5E: ?, ECM Casa Prima: 40, ...)
-
-
 /*******   
  * Preinfussion settings (only useful when ONLYPID=0)
  *******/
-#define PREINFUSION       1.5   //  length of time of the pre-infusion (in sec) 
-#define PREINFUSION_PAUSE 2     // length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec) 
+#define PREINFUSION       1.5   //  length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion.
+#define PREINFUSION_PAUSE 2     // length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
 // dont forget to adapt BREWTIME mentioned above
 
 
@@ -141,7 +134,6 @@
 //#define STATIC_SUBNET subnet(255,255,255,0);     //uncomment and set this to your network to force static IP
 
 // OTA
-#define OTAHOST "Rancilio"               // Name to be shown in ARUDINO IDE Port
 #define OTAPASS "otapassBleedingEdge"    // Password for OTA updates
 
 // Blynk

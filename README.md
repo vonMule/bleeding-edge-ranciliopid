@@ -81,6 +81,16 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.6.0 beta 5:
+  - BREAKING CHANGE: OnlyPid=1: Software based brewDetection is set with "2" (and not "1"!) in userConfig BREWDETECTION.
+  - Feature: OnlyPid=0: Disable pre-infusion and pause by setting userConfig settings to 0.
+  - Feature: OnlyPid=1: BrewDetection can now also be triggered by hardware using actionControle "BREWING".
+  - Feature: New userConfig setting SETPOINT_STEAM is also setable via [mqtt](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/MQTT-Setup)/[blynk](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Blynk-Setup).
+  - Feature: hardwareLed will glow for a few seconds when the maschine starts up. This helps determine a not starting node.
+  - Feature: Additional safe-guard to temporary disable heater if temperature is 10 degree above active setPoint.
+  - Removed userConfig OTAHOST to use HOSTNAME instead.
+  - Removed unused userConfig settings: AGGSTEAMKP, AGGSTEAMTN, AGGSTEAMTV
+  - Reduce FREQUENCYCHECKCONTROLS from 300 to 100ms to increase responsiveness of gpio contols.
 - 2.6.0 beta 4:
   - !!ATTENTION: THIS VERSION IS NOT FULLY TESTED!!
   - New feature: Set userConfig.h ROTATE_DISPLAY to rotate display 180 degree.

@@ -50,7 +50,6 @@ controlMap* parseControlsConfig() {
     controlMap* controlsConfig = NULL;
     controlMap* lastControlMap = NULL;
 
-    snprintf(debugline, sizeof(debugline), "inside parseControlsConfig():");
     DEBUG_println(debugline);
 
     // Read each controlsConfigPin pair 
@@ -62,8 +61,8 @@ controlMap* parseControlsConfig() {
         int item = 0;
         int lowerBoundary = 0;
         int upperBoundary = 0;
-        snprintf(debugline, sizeof(debugline), "controlsConfigBlock=%s", controlsConfigBlock);
-        DEBUG_println(debugline);
+        //snprintf(debugline, sizeof(debugline), "controlsConfigBlock=%s", controlsConfigBlock);
+        //DEBUG_println(debugline);
 
         // Split the controlsConfigBlock in controlsConfigPinDefinition + actionMappings
         char* controlsConfigBlockDefinition = NULL;
@@ -71,35 +70,35 @@ controlMap* parseControlsConfig() {
         splitStringBySeperator(controlsConfigBlock, '|', &controlsConfigBlockDefinition, &controlsConfigActionMappings);
         if (!controlsConfigBlockDefinition || !controlsConfigActionMappings) { break; }
 
-        snprintf(debugline, sizeof(debugline), "controlsConfigBlockDefinition=%s controlsConfigActionMappings=%s", controlsConfigBlockDefinition, controlsConfigActionMappings);
-        DEBUG_println(debugline);
+        //snprintf(debugline, sizeof(debugline), "controlsConfigBlockDefinition=%s controlsConfigActionMappings=%s", controlsConfigBlockDefinition, controlsConfigActionMappings);
+        //DEBUG_println(debugline);
 
         int controlsConfigGpio = -1;
         char* controlsConfigPortType = NULL;
         char* controlsConfigType = NULL;
         splitStringBySeperator(controlsConfigBlock, ':', &controlsConfigGpio, &controlsConfigPortType);
         splitStringBySeperator(controlsConfigPortType, ':', &controlsConfigPortType, &controlsConfigType);
-        snprintf(debugline, sizeof(debugline), "controlsConfigGpio=%i controlsConfigPortType=%s controlsConfigType=%s", controlsConfigGpio, controlsConfigPortType, controlsConfigType);
-        DEBUG_println(debugline);
+        //snprintf(debugline, sizeof(debugline), "controlsConfigGpio=%i controlsConfigPortType=%s controlsConfigType=%s", controlsConfigGpio, controlsConfigPortType, controlsConfigType);
+        //DEBUG_println(debugline);
 
         char* p = controlsConfigActionMappings;
         char* actionMap;
         controlMap* nextControlMap;
         while ((actionMap = strtok_r(p, ";", &p)) != NULL) {
-          snprintf(debugline, sizeof(debugline), "controlsConfigActionMap=%s", actionMap);
-          DEBUG_println(debugline);
+          //snprintf(debugline, sizeof(debugline), "controlsConfigActionMap=%s", actionMap);
+          //DEBUG_println(debugline);
 
           char* actionMapRange = NULL;
           char* actionMapAction = NULL;
           splitStringBySeperator(actionMap, ':', &actionMapRange, &actionMapAction);
-          snprintf(debugline, sizeof(debugline), "actionMapRange=%s actionMapAction=%s", actionMapRange, actionMapAction);
-          DEBUG_println(debugline);
+          //snprintf(debugline, sizeof(debugline), "actionMapRange=%s actionMapAction=%s", actionMapRange, actionMapAction);
+          //DEBUG_println(debugline);
 
           int lowerBoundary = -1;
           int upperBoundary = -1;
           splitStringBySeperator(actionMapRange, '-', &lowerBoundary, &upperBoundary);
-          snprintf(debugline, sizeof(debugline), "lowerBoundary=%u upperBoundary=%u", lowerBoundary, upperBoundary);
-          DEBUG_println(debugline);
+          //snprintf(debugline, sizeof(debugline), "lowerBoundary=%u upperBoundary=%u", lowerBoundary, upperBoundary);
+          //DEBUG_println(debugline);
           if (convertActionToDefine(actionMapAction) >= MAX_NUM_ACTIONS) {
             ERROR_println("More actions defined as allowed in MAX_NUM_ACTIONS");
             nextControlMap->action = UNDEFINED_ACTION;
@@ -171,7 +170,6 @@ void configureControlsHardware(controlMap* controlsConfig) {
     DEBUG_println(debugline);
     if ( strcmp(ptr->portType, "analog") == 0) {
       pinMode(ptr->gpio, INPUT);
-      //add stuff here?
     } else {
       pinMode(ptr->gpio, INPUT);
     }
@@ -199,7 +197,6 @@ void debugControlHardware(controlMap* controlsConfig) {
     }
     snprintf(debugline, sizeof(debugline), "GPIO %2i: %d", ptr->gpio, valueRead);
     DEBUG_println(debugline);
- 
   } while ((ptr = ptr->nextControlMap) != NULL);
 }
 
@@ -259,9 +256,6 @@ void actionController(int action, int newState, bool publishAction) {
       newState = 0; //fallback/safe-guard
     }
   }
-  //actionState[action] = newState;
-  //snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
-  //DEBUG_println(debugline);
   //call special helper functions when state changes
   //actionState logic should remain in actionController() function and not the helper functions
   if (newState != oldState) {
@@ -281,8 +275,6 @@ void checkControls(controlMap* controlsConfig) {
   unsigned long aktuelleZeit = millis();
   if ( aktuelleZeit >= previousCheckControls + FREQUENCYCHECKCONTROLS ) {
     previousCheckControls = aktuelleZeit;
-    //DEBUG_println("inside checkControls()");
-    
     controlMap* ptr = controlsConfig;
     int currentAction = -1;
     int portRead = -1;
@@ -346,17 +338,23 @@ void checkControls(controlMap* controlsConfig) {
  * helper functions to execute actions
 *********************************************************/
 void brewingAction(int state) {
-  if (OnlyPID) return;
+  if (OnlyPID) {
+    if (brewDetection == 1) {
+       brewing = state;  //brewing should only be set if the maschine is in reality brewing!
+    }
+   return;
+  }
   simulatedBrewSwitch = state;
+  DEBUG_print("brewingAction(): simulatedBrewSwitch: %d\n", simulatedBrewSwitch);
 }
 
 void hotwaterAction(int state) {
   // Function switches the pump on to dispense hot water
   if (OnlyPID) return;
-  if (state == 1) { // && digitalRead(pinRelayPumpe) == relayOFF) {
+  if (state == 1) {
     digitalWrite(pinRelayPumpe, relayON);
     DEBUG_print("hotwaterAction(): pump relay: on\n");
-  } else if (state == 0) { //&& digitalRead(pinRelayPumpe) == relayON) {
+  } else if (state == 0) {
     digitalWrite(pinRelayPumpe, relayOFF);
     DEBUG_print("hotwaterAction(): pump relay: off\n");
   }
@@ -364,8 +362,10 @@ void hotwaterAction(int state) {
 
 void steamingAction(int state) {
   steaming = state; //disabled because not yet ready/tested
+  DEBUG_print("steamingAction(): %d\n", state);
 }
 
 void cleaningAction(int state) { 
-  int cleaning = state; 
+  int cleaning = state;
+  DEBUG_print("cleaningAction(): %d\n", state);
 }
