@@ -81,6 +81,10 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.6.0 beta 6:
+  - OnlyPid=1 && brewDetection==2: Fix bug in brew detection.
+  - OnlyPid=1 && brewDetection==2: Feature: Guess premature stop of brew.
+  - Fix: mqtt interface for preinfusion_pause working
 - 2.6.0 beta 5:
   - BREAKING CHANGE: OnlyPid=1: Software based brewDetection is set with "2" (and not "1"!) in userConfig BREWDETECTION.
   - Feature: OnlyPid=0: Disable pre-infusion and pause by setting userConfig settings to 0.

@@ -23,7 +23,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.6.0 beta5";
+const char* sysVersion PROGMEM  = "2.6.0 beta6";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -547,7 +547,7 @@ bool checkBrewReady(double setPoint, float marginOfFluctuation, int lookback) {
 
 void setHardwareLed(bool mode) {
   #if (ENABLE_HARDWARE_LED == 0)
-  return
+  return;
   #endif
   static bool previousMode = false;
   if (enabledHardwareLed && mode != previousMode) {
@@ -1007,10 +1007,11 @@ void updateState() {
            (OnlyPID && brewDetection == 2 && bezugsZeit >= lastBrewTimeOffset + 3 && 
             (bezugsZeit >= brewtime*1000 ||
               setPoint - Input < 0  || 
-              (pastTemperatureChange(3) > -(brewDetectionSensitivity/2))  //Tobias: test this
+              (pastTemperatureChange(3) >= 0)  // detect premeature end of brew // Tobias: test this
             )
            )
         ) {
+        if (OnlyPID && brewDetection == 2) brewing = 0;
         //DEBUG_print("Out Zone Detection: past(2)=%0.2f, past(3)=%0.2f | past(5)=%0.2f | past(10)=%0.2f | bezugsZeit=%lu\n", pastTemperatureChange(2), pastTemperatureChange(3), pastTemperatureChange(5), pastTemperatureChange(10), bezugsZeit / 1000);
         //DEBUG_print("t(0)=%0.2f | t(1)=%0.2f | t(2)=%0.2f | t(3)=%0.2f | t(5)=%0.2f | t(10)=%0.2f | t(13)=%0.2f\n", getTemperature(0), getTemperature(1), getTemperature(2), getTemperature(3), getTemperature(5), getTemperature(7), getTemperature(10), getTemperature(13));
         snprintf(debugline, sizeof(debugline), "** End of Brew. Transition to step 2 (constant steadyPower)");
@@ -1018,7 +1019,7 @@ void updateState() {
         mqtt_publish("events", debugline);
         bPID.SetAutoTune(true);
         bPID.SetSumOutputI(0);
-        timerBrewDetection = 0 ;
+        timerBrewDetection = 0;
         mqtt_publish("brewDetected", "0");
         activeState = 2;
         lastBrewEnd = millis();
@@ -1110,8 +1111,8 @@ void updateState() {
           //Sample: Brew Detection: past(3)=-1.70 past(5)=-2.10 | Avg(3)=91.50 | Avg(10)=92.52 Avg(20)=92.81
           if (OnlyPID) {
             bezugsZeit = 0;
-            brewing = 1;
             if (brewDetection == 2) {
+              brewing = 1;
               lastBrewTime = millis() - lastBrewTimeOffset;
             } else {
               lastBrewTime = millis() - 200;

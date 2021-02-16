@@ -256,7 +256,7 @@ void mqtt_parse(char* topic_str, char* data_str) {
     return;
   }
   if (strcmp(configVar, "preinfusionpause") == 0) {
-    sscanf(data_str, "%lf", &preinfusionpause);
+    sscanf(data_str, "%lf", &data_double);
     if (data_double != preinfusionpause) {
       DEBUG_print("setting preinfusionpause=%s\n", data_str);
       preinfusionpause = data_double;
