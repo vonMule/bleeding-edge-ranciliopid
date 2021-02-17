@@ -361,7 +361,7 @@ void hotwaterAction(int state) {
 }
 
 void steamingAction(int state) {
-  steaming = state; //disabled because not yet ready/tested
+  steaming = state;
   DEBUG_print("steamingAction(): %d\n", state);
 }
 

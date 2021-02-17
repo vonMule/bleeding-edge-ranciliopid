@@ -136,6 +136,7 @@ double setPoint = SETPOINT;
 double setPointSteam = SETPOINT_STEAM;
 double* activeSetPoint = &setPoint;
 double starttemp = STARTTEMP;
+double steamReadyTemp = STEAM_READY_TEMP;
 
 // State 1: Coldstart PID values
 const int coldStartStep1ActivationOffset = 5;
@@ -603,7 +604,7 @@ double temperature_simulate_steam() {
     //if ( now <= 26000 ) return 99;
     //if ( now <= 33000 ) return 96;
     //if (now <= 45000) return setPoint;  //TOBIAS remove  
-    if ( now <= 20000 ) return 115;
+    if ( now <= 20000 ) return 114;
     if ( now <= 26000 ) return 117;
     if ( now <= 29000 ) return 120;
     if (now <= 32000) return 116;
@@ -1266,14 +1267,14 @@ void loop() {
     lastCheckBrewReady = millis();
     bool brewReadyCurrent = checkBrewReady(setPoint, marginOfFluctuation, 60);
     if (!brewReady && brewReadyCurrent) {
-      snprintf(debugline, sizeof(debugline), "brewReady (stable last 60 secs. Tuning took %lu secs)", (lastCheckBrewReady - lastBrewEnd) / 1000);
+      snprintf(debugline, sizeof(debugline), "brewReady (Tuning took %lu secs)", ((lastCheckBrewReady - lastBrewEnd) / 1000) - 60);
       DEBUG_println(debugline);
       mqtt_publish("events", debugline);
       lastBrewReady = millis() - 60000;
     }
     brewReady = brewReadyCurrent;
   }
-  setHardwareLed(brewReady || Input >=setPointSteam);
+  setHardwareLed(brewReady || Input >=setPointSteam || Input >= steamReadyTemp);
 
   //network related stuff
   if (!force_offline) {
@@ -1400,7 +1401,18 @@ void loop() {
 
     /* state 4: Brew detected. Increase heater power */
     } else if (activeState == 4) {
-      if (OnlyPID == 0) {
+      if (Input > setPoint + outerZoneTemperatureDifference) {
+        Output = convertUtilisationToOutput(steadyPower + bPID.GetSteadyPowerOffsetCalculated());
+      } else {
+        Output = convertUtilisationToOutput(brewDetectionPower);
+      }
+      if (OnlyPID == 1) {
+        if (timerBrewDetection == 1) {
+          bezugsZeit = millis() - lastBrewTime;
+        }        
+      }
+      /*
+      if (OnlyPID == 0) {  //TODO TOBIAS
          Output = convertUtilisationToOutput(brewDetectionPower);
       } else if (OnlyPID == 1) {
         if (setPoint - Input <= (outerZoneTemperatureDifference + 0.5)
@@ -1414,6 +1426,7 @@ void loop() {
           bezugsZeit = millis() - lastBrewTime;
         }
       }
+      */
 
     /* state 5: Outer Zone reached. More power than in inner zone */
     } else if (activeState == 5) {

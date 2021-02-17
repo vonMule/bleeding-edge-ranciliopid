@@ -81,6 +81,13 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.6.0 beta 7:
+  - Feature/Fix: New setting STEAM_READY_TEMP to show our special steaming-icon only when temperature is above.
+    - There is support for special "in-steaming-state" icons, but I am in no mood to paint them yet. Feel free. 
+  - Fix: EMERGENCY_TEMP setting disables pid when temperature is above and reables when below set point. Please check your setting to be reasonable high (eg. Rancilio 135 degree). Should at least be higher than SETPOINT_STEAM.
+  - BREWDETECTION_POWER is now in active right after a brew is detected and not when temp <1.5degree below setpoint.
+  - Fix: mqtt interface for STEADYPOWER_OFFSET_TIME working. This setting is currenly wrongly set and need to be re-set!!
+  - Hardware Led also lights up when temperature higher STEAM_READY_TEMP.
 - 2.6.0 beta 6:
   - OnlyPid=1 && brewDetection==2: Fix bug in brew detection.
   - OnlyPid=1 && brewDetection==2: Feature: Guess premature stop of brew.

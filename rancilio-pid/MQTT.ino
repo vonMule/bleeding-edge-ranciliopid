@@ -324,9 +324,9 @@ void mqtt_parse(char* topic_str, char* data_str) {
   }
   if (strcmp(configVar, "steadyPowerOffsetTime") == 0) {
     sscanf(data_str, "%d", &data_int);
-    if (data_double != steadyPowerOffsetTime) {
+    if (data_int != steadyPowerOffsetTime) {
       DEBUG_print("setting steadyPowerOffsetTime=%s\n", data_str);
-      steadyPowerOffsetTime = data_double;
+      steadyPowerOffsetTime = data_int;
       mqtt_publish("steadyPowerOffsetTime", data_str);
       Blynk.virtualWrite(V43, String(steadyPowerOffsetTime, 1));
       force_eeprom_sync = millis();
