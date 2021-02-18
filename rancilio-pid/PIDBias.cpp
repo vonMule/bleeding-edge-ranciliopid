@@ -171,7 +171,7 @@ int PIDBias::Compute()
         *mySteadyPower = steadyPowerDefault; 
       }
       if ( steadyPowerAutoTune && *mySteadyPower > 10 ) {
-        DEBUG_print("Auto-Tune steadyPower(%0.2f) is by far too high. Set back to %0.2f\n", *mySteadyPower, 4.8);
+        DEBUG_print("Auto-Tune steadyPower(%0.2f) is by far too high. Force to %0.2f\n", *mySteadyPower, 4.8);
         *mySteadyPower = 4.8; 
       }
 

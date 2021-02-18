@@ -148,6 +148,16 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
       - Default of userConfig EMERGENCY_TEMP from 125 to 128.
       - Default of userConfig TEMPSENSORRECOVERY from 1 to 0.
   - Sample Config for IoTMQTTPanel: IoTMQTTPanel-rancilio_v2.6.0_v1.json
+- 2.4.2 master:
+  - Bugfix: Revert changes in regard to compiler warnings added in 2.4.1.
+  - Bugfix (MQTT_ENABLE=1): Auto-Tuning settings are persisted across restarts.
+  - Bugfix: steadyPowerOffsetTime is configurable via mqtt.
+  - Bugfix: aggoTn is now correctly published via mqtt.
+  - Added new circuit-diagrams (Thanks Tempcookies + Helge).
+  - MQTT code refactorings.
+- 2.4.1 master:
+  - It fixes some compiler errors and warnings I was seeing on my system. (Thanks nils-werner)
+  - It contains a small platformio.ini file for Platformio support. (Thanks nils-werner)
 - 2.4.0 master:
   - Special winter theme added. Activate with ICON_COLLECTION=2 in userConfig.h.
   - Added support for a customizable screen-saver (#define ENABLE_SCREEN_SAVER)
