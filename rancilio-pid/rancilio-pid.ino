@@ -23,7 +23,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.6.0 beta6";
+const char* sysVersion PROGMEM  = "2.6.0";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -1007,8 +1007,7 @@ void updateState() {
       if ( !brewing ||
            (OnlyPID && brewDetection == 2 && bezugsZeit >= lastBrewTimeOffset + 3 && 
             (bezugsZeit >= brewtime*1000 ||
-              setPoint - Input < 0  || 
-              (pastTemperatureChange(3) >= 0)  // detect premeature end of brew // Tobias: test this
+              setPoint - Input < 0
             )
            )
         ) {

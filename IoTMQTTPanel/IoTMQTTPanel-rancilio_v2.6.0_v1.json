@@ -1,0 +1,1289 @@
+{
+	"dataVersion": 54,
+	"connections": [
+		{
+			"autoConnect": true,
+			"connectionName": "Rancilio",
+			"clientId": "HBwwiJGjsY",
+			"host": "192.168.10.53",
+			"port": 1883,
+			"connectionType": "tcp",
+			"defaultDashboard": "dashboard_1",
+			"connectionTimeout": 30,
+			"keepAlive": 60,
+			"connectionId": "connection_4",
+			"dashboards": [
+				{
+					"dashboardId": "dashboard_1",
+					"dashboardName": "Rancilio PID",
+					"dashboardPrefixTopic": "custom/Küche.Rancilio2/",
+					"dashboardIcon": "cup_plate",
+					"dashboardColor": "#2196F3",
+					"panels": [
+						{
+							"noOfDivisor": 10,
+							"maxPersistence": 100,
+							"comboItemList": [
+								{
+									"color": "#08d800",
+									"$$hashKey": "object:283",
+									"topic": "temperature",
+									"label": "Temperature",
+									"showPoints": false,
+									"showArea": false,
+									"panelTopic": "custom/Küche.Rancilio2/temperature",
+									"lineGraphData": [
+										{
+											"x": "2021-02-16T21:19:49.056Z",
+											"y": 24.92
+										},
+										{
+											"x": "2021-02-16T21:19:54.071Z",
+											"y": 24.94
+										},
+										{
+											"x": "2021-02-16T21:19:59.095Z",
+											"y": 24.94
+										},
+										{
+											"x": "2021-02-16T21:20:04.114Z",
+											"y": 24.96
+										},
+										{
+											"x": "2021-02-16T21:20:09.224Z",
+											"y": 24.94
+										},
+										{
+											"x": "2021-02-16T21:20:14.040Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:20:19.149Z",
+											"y": 24.96
+										},
+										{
+											"x": "2021-02-16T21:20:23.912Z",
+											"y": 24.98
+										},
+										{
+											"x": "2021-02-16T21:20:29.196Z",
+											"y": 25
+										},
+										{
+											"x": "2021-02-16T21:20:34.020Z",
+											"y": 24.94
+										},
+										{
+											"x": "2021-02-16T21:20:39.233Z",
+											"y": 24.94
+										},
+										{
+											"x": "2021-02-16T21:20:54.178Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:20:59.096Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:04.109Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:09.223Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:14.041Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:19.058Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:24.076Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:29.198Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:34.119Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:39.132Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:44.054Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:49.161Z",
+											"y": 24.92
+										},
+										{
+											"x": "2021-02-16T21:21:54.085Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:21:59.100Z",
+											"y": 24.9
+										},
+										{
+											"x": "2021-02-16T21:22:04.230Z",
+											"y": 24.82
+										},
+										{
+											"x": "2021-02-17T07:22:18.660Z",
+											"y": 23.56
+										},
+										{
+											"x": "2021-02-18T20:23:40.810Z",
+											"y": 25
+										},
+										{
+											"x": "2021-02-18T20:24:22.205Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:24:27.220Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:24:32.238Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:24:37.259Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:24:42.277Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:24:47.292Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:24:52.202Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:24:57.226Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:02.243Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:07.261Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:12.279Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:17.296Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:22.212Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:27.230Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:32.248Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:37.175Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:42.280Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:47.294Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:52.211Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:25:57.232Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:26:02.251Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:26:07.268Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:26:12.284Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:26:17.300Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:26:22.218Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:26:27.236Z",
+											"y": 25.12
+										},
+										{
+											"x": "2021-02-18T20:26:32.258Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:26:47.204Z",
+											"y": 25.14
+										},
+										{
+											"x": "2021-02-18T20:26:52.221Z",
+											"y": 25.12
+										},
+										{
+											"x": "2021-02-18T20:26:57.239Z",
+											"y": 25.18
+										},
+										{
+											"x": "2021-02-18T20:27:02.256Z",
+											"y": 25.18
+										},
+										{
+											"x": "2021-02-18T20:30:16.408Z",
+											"y": 25.18
+										},
+										{
+											"x": "2021-02-18T20:30:21.424Z",
+											"y": 25.18
+										},
+										{
+											"x": "2021-02-18T20:30:26.337Z",
+											"y": 25.14
+										},
+										{
+											"x": "2021-02-18T20:30:31.357Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:30:36.376Z",
+											"y": 25.14
+										},
+										{
+											"x": "2021-02-18T20:30:41.395Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:30:46.411Z",
+											"y": 25.18
+										},
+										{
+											"x": "2021-02-18T20:30:51.429Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:30:56.341Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:31:01.363Z",
+											"y": 25.14
+										},
+										{
+											"x": "2021-02-18T20:31:06.381Z",
+											"y": 25.12
+										},
+										{
+											"x": "2021-02-18T20:31:48.671Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:31:53.688Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:31:58.705Z",
+											"y": 25.16
+										},
+										{
+											"x": "2021-02-18T20:32:03.610Z",
+											"y": 25.14
+										},
+										{
+											"x": "2021-02-18T20:32:08.637Z",
+											"y": 25.12
+										},
+										{
+											"x": "2021-02-18T20:32:13.656Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:32:18.675Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:32:23.691Z",
+											"y": 25.12
+										},
+										{
+											"x": "2021-02-18T20:32:28.710Z",
+											"y": 25.14
+										},
+										{
+											"x": "2021-02-18T20:32:33.731Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:32:38.642Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:32:43.661Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:32:48.679Z",
+											"y": 25.12
+										},
+										{
+											"x": "2021-02-18T20:32:53.696Z",
+											"y": 25.16
+										},
+										{
+											"x": "2021-02-18T20:32:58.713Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:33:03.734Z",
+											"y": 25.18
+										},
+										{
+											"x": "2021-02-18T20:33:08.646Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:33:13.660Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:33:18.676Z",
+											"y": 25.16
+										},
+										{
+											"x": "2021-02-18T20:33:23.694Z",
+											"y": 25.18
+										},
+										{
+											"x": "2021-02-18T20:33:28.714Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:33:33.730Z",
+											"y": 25.16
+										},
+										{
+											"x": "2021-02-18T20:33:38.646Z",
+											"y": 25.12
+										},
+										{
+											"x": "2021-02-18T20:33:43.668Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:33:48.680Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:33:53.700Z",
+											"y": 25.18
+										},
+										{
+											"x": "2021-02-18T20:33:58.719Z",
+											"y": 25.2
+										},
+										{
+											"x": "2021-02-18T20:34:03.609Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:34:08.610Z",
+											"y": 25.14
+										},
+										{
+											"x": "2021-02-18T20:34:13.669Z",
+											"y": 25.1
+										},
+										{
+											"x": "2021-02-18T20:34:18.685Z",
+											"y": 25.1
+										}
+									]
+								},
+								{
+									"color": "#ec473a",
+									"$$hashKey": "object:7021",
+									"topic": "heaterUtilization",
+									"label": "HeaterUtilization",
+									"showArea": true,
+									"panelTopic": "custom/Küche.Rancilio2/heaterUtilization",
+									"lineGraphData": [
+										{
+											"x": "2021-02-16T21:19:39.230Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:19:44.247Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:19:49.074Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:19:54.085Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:19:59.109Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:20:04.129Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:20:09.238Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:20:14.057Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:20:19.163Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:20:23.925Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:20:29.220Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:20:34.035Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:20:39.249Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:20:54.190Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:20:59.110Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:04.123Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:09.239Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:14.057Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:19.071Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:24.089Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:29.212Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:34.135Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:39.142Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:44.072Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:49.176Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:54.114Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:21:59.134Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-16T21:22:04.250Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:24:22.221Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:24:27.236Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:24:32.246Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:24:37.268Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:24:42.288Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:24:47.310Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:24:52.212Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:24:57.244Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:02.268Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:07.277Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:12.294Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:17.313Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:22.239Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:27.249Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:32.275Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:37.200Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:42.287Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:47.303Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:52.218Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:25:57.242Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:26:02.271Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:26:07.280Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:26:12.294Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:26:17.315Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:26:22.241Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:26:27.262Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:26:32.283Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:26:47.218Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:26:52.238Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:26:57.251Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:27:02.266Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:30:16.426Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:30:21.438Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:30:26.356Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:30:31.372Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:30:36.394Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:30:41.414Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:30:46.430Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:30:51.454Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:30:56.360Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:31:01.382Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:31:06.396Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:31:48.686Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:31:53.715Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:31:58.725Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:03.621Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:08.656Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:13.672Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:18.704Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:23.703Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:28.720Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:33.748Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:38.659Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:43.678Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:48.695Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:53.712Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:32:58.730Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:03.753Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:08.672Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:13.671Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:18.683Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:23.702Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:28.726Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:33.739Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:38.656Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:43.684Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:48.691Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:53.719Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:33:58.736Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:34:03.618Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:34:08.636Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:34:13.682Z",
+											"y": 100
+										},
+										{
+											"x": "2021-02-18T20:34:18.695Z",
+											"y": 100
+										}
+									]
+								}
+							],
+							"xAxisTimeFormat": "HH:mm",
+							"panelName": "Temperature/HeaterUtilization",
+							"panelId": "panel_1",
+							"type": "line-graph",
+							"panelWidth": "100",
+							"qos": 0,
+							"panelMergeClass": "     ",
+							"unit": "°/%",
+							"hideLegend": false,
+							"mqttType": "sub"
+						},
+						{
+							"showReceivedTimeStamp": false,
+							"showLatestMsgOnly": true,
+							"hideTopic": true,
+							"unit": " C",
+							"panelName": "Temperature",
+							"topic": "temperature",
+							"fontSize": "30",
+							"panelId": "panel_10",
+							"type": "log",
+							"logLength": 2,
+							"panelWidth": "50",
+							"qos": 0,
+							"panelMergeClass": "    ",
+							"mqttType": "sub"
+						},
+						{
+							"showReceivedTimeStamp": false,
+							"showLatestMsgOnly": true,
+							"hideTopic": true,
+							"unit": " %",
+							"panelName": "HeaterUtilization",
+							"topic": "heaterUtilization",
+							"fontSize": "30",
+							"panelId": "panel_21",
+							"type": "log",
+							"logLength": 2,
+							"panelWidth": "50",
+							"qos": 0,
+							"panelMergeClass": "    ",
+							"mqttType": "sub"
+						},
+						{
+							"showReceivedTimeStamp": false,
+							"showLatestMsgOnly": true,
+							"hideTopic": true,
+							"unit": " C",
+							"panelName": "Temperature Error",
+							"topic": "temperatureAboveTarget",
+							"fontSize": "23",
+							"panelId": "panel_22",
+							"type": "log",
+							"logLength": 2,
+							"panelWidth": "50",
+							"qos": 0,
+							"panelMergeClass": "    ",
+							"mqttType": "sub"
+						},
+						{
+							"showReceivedTimeStamp": false,
+							"showLatestMsgOnly": true,
+							"hideTopic": true,
+							"unit": " C",
+							"panelName": "Temperature Change",
+							"topic": "pastTemperatureChange",
+							"fontSize": "23",
+							"panelId": "panel_23",
+							"type": "log",
+							"logLength": 2,
+							"panelWidth": "50",
+							"qos": 0,
+							"panelMergeClass": "    ",
+							"mqttType": "sub"
+						},
+						{
+							"panelName": "On/Off",
+							"topic": "pidON/set",
+							"payloadOn": "1",
+							"payloadOff": "0",
+							"hasCustomIcon": false,
+							"iconOn": "flash_on",
+							"iconColorOn": "#9E9E9E",
+							"iconOff": "flash_off",
+							"iconColorOff": "#9E9E9E",
+							"panelId": "panel_6",
+							"type": "switch",
+							"panelWidth": "25",
+							"retain": true,
+							"qos": 0,
+							"seperateSubscribeTopic": "pidON",
+							"mqttType": "pubsub"
+						},
+						{
+							"iconOn": "hot_cup",
+							"iconColorOn": "#5fe000",
+							"iconOff": "heater",
+							"iconColorOff": "#e71919",
+							"topic": "brewReady",
+							"payloadOn": "1",
+							"payloadOff": "0",
+							"panelName": "Status",
+							"panelId": "panel_2",
+							"type": "led",
+							"panelWidth": "50",
+							"qos": 0,
+							"panelMergeClass": "     ",
+							"mqttType": "sub"
+						},
+						{
+							"iconOn": "led",
+							"iconColorOn": "#5fe000",
+							"iconOff": "led",
+							"iconColorOff": "#9E9E9E",
+							"topic": "brewDetected",
+							"payloadOn": "1",
+							"payloadOff": "0",
+							"panelName": "Brewing",
+							"panelId": "panel_3",
+							"type": "led",
+							"panelWidth": "25",
+							"qos": 0,
+							"panelMergeClass": "     ",
+							"mqttType": "sub"
+						},
+						{
+							"panelName": "SetPoint",
+							"topic": "setPoint/set",
+							"seperateSubscribeTopic": "setPoint",
+							"payloadMax": 97.5,
+							"payloadMin": 90.5,
+							"unit": " C",
+							"orientation": "horizontal",
+							"retain": true,
+							"panelId": "panel_8",
+							"type": "slider",
+							"panelWidth": "66",
+							"qos": 0,
+							"confirmBeforePublish": false,
+							"confirmationMessage": "Set",
+							"panelMergeClass": "merge-left    ",
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "SetPointSteam",
+							"topic": "setPointSteam/set",
+							"seperateSubscribeTopic": "setPointSteam",
+							"payloadMax": 125,
+							"payloadMin": 110,
+							"unit": " C",
+							"orientation": "horizontal",
+							"retain": true,
+							"panelId": "panel_33",
+							"type": "slider",
+							"panelWidth": "66",
+							"qos": 0,
+							"confirmBeforePublish": false,
+							"confirmationMessage": "Set",
+							"panelMergeClass": "merge-left    ",
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "Brewtime",
+							"topic": "brewtime/set",
+							"seperateSubscribeTopic": "brewtime",
+							"payloadMin": 0,
+							"payloadMax": 45,
+							"unit": " Sec",
+							"confirmBeforePublish": false,
+							"retain": true,
+							"panelId": "panel_9",
+							"type": "slider",
+							"panelWidth": "66",
+							"orientation": "horizontal",
+							"qos": 0,
+							"confirmationMessage": "Ok?",
+							"panelMergeClass": "   merge-bottom",
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "Preinfusion",
+							"titleAlignment": "center",
+							"panelId": "panel_15",
+							"type": "layout-decorator",
+							"fontSize": "20",
+							"panelWidth": "100",
+							"mqttType": "none"
+						},
+						{
+							"panelName": "Preinfusion",
+							"topic": "preinfusion/set",
+							"seperateSubscribeTopic": "preinfusion",
+							"payloadMin": 0,
+							"payloadMax": 10,
+							"unit": " Sec",
+							"confirmBeforePublish": false,
+							"retain": true,
+							"panelId": "panel_11",
+							"type": "slider",
+							"panelWidth": "66",
+							"orientation": "horizontal",
+							"qos": 0,
+							"confirmationMessage": "Ok?",
+							"panelMergeClass": "      ",
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "PreinfusionPause",
+							"topic": "preinfusionpause/set",
+							"seperateSubscribeTopic": "preinfusionpause",
+							"payloadMin": 0,
+							"payloadMax": 10,
+							"unit": " Sec",
+							"confirmBeforePublish": false,
+							"retain": true,
+							"panelId": "panel_12",
+							"type": "slider",
+							"panelWidth": "66",
+							"orientation": "horizontal",
+							"qos": 0,
+							"confirmationMessage": "Ok?",
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "BrewDetection",
+							"titleAlignment": "center",
+							"panelId": "panel_13",
+							"type": "layout-decorator",
+							"fontSize": "20",
+							"panelWidth": "100",
+							"mqttType": "none"
+						},
+						{
+							"panelName": "Sensitivity",
+							"topic": "brewDetectionSensitivity/set",
+							"seperateSubscribeTopic": "brewDetectionSensitivity",
+							"payloadMin": 0.4,
+							"payloadMax": 1.4,
+							"unit": " C",
+							"confirmBeforePublish": false,
+							"retain": true,
+							"panelId": "panel_14",
+							"type": "slider",
+							"panelWidth": "66",
+							"orientation": "horizontal",
+							"qos": 0,
+							"confirmationMessage": "Ok?",
+							"panelMergeClass": "    ",
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "Power",
+							"topic": "brewDetectionPower/set",
+							"seperateSubscribeTopic": "brewDetectionPower",
+							"payloadMin": 0,
+							"payloadMax": 100,
+							"unit": " %",
+							"confirmBeforePublish": false,
+							"retain": true,
+							"panelId": "panel_16",
+							"type": "slider",
+							"panelWidth": "66",
+							"orientation": "horizontal",
+							"qos": 0,
+							"confirmationMessage": "Ok?",
+							"panelMergeClass": "    ",
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "SteadyPower (Auto)",
+							"titleAlignment": "center",
+							"panelId": "panel_17",
+							"type": "layout-decorator",
+							"fontSize": "20",
+							"panelWidth": "100",
+							"mqttType": "none"
+						},
+						{
+							"panelName": "Power",
+							"topic": "steadyPower/set",
+							"seperateSubscribeTopic": "steadyPower",
+							"payloadMin": 0,
+							"payloadMax": 15.1,
+							"unit": " %",
+							"confirmBeforePublish": false,
+							"retain": true,
+							"panelId": "panel_18",
+							"type": "slider",
+							"panelWidth": "66",
+							"orientation": "horizontal",
+							"qos": 0,
+							"confirmationMessage": "Ok?",
+							"panelMergeClass": "    ",
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "PowerOffset",
+							"topic": "steadyPowerOffset/set",
+							"seperateSubscribeTopic": "steadyPowerOffset",
+							"payloadMin": 0,
+							"payloadMax": 10.1,
+							"unit": " %",
+							"confirmBeforePublish": false,
+							"retain": true,
+							"panelId": "panel_19",
+							"type": "slider",
+							"panelWidth": "66",
+							"orientation": "horizontal",
+							"qos": 0,
+							"confirmationMessage": "Ok?",
+							"panelMergeClass": "    ",
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "PowerOffsetTime",
+							"topic": "steadyPowerOffsetTime/set",
+							"seperateSubscribeTopic": "steadyPowerOffsetTime",
+							"payloadMin": 1,
+							"payloadMax": 1200,
+							"unit": " Sec",
+							"confirmBeforePublish": false,
+							"retain": true,
+							"panelId": "panel_20",
+							"type": "slider",
+							"panelWidth": "66",
+							"orientation": "horizontal",
+							"qos": 0,
+							"confirmationMessage": "Ok?",
+							"panelMergeClass": "    ",
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "starttemp",
+							"topic": "starttemp/set",
+							"seperateSubscribeTopic": "starttemp",
+							"retain": true,
+							"payloadMin": 70,
+							"payloadMax": 90,
+							"panelId": "panel_26",
+							"type": "slider",
+							"panelWidth": "66",
+							"orientation": "horizontal",
+							"qos": 0,
+							"mqttType": "pubsub"
+						},
+						{
+							"panelName": "Actions",
+							"titleAlignment": "center",
+							"panelId": "panel_31",
+							"type": "layout-decorator",
+							"mqttType": "none",
+							"fontSize": "20",
+							"panelWidth": "100"
+						},
+						{
+							"panelName": "Brewing",
+							"topic": "actions/BREWING",
+							"payloadOn": "1",
+							"payloadOff": "0",
+							"panelId": "panel_32",
+							"type": "switch",
+							"mqttType": "pubsub",
+							"panelWidth": "66",
+							"retain": false,
+							"qos": 0
+						},
+						{
+							"panelName": "Steaming",
+							"topic": "actions/STEAMING",
+							"payloadOn": "1",
+							"payloadOff": "0",
+							"hasCustomIcon": false,
+							"iconOn": "switch_on",
+							"iconColorOn": "#9E9E9E",
+							"iconOff": "switch_off",
+							"iconColorOff": "#9E9E9E",
+							"panelId": "panel_29",
+							"type": "switch",
+							"mqttType": "pubsub",
+							"panelWidth": "66",
+							"retain": false,
+							"qos": 0
+						},
+						{
+							"panelName": "Cleaning",
+							"topic": "actions/CLEANING",
+							"payloadOn": "1",
+							"payloadOff": "0",
+							"panelId": "panel_30",
+							"type": "switch",
+							"mqttType": "pubsub",
+							"panelWidth": "66",
+							"retain": false,
+							"qos": 0
+						},
+						{
+							"panelName": "Events",
+							"titleAlignment": "center",
+							"fontSize": "20",
+							"panelId": "panel_25",
+							"type": "layout-decorator",
+							"panelWidth": "100",
+							"mqttType": "none"
+						},
+						{
+							"showReceivedTimeStamp": false,
+							"panelName": "Events",
+							"topic": "events",
+							"panelId": "panel_24",
+							"type": "log",
+							"logLength": 10,
+							"panelWidth": "100",
+							"qos": 0,
+							"hideTopic": true,
+							"showLatestMsgOnly": false,
+							"fontSize": "20",
+							"maxPersistence": 10,
+							"mqttType": "sub"
+						}
+					],
+					"lockPanels": false
+				}
+			],
+			"dashboardQuickAccess": false,
+			"username": "USER",
+			"password": "PASS"
+		}
+	],
+	"appTheme": "dark",
+	"runInBackground": false,
+	"wakeLock": false,
+	"displayOrientation": "portrait"
+}
