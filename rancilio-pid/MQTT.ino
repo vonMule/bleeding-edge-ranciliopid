@@ -313,17 +313,11 @@ void mqtt_parse(char* topic_str, char* data_str) {
     return;
   }
   if (strcmp(configVar, "setPointSteam") == 0) {  //TOBIAS: update wiki (blynk address,..)
-    sscanf(data_str, "%lf", &data_double);
-    if (data_double != setPointSteam) {
-      DEBUG_print("setting setPointSteam=%s\n", data_str);
-      setPointSteam = data_double;
-      mqtt_publish("setPointSteam", data_str);
+    if (persist_setting("aggoTv", &setPointSteam, data_str)) {
       Blynk.virtualWrite(V50, String(setPointSteam, 1));
-      force_eeprom_sync = millis();
     }
     return;
-  }
-
+  }    
 }
 
 boolean persist_setting(char* type, double* value, char* data_str) {

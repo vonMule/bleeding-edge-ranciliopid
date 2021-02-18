@@ -148,6 +148,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
       - Default of userConfig EMERGENCY_TEMP from 125 to 128.
       - Default of userConfig TEMPSENSORRECOVERY from 1 to 0.
   - Sample Config for IoTMQTTPanel: IoTMQTTPanel-rancilio_v2.6.0_v1.json
+  - Update ZACwire-Library to v1.1.3.
 - 2.4.2 master:
   - Bugfix: Revert changes in regard to compiler warnings added in 2.4.1.
   - Bugfix (MQTT_ENABLE=1): Auto-Tuning settings are persisted across restarts.

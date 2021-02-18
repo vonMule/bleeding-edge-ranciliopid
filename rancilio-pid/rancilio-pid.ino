@@ -620,8 +620,9 @@ double temperature_simulate_steam() {
 
 double temperature_simulate_normal() {
     unsigned long now = millis();
-    if ( now <= 12000 ) return 85;
-    if ( now <= 15000 ) return 88;
+    if ( now <= 12000 ) return 82;
+    if ( now <= 15000 ) return 85;
+    if ( now <= 19000 ) return 88;
     if ( now <= 25000 ) return 91;
     if (now <= 28000) return 92;
     return setPoint; 
@@ -711,7 +712,7 @@ void refreshTemp() {
         previousInput = getCurrentTemperature();
         previousMillistemp = currentMillistemp;
         //Temperatur_C = temperature_simulate_steam();
-        // Temperatur_C = temperature_simulate_normal();
+        //Temperatur_C = temperature_simulate_normal();
         Temperatur_C = TSIC.getTemp();
         if (checkSensor(Temperatur_C, previousInput)) {
             updateTemperatureHistory(Temperatur_C);
@@ -2002,9 +2003,11 @@ void setup() {
     #ifdef USE_ZACWIRE_TSIC
     while (true) {
       //previousInput = temperature_simulate_steam();
+      //previousInput = temperature_simulate_normal();
       previousInput = TSIC.getTemp();
       delay(200);
       //Input = temperature_simulate_steam();
+      //Input = temperature_simulate_normal();
       Input = TSIC.getTemp();
       if (checkSensor(Input, previousInput)) {
         updateTemperatureHistory(Input);
