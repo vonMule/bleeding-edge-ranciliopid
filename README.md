@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.6.0
+Version 2.6.1 beta
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
