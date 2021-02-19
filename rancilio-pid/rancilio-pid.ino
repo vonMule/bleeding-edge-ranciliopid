@@ -22,7 +22,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.6.0";
+const char* sysVersion PROGMEM  = "2.6.1 beta";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -60,6 +60,7 @@ unsigned int blynk_max_incremental_backoff = 5 ; // At most backoff <mqtt_max_in
 
 WiFiClient espClient;
 
+
 // MQTT
 #if (MQTT_ENABLE==1)
 #include "src/PubSubClient/PubSubClient.h"
@@ -88,7 +89,6 @@ unsigned long mqtt_reconnect_incremental_backoff = 210000 ; //Failsafe: add 210s
 unsigned int mqtt_max_incremental_backoff = 5 ; // At most backoff <mqtt_max_incremenatl_backoff>+1 * (<mqtt_reconnect_incremental_backoff>ms)
 bool mqtt_disabled_temporary = false;
 
- 
 /********************************************************
    Vorab-Konfig
 ******************************************************/
@@ -245,9 +245,15 @@ const unsigned int emergency_temperature = 120;             // fallback
 double brewDetectionSensitivity = BREWDETECTION_SENSITIVITY ; // if temperature decreased within the last 6 seconds by this amount, then we detect a brew.
 #ifdef BREW_READY_DETECTION
 const int enabledHardwareLed = ENABLE_HARDWARE_LED;
+const int enabledHardwareLedNumber = ENABLE_HARDWARE_LED_NUMBER;
 float marginOfFluctuation = float(BREW_READY_DETECTION);
+#if (ENABLE_HARDWARE_LED==2)  // WS2812b based LEDs
+  #define FASTLED_ESP8266_RAW_PIN_ORDER
+  #include <FastLED.h>
+  CRGB leds[enabledHardwareLedNumber];
+#endif
 #else
-const int enabledHardwareLed = 0;   // 0 = disable functionality
+const int enabledHardwareLed = 0;       // 0 = disable functionality
 float marginOfFluctuation = 0;          // 0 = disable functionality
 #endif
 char* blynkReadyLedColor = "#000000";
@@ -551,12 +557,24 @@ bool checkBrewReady(double setPoint, float marginOfFluctuation, int lookback) {
 void setHardwareLed(bool mode) {
   #if (ENABLE_HARDWARE_LED == 0)
   return;
-  #endif
+  #elif (ENABLE_HARDWARE_LED == 1)
   static bool previousMode = false;
-  if (enabledHardwareLed && mode != previousMode) {
-      digitalWrite(pinLed, mode);
-      previousMode = mode;
+  if (enabledHardwareLed == 1 && mode != previousMode) {
+    digitalWrite(pinLed, mode);
+    previousMode = mode;
   }
+  #elif (ENABLE_HARDWARE_LED == 2)
+  static bool previousMode = false;
+  if(enabledHardwareLed == 2 && mode != previousMode){
+    if (mode){
+      fill_solid(leds, enabledHardwareLedNumber, CRGB(100, 100, 100));
+    }
+    else{
+      fill_solid(leds, enabledHardwareLedNumber, CRGB(255, 255, 255));
+    }
+    FastLED.show(); 
+  }
+  #endif
 }
 
 /*****************************************************
@@ -1807,6 +1825,10 @@ void setup() {
   #if (ENABLE_HARDWARE_LED == 1)
   pinMode(pinLed, OUTPUT);
   digitalWrite(pinLed, LOW);
+  setHardwareLed(1);
+  #elif (ENABLE_HARDWARE_LED == 2)
+  pinMode(pinLed, OUTPUT);
+  FastLED.addLeds<WS2812B, pinLed, GRB>(leds, enabledHardwareLedNumber);
   setHardwareLed(1);
   #endif
 

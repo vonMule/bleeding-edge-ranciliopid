@@ -1,5 +1,5 @@
 /********************************************************
- * Version 2.6.0
+ * Version 2.6.1
  * Config must be configured by the user
  *****************************************************/
 
@@ -29,11 +29,11 @@
 #define BREWDETECTION_WAIT 90         // (ONLYPID=1) 50=default: Software based BrewDetection is disabled after brewing for this number (seconds)
 #define BREWDETECTION_POWER 50        // heater utiilization (in percent) during brew (BREWDETECTION must be 1)
 
-#define BREW_READY_DETECTION 0.3  // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (recommended value 0.3)
-#define ENABLE_HARDWARE_LED 0     // 0=off | 1=LED at GPO PinLed will lighten when BREW_READY_DETECTION triggers or temperature>SETPOINT_STEAM
+#define BREW_READY_DETECTION 0.3      // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (recommended value 0.3)
+#define ENABLE_HARDWARE_LED 0         // 0=off | 1=Single LED | 2=WS2812b - LEDs at GPO PinLed will lighten when BREW_READY_DETECTION triggers or temperature>SETPOINT_STEAM
+#define ENABLE_HARDWARE_LED_NUMBER 0  // 0=off | (ENABLE_HARDWARE_LED=2) Number of WS2812b-based LEDs connected
 
 //#define DEBUGMODE               // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
-
 
 /*******   
  * Hardware GPIO Pin Mapping (just change values but don't comment)
