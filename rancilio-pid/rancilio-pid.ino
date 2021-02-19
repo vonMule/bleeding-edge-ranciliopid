@@ -22,7 +22,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.4.2";
+const char* sysVersion PROGMEM  = "2.6.0";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -47,7 +47,6 @@ unsigned long wifiConnectWaitTime = 6000; //ms to wait for the connection to suc
 unsigned int wifiReconnects = 0; //number of reconnects
 
 // OTA
-const char* OTAhost = OTAHOST;
 const char* OTApass = OTAPASS;
 
 //Blynk
@@ -67,7 +66,6 @@ WiFiClient espClient;
 //#include <PubSubClient.h>  // uncomment this line AND delete src/PubSubClient/ folder, if you want to use system lib
 PubSubClient mqtt_client(espClient);
 #elif (MQTT_ENABLE==2)
-//#include "src/uMQTTBroker/uMQTTBroker.h"
 #include "uMQTTBroker.h"
 #endif
 const int MQTT_MAX_PUBLISH_SIZE = 120; //see https://github.com/knolleary/pubsubclient/blob/master/src/PubSubClient.cpp
@@ -78,6 +76,7 @@ const char* mqtt_password = MQTT_PASSWORD;
 const char* mqtt_topic_prefix = MQTT_TOPIC_PREFIX;
 char topic_will[256];
 char topic_set[256];
+char topic_actions[256];
 unsigned long lastMQTTStatusReportTime = 0;
 unsigned long lastMQTTStatusReportInterval = 5000; //mqtt send status-report every 5 second
 const bool mqtt_flag_retained = true;
@@ -101,8 +100,8 @@ int activeState = 3;        // (0:= undefined / EMERGENCY_TEMP reached)
                             // 3:= (default) Inner Zone detected (temperature near setPoint)
                             // 4:= Brew detected
                             // 5:= Outer Zone detected (temperature outside of "inner zone")
-                            // (6:= steam mode activated (TODO))
-                            // (7:= steam ready)
+                            // 6:= steam mode activated
+                            // (7:= steam ready, TODO?)
 bool emergencyStop = false; // Notstop bei zu hoher Temperatur
 
 /********************************************************
@@ -133,7 +132,10 @@ double previousOutput = 0;
 int pidMode = 1;                   //1 = Automatic, 0 = Manual
 
 double setPoint = SETPOINT;
+double setPointSteam = SETPOINT_STEAM;
+double* activeSetPoint = &setPoint;
 double starttemp = STARTTEMP;
+double steamReadyTemp = STEAM_READY_TEMP;
 
 // State 1: Coldstart PID values
 const int coldStartStep1ActivationOffset = 5;
@@ -151,7 +153,7 @@ double aggKi = 0;
 #else
 double aggKi = aggKp / aggTn;
 #endif
-double aggKd = aggTv * aggKp ;
+double aggKd = aggTv * aggKp;
 
 // State 4: Brew PID values
 // ... none ...
@@ -168,6 +170,7 @@ double aggoKi = aggoKp / aggoTn;
 #endif
 double aggoKd = aggoTv * aggoKp ;
 const double outerZoneTemperatureDifference = 1;
+//const double steamZoneTemperatureDifference = 3;
 
 /********************************************************
    PID with Bias (steadyPower) Temperature Controller
@@ -193,29 +196,33 @@ unsigned long lastUpdateSteadyPowerOffset = 0;  //last time steadyPowerOffset wa
 bool MachineColdOnStart = true;
 double starttempOffset = 0;  //Increasing this lead to too high temp and emergency measures taking place. For my rancilio it is best to leave this at 0.
 
-PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyPowerOffset_Activated, &steadyPowerOffsetTime, &setPoint, aggKp, aggKi, aggKd);
+PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyPowerOffset_Activated, &steadyPowerOffsetTime, &activeSetPoint, aggKp, aggKi, aggKd);
 
 /********************************************************
-   Analog Schalter Read
+   BREWING / PREINFUSSION
 ******************************************************/
 double brewtime          = BREWTIME;
 double preinfusion       = PREINFUSION;
 double preinfusionpause  = PREINFUSION_PAUSE;
-int brewing              = 0;
-int brewswitch           = 0;
+int brewing              = 0;  //Attention: "brewing" must only be changed in brew() (ONLYPID=0) or brewingAction() (ONLYPID=1)!
 bool waitingForBrewSwitchOff = false;
+int brewState            = 0;
 unsigned long totalbrewtime = 0;
 unsigned long bezugsZeit = 0;
 unsigned long startZeit  = 0;
 unsigned long previousBrewCheck = 0;
 unsigned long lastBrewMessage   = 0;
 
-unsigned long previousControlButtonCheck = 0;
+/********************************************************
+   STEAMING
+******************************************************/
+int steaming             = 0;
+unsigned long lastSteamMessage = 0;
 
 /********************************************************
    Sensor check
 ******************************************************/
-bool sensorError = false;
+bool sensorError    = false;
 int error           = 0;
 int maxErrorCounter = 10 ;  //define maximum number of consecutive polls (of intervaltempmes* duration) to have errors
 
@@ -237,10 +244,10 @@ const unsigned int emergency_temperature = 120;             // fallback
 #endif
 double brewDetectionSensitivity = BREWDETECTION_SENSITIVITY ; // if temperature decreased within the last 6 seconds by this amount, then we detect a brew.
 #ifdef BREW_READY_DETECTION
-const int brew_ready_led_enabled = BREW_READY_LED;
+const int enabledHardwareLed = ENABLE_HARDWARE_LED;
 float marginOfFluctuation = float(BREW_READY_DETECTION);
 #else
-const int brew_ready_led_enabled = 0;   // 0 = disable functionality
+const int enabledHardwareLed = 0;   // 0 = disable functionality
 float marginOfFluctuation = 0;          // 0 = disable functionality
 #endif
 char* blynkReadyLedColor = "#000000";
@@ -248,7 +255,7 @@ unsigned long lastCheckBrewReady = 0;
 unsigned long lastBrewReady = 0;
 unsigned long lastBrewEnd = 0;    //used to determime the time it takes to reach brewReady==true
 bool brewReady = false;
-const int expected_eeprom_version = 4;        // EEPROM values are saved according to this versions layout. Increase if a new layout is implemented.
+const int expected_eeprom_version = 5;        // EEPROM values are saved according to this versions layout. Increase if a new layout is implemented.
 unsigned long eeprom_save_interval = 28*60*1000UL;  //save every 28min
 unsigned long last_eeprom_save = 0;
 char debugline[100];
@@ -309,6 +316,14 @@ volatile byte tsicDataAvailable = 0;
 unsigned int isrCounterStripped = 0;
 const int isrCounterFrame = 1000;
 
+
+/********************************************************
+   CONTROLS
+******************************************************/
+#include "controls.h"
+controlMap* controlsConfig = NULL;
+unsigned long lastCheckGpio = 0;
+
 /********************************************************
    BLYNK
 ******************************************************/
@@ -340,6 +355,7 @@ BLYNK_CONNECTED() {
 BLYNK_APP_CONNECTED() {
   DEBUG_print("Blynk Client Connected.\n");
   print_settings();
+  printControlsConfig(controlsConfig);
 }
 // This is called when Smartphone App is closed
 BLYNK_APP_DISCONNECTED() {
@@ -403,6 +419,10 @@ BLYNK_WRITE(V43) {
 BLYNK_WRITE(V44) {
   burstPower = param.asDouble();
 }
+BLYNK_WRITE(V50) {
+  setPointSteam = param.asDouble();
+}
+
 
 /******************************************************
  * Type Definition of "sending" BLYNK PIN values from 
@@ -422,7 +442,7 @@ bool blynk_working() {
 }
 
 bool in_sensitive_phase() {
-  return (Input >=115 || brewing || activeState==4 || isrCounter > 1000);
+  return (Input >=(setPointSteam -5) || brewing || activeState==4 || isrCounter > 1000);
 }
 
 /********************************************************
@@ -436,8 +456,8 @@ void testEmergencyStop(){
       mqtt_publish("events", debugline);
       emergencyStop = true;
     }
-  } else if (emergencyStop == true && getCurrentTemperature() < 100) {
-    snprintf(debugline, sizeof(debugline), "EmergencyStop ended because temperature<100 (temperature=%0.2f)", getCurrentTemperature());
+  } else if (emergencyStop == true && getCurrentTemperature() < emergency_temperature) {
+    snprintf(debugline, sizeof(debugline), "EmergencyStop ended because temperature<%0.2f (temperature=%0.2f)", emergency_temperature, getCurrentTemperature());
     ERROR_println(debugline);
     mqtt_publish("events", debugline);
     emergencyStop = false;
@@ -528,11 +548,14 @@ bool checkBrewReady(double setPoint, float marginOfFluctuation, int lookback) {
   return true;
 }
 
-void refreshBrewReadyHardwareLed(bool brewReady) {
-  static bool lastBrewReady = false;
-  if (brew_ready_led_enabled && brewReady != lastBrewReady) {
-      digitalWrite(pinLed, brewReady);
-      lastBrewReady = brewReady;
+void setHardwareLed(bool mode) {
+  #if (ENABLE_HARDWARE_LED == 0)
+  return;
+  #endif
+  static bool previousMode = false;
+  if (enabledHardwareLed && mode != previousMode) {
+      digitalWrite(pinLed, mode);
+      previousMode = mode;
   }
 }
 
@@ -579,7 +602,11 @@ void ICACHE_RAM_ATTR readTSIC() { //executed every ~100ms by interrupt
 
 double temperature_simulate_steam() {
     unsigned long now = millis();
-    if ( now <= 20000 ) return 115;
+    //if ( now <= 20000 ) return 102;
+    //if ( now <= 26000 ) return 99;
+    //if ( now <= 33000 ) return 96;
+    //if (now <= 45000) return setPoint;  //TOBIAS remove  
+    if ( now <= 20000 ) return 114;
     if ( now <= 26000 ) return 117;
     if ( now <= 29000 ) return 120;
     if (now <= 32000) return 116;
@@ -593,8 +620,9 @@ double temperature_simulate_steam() {
 
 double temperature_simulate_normal() {
     unsigned long now = millis();
-    if ( now <= 12000 ) return 85;
-    if ( now <= 15000 ) return 88;
+    if ( now <= 12000 ) return 82;
+    if ( now <= 15000 ) return 85;
+    if ( now <= 19000 ) return 88;
     if ( now <= 25000 ) return 91;
     if (now <= 28000) return 92;
     return setPoint; 
@@ -683,8 +711,8 @@ void refreshTemp() {
       {
         previousInput = getCurrentTemperature();
         previousMillistemp = currentMillistemp;
-        // Temperatur_C = temperature_simulate_steam();
-        // Temperatur_C = temperature_simulate_normal();
+        //Temperatur_C = temperature_simulate_steam();
+        //Temperatur_C = temperature_simulate_normal();
         Temperatur_C = TSIC.getTemp();
         if (checkSensor(Temperatur_C, previousInput)) {
             updateTemperatureHistory(Temperatur_C);
@@ -708,104 +736,76 @@ void refreshTemp() {
 
 
 /********************************************************
-    Button Admin Menu
-******************************************************/
-int checkControlButtons() {
-  //TODO add fail-safe if buttons are always detected as pressed
-  //TODO add DEFINE
-  const int lower_seperating_signal = 300;
-  const int higher_seperating_signal = 520;
-  const int default_seperating_signal = 870;
-  if ( millis() >= previousControlButtonCheck + 100 ) {  //250ms
-    //previousControlButtonCheck = millis();
-    int signal = analogRead(0);
-    //DEBUG_print("ControlButton signal: %d\n", signal);
-    if (signal > 10 && signal <= lower_seperating_signal) {
-      previousControlButtonCheck = millis() + 180;
-      return 1; 
-    } else if (signal > lower_seperating_signal && signal <= higher_seperating_signal) {
-      previousControlButtonCheck = millis() + 180;
-      return 2; 
-    } else if (signal >higher_seperating_signal && signal <= default_seperating_signal) {
-      previousControlButtonCheck = millis() + 180;
-      return 3; 
-    } else if (signal >default_seperating_signal) {
-      previousControlButtonCheck = millis();
-      return 0;
-    } //else {
-      //previousControlButtonCheck = millis();
-      //DEBUG_print("Undefined ControlButton signal: %d\n", signal);
-    //}
-  }
-  return 0;
-}
-
-
-/********************************************************
     PreInfusion, Brew , if not Only PID
 ******************************************************/
 void brew() {
-  if (OnlyPID == 0) {
-    unsigned long aktuelleZeit = millis();
+  if (OnlyPID) {
+    return;
+  }
+  unsigned long aktuelleZeit = millis();
+  if (simulatedBrewSwitch && (brewing == 1 || waitingForBrewSwitchOff == false) ) {
+    totalbrewtime = (preinfusion + preinfusionpause + brewtime) * 1000;
     
-    if ( aktuelleZeit >= previousBrewCheck + 50 ) {  //50ms
-      previousBrewCheck = aktuelleZeit;
-      brewswitch = analogRead(pinBrewButton);
-
-      //if (aktuelleZeit >= output_timestamp + 500) {
-      //  DEBUG_print("brew(): brewswitch=%u | brewing=%u | waitingForBrewSwitchOff=%u\n", brewswitch, brewing, waitingForBrewSwitchOff);
-      //  output_timestamp = aktuelleZeit;
-      //}
-      if (brewswitch > 700 && not (brewing == 0 && waitingForBrewSwitchOff) ) {
-        totalbrewtime = (preinfusion + preinfusionpause + brewtime) * 1000;
-        userActivity = millis();
-        
-        if (brewing == 0) {
-          brewing = 1;
-          startZeit = aktuelleZeit;
-          waitingForBrewSwitchOff = true;
-          DEBUG_print("brewswitch=on - Starting brew()\n");
-        }
-        bezugsZeit = aktuelleZeit - startZeit; 
-  
-        //if (aktuelleZeit >= lastBrewMessage + 500) {
-        //  lastBrewMessage = aktuelleZeit;
-        //  DEBUG_print("brew(): bezugsZeit=%lu totalbrewtime=%lu\n", bezugsZeit/1000, totalbrewtime/1000);
-        //}
-        if (bezugsZeit <= totalbrewtime) {
-          if (bezugsZeit <= preinfusion*1000) {
-            //DEBUG_println("preinfusion");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayON);
-          } else if (bezugsZeit > preinfusion*1000 && bezugsZeit <= (preinfusion + preinfusionpause)*1000) {
-            //DEBUG_println("Pause");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayOFF);
-          } else if (bezugsZeit > (preinfusion + preinfusionpause)*1000) {
-            //DEBUG_println("Brew");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayON);
-          }
-        } else {
-          DEBUG_print("End brew()\n");
-          brewing = 0;
-        }
-      }
-  
-      if (brewswitch <= 700) {
-        if (waitingForBrewSwitchOff) {
-          DEBUG_print("brewswitch=off\n");
-          userActivity = millis();
-        }
-        waitingForBrewSwitchOff = false;
-        brewing = 0;
-        bezugsZeit = 0;
-      }
-      if (brewing == 0) {
-          digitalWrite(pinRelayVentil, relayOFF);
-          digitalWrite(pinRelayPumpe, relayOFF);
-      }
+    if (brewing == 0) {
+      brewing = 1;  // Attention: For OnlyPID==0 brewing must only be changed in this function! Not externally.
+      startZeit = aktuelleZeit;
+      waitingForBrewSwitchOff = true;         
+      
     }
+    bezugsZeit = aktuelleZeit - startZeit; 
+
+    if (aktuelleZeit >= lastBrewMessage + 500) {
+      lastBrewMessage = aktuelleZeit;
+      DEBUG_print("brew(): bezugsZeit=%lu totalbrewtime=%lu\n", bezugsZeit/1000, totalbrewtime/1000);
+    }
+    if (bezugsZeit <= totalbrewtime) {
+      if (preinfusion > 0 && bezugsZeit <= preinfusion*1000) {
+        if (brewState != 1) {
+          brewState = 1;
+          DEBUG_println("preinfusion");
+          digitalWrite(pinRelayVentil, relayON);
+          digitalWrite(pinRelayPumpe, relayON);
+        }
+      } else if (preinfusion > 0 && bezugsZeit > preinfusion*1000 && bezugsZeit <= (preinfusion + preinfusionpause)*1000) {
+        if (brewState != 2) {
+          brewState = 2;
+          DEBUG_println("Pause");
+          digitalWrite(pinRelayVentil, relayON);
+          digitalWrite(pinRelayPumpe, relayOFF);
+        }
+      } else if (preinfusion == 0 || bezugsZeit > (preinfusion + preinfusionpause)*1000) {
+        if (brewState != 3) {
+          brewState = 3;
+          DEBUG_println("Brew");
+          digitalWrite(pinRelayVentil, relayON);
+          digitalWrite(pinRelayPumpe, relayON);
+        }
+      }
+    } else {
+      brewState = 0;
+      DEBUG_print("End brew()\n");
+      brewing = 0;
+      digitalWrite(pinRelayVentil, relayOFF);
+      digitalWrite(pinRelayPumpe, relayOFF);
+    }
+  } else if (simulatedBrewSwitch && !brewing) {  //corner-case: switch=On but brewing==0
+    waitingForBrewSwitchOff = true;  //just to be sure
+    //digitalWrite(pinRelayVentil, relayOFF);  //already handled by brewing var
+    //digitalWrite(pinRelayPumpe, relayOFF);
+    bezugsZeit = 0;
+    brewState = 0;        
+  } else if (!simulatedBrewSwitch) {
+    if (waitingForBrewSwitchOff) {
+      DEBUG_print("simulatedBrewSwitch=off\n");
+    }
+    waitingForBrewSwitchOff = false;
+    if (brewing == 1) {
+      digitalWrite(pinRelayVentil, relayOFF);
+      digitalWrite(pinRelayPumpe, relayOFF);
+      brewing = 0;
+    }
+    bezugsZeit = 0;
+    brewState = 0;
   }
 }
 
@@ -879,7 +879,7 @@ void sendToBlynk() {
       }
     }
     if (grafana == 1 && blynksendcounter == 1) {
-      Blynk.virtualWrite(V60, Input, Output, bPID.GetKp(), bPID.GetKi(), bPID.GetKd(), setPoint );
+      Blynk.virtualWrite(V60, Input, Output, bPID.GetKp(), bPID.GetKi(), bPID.GetKd(), *activeSetPoint );
     }
     //performance tests has shown to only send one api-call per sendToBlynk() 
     if (blynksendcounter == 1) {
@@ -900,8 +900,8 @@ void sendToBlynk() {
     } 
     if (blynksendcounter == 3) {
       if (String(Input - setPoint, 2) != PreviousError) {
-        Blynk.virtualWrite(V11, String(Input - setPoint, 2));
-        PreviousError = String(Input - setPoint, 2);
+        Blynk.virtualWrite(V11, String(Input - *activeSetPoint, 2));
+        PreviousError = String(Input - *activeSetPoint, 2);
       } else {
         blynksendcounter++;
       }
@@ -1015,21 +1015,22 @@ void updateState() {
     {
       bPID.SetFilterSumOutputI(100);
       bPID.SetAutoTune(false);
-      if ((!OnlyPID && !brewing) || 
-           (OnlyPID && bezugsZeit >= lastBrewTimeOffset + 3 && 
+      if ( !brewing ||
+           (OnlyPID && brewDetection == 2 && bezugsZeit >= lastBrewTimeOffset + 3 && 
             (bezugsZeit >= brewtime*1000 ||
               setPoint - Input < 0
-            ) 
+            )
            )
         ) {
+        if (OnlyPID && brewDetection == 2) brewing = 0;
         //DEBUG_print("Out Zone Detection: past(2)=%0.2f, past(3)=%0.2f | past(5)=%0.2f | past(10)=%0.2f | bezugsZeit=%lu\n", pastTemperatureChange(2), pastTemperatureChange(3), pastTemperatureChange(5), pastTemperatureChange(10), bezugsZeit / 1000);
         //DEBUG_print("t(0)=%0.2f | t(1)=%0.2f | t(2)=%0.2f | t(3)=%0.2f | t(5)=%0.2f | t(10)=%0.2f | t(13)=%0.2f\n", getTemperature(0), getTemperature(1), getTemperature(2), getTemperature(3), getTemperature(5), getTemperature(7), getTemperature(10), getTemperature(13));
         snprintf(debugline, sizeof(debugline), "** End of Brew. Transition to step 2 (constant steadyPower)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
-        bPID.SetAutoTune(false);
+        bPID.SetAutoTune(true);
         bPID.SetSumOutputI(0);
-        timerBrewDetection = 0 ;
+        timerBrewDetection = 0;
         mqtt_publish("brewDetected", "0");
         activeState = 2;
         lastBrewEnd = millis();
@@ -1043,28 +1044,54 @@ void updateState() {
       } else {
         bPID.SetFilterSumOutputI(9);
       }
-      if ( fabs(Input - setPoint) < outerZoneTemperatureDifference) {
+
+      if ( fabs(Input - *activeSetPoint) < outerZoneTemperatureDifference || steaming == 1 || (OnlyPID && brewDetection == 1 && simulatedBrewSwitch) ) {
         snprintf(debugline, sizeof(debugline), "** End of outerZone. Transition to step 3 (normal mode)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
+        if (pidMode == 1) bPID.SetMode(AUTOMATIC);
         bPID.SetSumOutputI(0);
+        bPID.SetAutoTune(true);
         timerBrewDetection = 0 ;
         activeState = 3;
       }
       break;
     }
+    case 6: //state 6 heat up because we want to steam
+    {
+      bPID.SetAutoTune(false);  //do not tune during steam phase
+      bPID.SetSumOutputI(100);
+
+      if (!steaming) {  ///YYY1
+        snprintf(debugline, sizeof(debugline), "** End of Steaming phase. Now cooling down. Transition to step 3 (normal mode)");
+        DEBUG_println(debugline);
+        mqtt_publish("events", debugline);
+        if (*activeSetPoint != setPoint) {
+          activeSetPoint = &setPoint;  //TOBIAS rename setPoint -> brewSetPoint
+          DEBUG_print("set activeSetPoint: %0.2f\n", *activeSetPoint);
+        }
+        if (pidMode == 1) bPID.SetMode(AUTOMATIC);
+        bPID.SetSumOutputI(0);
+        bPID.SetAutoTune(false);
+        Output = 0;
+        timerBrewDetection = 0;
+        activeState = 3;
+      }
+      break;
+    }
+
     case 3: // normal PID mode
     default:
     {
       if (!pidMode) break;
 
       //set maximum allowed filterSumOutputI based on error/marginOfFluctuation
-      if (Input >= setPoint - marginOfFluctuation) {
+      if (Input >= *activeSetPoint - marginOfFluctuation) {
         if (bPID.GetFilterSumOutputI() != 1.0) {
           bPID.SetFilterSumOutputI(0);
         }
         bPID.SetFilterSumOutputI(1.0);
-      } else if ( Input >= setPoint - 0.5) {
+      } else if ( Input >= *activeSetPoint - 0.5) {
         bPID.SetFilterSumOutputI(2.0);
       } else {
         bPID.SetFilterSumOutputI(4.5);
@@ -1084,19 +1111,23 @@ void updateState() {
       }
 
       /* STATE 4 (BREW) DETECTION */
-      if (brewDetectionSensitivity != 0 && brewDetection == 1) {
+      if (brewDetection == 1 || (brewDetectionSensitivity != 0 && brewDetection == 2) ) {
         //enable brew-detection if not already running and diff temp is > brewDetectionSensitivity
-        if ( (!OnlyPID && brewing) || 
-             (OnlyPID && (pastTemperatureChange(3) <= -brewDetectionSensitivity) && 
+        if ( brewing ||
+             (OnlyPID && brewDetection == 2 && (pastTemperatureChange(3) <= -brewDetectionSensitivity) && 
                fabs(getTemperature(5) - setPoint) <= outerZoneTemperatureDifference && 
                millis() - lastBrewTime >= BREWDETECTION_WAIT * 1000)
            ) {
           //DEBUG_print("Brew Detect: prev(5)=%0.2f past(3)=%0.2f past(5)=%0.2f | Avg(3)=%0.2f | Avg(10)=%0.2f Avg(2)=%0.2f\n", getTemperature(5), pastTemperatureChange(3), pastTemperatureChange(5), getAverageTemperature(3), getAverageTemperature(10), getAverageTemperature(2));  
           //Sample: Brew Detection: past(3)=-1.70 past(5)=-2.10 | Avg(3)=91.50 | Avg(10)=92.52 Avg(20)=92.81
           if (OnlyPID) {
-            bezugsZeit = 0 ;
-            lastBrewTime = millis() - lastBrewTimeOffset;
-            brewing = 1;
+            bezugsZeit = 0;
+            if (brewDetection == 2) {
+              brewing = 1;
+              lastBrewTime = millis() - lastBrewTimeOffset;
+            } else {
+              lastBrewTime = millis() - 200;
+            }
           }
           userActivity = millis();
           timerBrewDetection = 1 ;
@@ -1110,15 +1141,33 @@ void updateState() {
         }
       }
 
+      /* STATE 6 (Steam) DETECTION */
+      if (steaming) {
+        snprintf(debugline, sizeof(debugline), "Steaming Detected. Transition to state 6 (Steam)");
+        DEBUG_println(debugline);
+        mqtt_publish("events", debugline);
+        if (*activeSetPoint != setPointSteam) {
+          activeSetPoint = &setPointSteam;
+          DEBUG_print("set activeSetPoint: %0.2f\n", *activeSetPoint);
+        }
+        activeState = 6;
+        break;
+      }
+
       /* STATE 5 (OUTER ZONE) DETECTION */
       if ( Input > starttemp - coldStartStep1ActivationOffset && 
-           (fabs(Input - setPoint) > outerZoneTemperatureDifference) ) { 
+           (fabs(Input - *activeSetPoint) > outerZoneTemperatureDifference)
+         ) {
         //DEBUG_print("Out Zone Detection: Avg(3)=%0.2f | Avg(5)=%0.2f Avg(20)=%0.2f Avg(2)=%0.2f\n", getAverageTemperature(3), getAverageTemperature(5), getAverageTemperature(20), getAverageTemperature(2));  
         snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to step 5 (outerZone)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
         bPID.SetSumOutputI(0);
         activeState = 5;
+        if (Input > setPoint) {  // if we are above setPoint always disable heating (primary useful after steaming)  YYY1
+          bPID.SetAutoTune(false);
+          bPID.SetMode(MANUAL);
+        }
         break;
       }
 
@@ -1127,7 +1176,7 @@ void updateState() {
   }
   
   // steadyPowerOffset_Activated handling
-  if ( steadyPowerOffset_Activated >0 ) {
+  if ( steadyPowerOffset_Activated > 0) {
     if (Input - setPoint >= 1) {
       steadyPowerOffset_Activated = 0;
       snprintf(debugline, sizeof(debugline), "ATTENTION: Disabled steadyPowerOffset because its too large or starttemp too high");
@@ -1161,7 +1210,7 @@ void pidCompute() {
   }
   int ret = bPID.Compute();
   if ( ret == 1) {  // compute() did run successfully
-    if (isrCounter>5100) {
+    if (isrCounter>(windowSize+100)) {
       ERROR_print("pidCompute() delay: isrCounter=%d, heater_overextending_isrCounter=%d, heater=%d\n", isrCounter, heater_overextending_isrCounter, digitalRead(pinRelayHeater));
     }
     isrCounter = 0; // Attention: heater might not shutdown if bPid.SetSampleTime(), windowSize, timer1_write() and are not set correctly!
@@ -1175,7 +1224,7 @@ void pidCompute() {
     }
     DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f = b:%5.2f + p:%5.2f + i:%5.2f(%5.2f) + d:%5.2f\n", 
       Input,
-      (setPoint - Input),
+      (*activeSetPoint - Input),
       pastTemperatureChange(10)/2,
       convertOutputToUtilisation(Output),
       steadyPower + bPID.GetSteadyPowerOffsetCalculated(),
@@ -1189,7 +1238,7 @@ void pidCompute() {
     pidComputeLastRunTime = millis();
     DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f (PID disabled)\n",
       Input,
-      (setPoint - Input),
+      (*activeSetPoint - Input),
       pastTemperatureChange(10)/2,
       convertOutputToUtilisation(Output));
   }
@@ -1222,28 +1271,22 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
 void loop() {
   refreshTemp();        // save new temperature values
   testEmergencyStop();  // test if Temp is to high
-  pidCompute();         // call PID for Output calculation
-  brew();               //start brewing if button pressed
+
+  //brewReady
   if (millis() > lastCheckBrewReady + refreshTempInterval) {
     lastCheckBrewReady = millis();
     bool brewReadyCurrent = checkBrewReady(setPoint, marginOfFluctuation, 60);
     if (!brewReady && brewReadyCurrent) {
-      snprintf(debugline, sizeof(debugline), "brewReady (stable last 60 secs. Tuning took %lu secs)", (lastCheckBrewReady - lastBrewEnd) / 1000);
+      snprintf(debugline, sizeof(debugline), "brewReady (Tuning took %lu secs)", ((lastCheckBrewReady - lastBrewEnd) / 1000) - 60);
       DEBUG_println(debugline);
       mqtt_publish("events", debugline);
       lastBrewReady = millis() - 60000;
     }
     brewReady = brewReadyCurrent;
   }
-  refreshBrewReadyHardwareLed(brewReady);
-  #if (ENABLE_USER_MENU==1)
-  int controlButtonPressed = checkControlButtons();
-  if (controlButtonPressed != 0) {
-    DEBUG_print("Pressed Button: %d\n", controlButtonPressed);
-    userActivity = millis();
-  }
-  #endif
+  setHardwareLed(brewReady || Input >=setPointSteam || Input >= steamReadyTemp);
 
+  //network related stuff
   if (!force_offline) {
     if (!wifi_working()) {
       #if (MQTT_ENABLE == 2)
@@ -1308,7 +1351,7 @@ void loop() {
           if (now >= lastMQTTStatusReportTime + lastMQTTStatusReportInterval) {
             lastMQTTStatusReportTime = now;
             mqtt_publish("temperature", number2string(Input));
-            mqtt_publish("temperatureAboveTarget", number2string((Input - setPoint)));
+            mqtt_publish("temperatureAboveTarget", number2string((Input - *activeSetPoint)));
             mqtt_publish("heaterUtilization", number2string(convertOutputToUtilisation(Output)));
             mqtt_publish("pastTemperatureChange", number2string(pastTemperatureChange(10)));
             mqtt_publish("brewReady", bool2string(brewReady));
@@ -1318,6 +1361,24 @@ void loop() {
       }
     }
   }
+
+  Debug.handle();
+    
+  #if (DEBUG_FORCE_GPIO_CHECK == 1)
+  if (millis() > lastCheckGpio + 2000) {
+    lastCheckGpio = millis();
+    debugControlHardware(controlsConfig);
+  }
+  return;
+  #endif
+  
+  pidCompute();         // call PID for Output calculation
+  
+  checkControls(controlsConfig);  //transform controls to actions
+
+  //handle brewing if button is pressed (ONLYPID=0 for now, because ONLYPID=1_with_BREWDETECTION=1 is handled in actionControl)
+  //ideally brew() should be controlled in our state-maschine (TODO)
+  brew();               
 
   //check if PID should run or not. If not, set to manuel and force output to zero
   if (pidON == 0 && pidMode == 1) {
@@ -1350,7 +1411,18 @@ void loop() {
 
     /* state 4: Brew detected. Increase heater power */
     } else if (activeState == 4) {
-      if (OnlyPID == 0) {
+      if (Input > setPoint + outerZoneTemperatureDifference) {
+        Output = convertUtilisationToOutput(steadyPower + bPID.GetSteadyPowerOffsetCalculated());
+      } else {
+        Output = convertUtilisationToOutput(brewDetectionPower);
+      }
+      if (OnlyPID == 1) {
+        if (timerBrewDetection == 1) {
+          bezugsZeit = millis() - lastBrewTime;
+        }        
+      }
+      /*
+      if (OnlyPID == 0) {  //TODO TOBIAS
          Output = convertUtilisationToOutput(brewDetectionPower);
       } else if (OnlyPID == 1) {
         if (setPoint - Input <= (outerZoneTemperatureDifference + 0.5)
@@ -1364,17 +1436,50 @@ void loop() {
           bezugsZeit = millis() - lastBrewTime;
         }
       }
+      */
 
     /* state 5: Outer Zone reached. More power than in inner zone */
     } else if (activeState == 5) {
-      if (aggoTn != 0) {
-        aggoKi = aggoKp / aggoTn ;
+      if (Input > setPoint) {
+        Output = 0;
       } else {
-        aggoKi = 0;
+        if (aggoTn != 0) {
+          aggoKi = aggoKp / aggoTn ;
+        } else {
+          aggoKi = 0;
+        }
+        aggoKd = aggoTv * aggoKp ;
+        bPID.SetTunings(aggoKp, aggoKi, aggoKd);
+        if (pidMode == 1) bPID.SetMode(AUTOMATIC);
       }
-      aggoKd = aggoTv * aggoKp ;
-      if (pidMode == 1) bPID.SetMode(AUTOMATIC);
-      bPID.SetTunings(aggoKp, aggoKi, aggoKd);
+      
+    /* state 6: Steaming state active*/
+    } else if (activeState == 6) {
+      bPID.SetMode(MANUAL);
+      if (!pidMode) {
+        Output = 0;
+      } else {
+        if (Input <= setPointSteam) {
+          //full heat when temp below steam-temp
+          Output = windowSize;
+        } else if (Input > setPointSteam && (pastTemperatureChange(2) < 0) ) {
+          //full heat when >setPointSteam BUT temp goes down!
+          Output = windowSize;
+        } else {
+          Output = 0;
+        }
+        /*
+        if (millis() >= lastSteamMessage + 1000) {
+          lastSteamMessage = millis();
+          DEBUG_print("*nput=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f\n", 
+            Input,
+            (*activeSetPoint - Input),
+            pastTemperatureChange(2),
+            convertOutputToUtilisation(Output)
+          );
+        }
+        */
+      }
 
     /* state 3: Inner zone reached = "normal" low power mode */
     } else {
@@ -1383,7 +1488,7 @@ void loop() {
       } else {
         bPID.SetMode(AUTOMATIC);
         if (aggTn != 0) {
-          aggKi = aggKp / aggTn ;
+          aggKi = aggKp / aggTn;
         } else {
           aggKi = 0 ;
         }
@@ -1433,11 +1538,7 @@ void loop() {
     digitalWrite(pinRelayHeater, LOW); //Stop heating
     char line2[17];
     snprintf(line2, sizeof(line2), "%0.0f\xB0""C", getCurrentTemperature());
-    if (EMERGENCY_ICON == "steam") {
-      displaymessage(7, "", "");
-    } else {
-      displaymessage(0, "Emergency Stop!", line2);
-    }
+    displaymessage(0, "Emergency Stop!", line2);
 
   } else {
     if ( millis() - output_timestamp > 15000) {
@@ -1475,7 +1576,6 @@ void loop() {
     sync_eeprom();
     interrupts();
   }
-  Debug.handle();
 }
 
 
@@ -1516,6 +1616,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
     //180 is used
     EEPROM.get(190, brewDetectionPower);
     EEPROM.get(200, pidON);
+    EEPROM.get(210, setPointSteam);
     //Reminder: 290 is reserved for "version"
   }
   //always read the following values during setup() (which are not saved in blynk)
@@ -1543,6 +1644,8 @@ void sync_eeprom(bool startup_read, bool force_read) {
   int estimated_cycle_refreshTemp_latest_saved = 0;
   double brewDetectionPower_latest_saved = 0;
   int pidON_latest_saved = 0;
+  double setPointSteam_latest_saved = 0;
+  
   if (current_version == expected_eeprom_version) {
     EEPROM.get(0, aggKp_latest_saved);
     EEPROM.get(10, aggTn_latest_saved);
@@ -1563,6 +1666,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
     EEPROM.get(180, estimated_cycle_refreshTemp_latest_saved);
     EEPROM.get(190, brewDetectionPower_latest_saved);
     EEPROM.get(200, pidON_latest_saved);
+    EEPROM.get(210, setPointSteam_latest_saved);
   }
 
   //get saved userConfig.h values
@@ -1583,6 +1687,8 @@ void sync_eeprom(bool startup_read, bool force_read) {
   int steadyPowerOffsetTime_config_saved;
   double burstPower_config_saved;
   double brewDetectionPower_config_saved;
+  double setPointSteam_config_saved;
+  
   EEPROM.get(300, aggKp_config_saved);
   EEPROM.get(310, aggTn_config_saved);
   EEPROM.get(320, aggTv_config_saved);
@@ -1599,7 +1705,8 @@ void sync_eeprom(bool startup_read, bool force_read) {
   EEPROM.get(450, steadyPowerOffset_config_saved);
   EEPROM.get(460, steadyPowerOffsetTime_config_saved);
   EEPROM.get(470, burstPower_config_saved);
-  EEPROM.get(480, brewDetectionPower_config_saved);
+  EEPROM.get(490, brewDetectionPower_config_saved);
+  EEPROM.get(510, setPointSteam_config_saved);
 
   //use userConfig.h value if if differs from *_config_saved
   if (AGGKP != aggKp_config_saved) { aggKp = AGGKP; EEPROM.put(300, aggKp); }
@@ -1618,7 +1725,8 @@ void sync_eeprom(bool startup_read, bool force_read) {
   if (STEADYPOWER_OFFSET != steadyPowerOffset_config_saved) { steadyPowerOffset = STEADYPOWER_OFFSET; EEPROM.put(450, steadyPowerOffset); }
   if (STEADYPOWER_OFFSET_TIME != steadyPowerOffsetTime_config_saved) { steadyPowerOffsetTime = STEADYPOWER_OFFSET_TIME; EEPROM.put(460, steadyPowerOffsetTime); }
   //if (BURSTPOWER != burstPower_config_saved) { burstPower = BURSTPOWER; EEPROM.put(470, burstPower); }
-  if (BREWDETECTION_POWER != brewDetectionPower_config_saved) { brewDetectionPower = BREWDETECTION_POWER; EEPROM.put(480, brewDetectionPower); DEBUG_print("EEPROM: brewDetectionPower (%0.2f) is read from userConfig.h\n", brewDetectionPower); }
+  if (BREWDETECTION_POWER != brewDetectionPower_config_saved) { brewDetectionPower = BREWDETECTION_POWER; EEPROM.put(490, brewDetectionPower); DEBUG_print("EEPROM: brewDetectionPower (%0.2f) is read from userConfig.h\n", brewDetectionPower); }
+  if (SETPOINT_STEAM != setPointSteam_config_saved) { setPointSteam = SETPOINT_STEAM; EEPROM.put(510, setPointSteam); DEBUG_print("EEPROM: setPointSteam (%0.2f) is read from userConfig.h\n", setPointSteam); }
 
   //save latest values to eeprom and sync back to blynk
   if ( aggKp != aggKp_latest_saved) { EEPROM.put(0, aggKp); Blynk.virtualWrite(V4, aggKp); }
@@ -1640,6 +1748,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
   if ( estimated_cycle_refreshTemp != estimated_cycle_refreshTemp_latest_saved) { EEPROM.put(180, estimated_cycle_refreshTemp); DEBUG_print("EEPROM: estimated_cycle_refreshTemp (%u) is saved (previous:%u)\n", estimated_cycle_refreshTemp, estimated_cycle_refreshTemp_latest_saved); }
   if ( brewDetectionPower != brewDetectionPower_latest_saved) { EEPROM.put(190, brewDetectionPower); Blynk.virtualWrite(V36, brewDetectionPower); DEBUG_print("EEPROM: brewDetectionPower (%0.2f) is saved (previous:%0.2f)\n", brewDetectionPower, brewDetectionPower_latest_saved); }
   if ( pidON != pidON_latest_saved) { EEPROM.put(200, pidON); Blynk.virtualWrite(V13, pidON); DEBUG_print("EEPROM: pidON (%d) is saved (previous:%d)\n", pidON, pidON_latest_saved); }
+  if ( setPointSteam != setPointSteam_latest_saved) { EEPROM.put(210, setPointSteam); Blynk.virtualWrite(V50, setPointSteam); DEBUG_print("EEPROM: setPointSteam (%0.2f) is saved\n", setPointSteam); }
   EEPROM.commit();
   DEBUG_print("EEPROM: sync_eeprom() finished.\n");
 }
@@ -1649,15 +1758,15 @@ void print_settings() {
   DEBUG_print("Machine: %s | Version: %s\n", MACHINE_TYPE, sysVersion);
   DEBUG_print("aggKp: %0.2f | aggTn: %0.2f | aggTv: %0.2f\n", aggKp, aggTn, aggTv);
   DEBUG_print("aggoKp: %0.2f | aggoTn: %0.2f | aggoTv: %0.2f\n", aggoKp, aggoTn, aggoTv);
-  DEBUG_print("setPoint: %0.2f | starttemp: %0.2f | burstPower: %0.2f\n", setPoint, starttemp, burstPower);
+  DEBUG_print("starttemp: %0.2f | burstPower: %0.2f\n", starttemp, burstPower);
+  DEBUG_print("setPoint: %0.2f | setPointSteam: %0.2f | activeSetPoint: %0.2f | \n", setPoint, setPointSteam, *activeSetPoint);
   DEBUG_print("brewDetection: %d | brewDetectionSensitivity: %0.2f | brewDetectionPower: %0.2f\n", brewDetection, brewDetectionSensitivity, brewDetectionPower);
   DEBUG_print("brewtime: %0.2f | preinfusion: %0.2f | preinfusionpause: %0.2f\n", brewtime, preinfusion, preinfusionpause);
   DEBUG_print("steadyPower: %0.2f | steadyPowerOffset: %0.2f | steadyPowerOffsetTime: %d\n", steadyPower, steadyPowerOffset, steadyPowerOffsetTime);
   DEBUG_print("pidON: %d\n", pidON);
+  printControlsConfig(controlsConfig);
   DEBUG_print("========================\n");
 }
-
-
 
 
 /***********************************
@@ -1695,9 +1804,10 @@ void setup() {
   digitalWrite(pinRelayPumpe, relayOFF);
   pinMode(pinRelayHeater, OUTPUT);
   digitalWrite(pinRelayHeater, LOW);
-  #ifdef BREW_READY_LED
+  #if (ENABLE_HARDWARE_LED == 1)
   pinMode(pinLed, OUTPUT);
   digitalWrite(pinLed, LOW);
+  setHardwareLed(1);
   #endif
 
   DEBUG_print("\nMachine: %s\nVersion: %s\n", MACHINE_TYPE, sysVersion);
@@ -1705,6 +1815,7 @@ void setup() {
     //u8g2.setBusClock(400000);  //any use?
     u8g2.begin();
     u8g2_prepare();
+    u8g2.setFlipMode(ROTATE_DISPLAY);
     u8g2.clearBuffer();
   }
   
@@ -1716,8 +1827,11 @@ void setup() {
 
   delay(1000);
 
-  //if brewswitch is already "on" on startup, then we brew should not start automatically
-  if (OnlyPID == 0 && (analogRead(pinBrewButton) >= 700)) { 
+  controlsConfig = parseControlsConfig();
+  configureControlsHardware(controlsConfig);
+
+  //if simulatedBrewSwitch is already "on" on startup, then we brew should not start automatically
+  if (simulatedBrewSwitch) { 
     DEBUG_print("brewsitch is already on. Dont brew until it is turned off.\n");
     waitingForBrewSwitchOff=true; 
   }
@@ -1751,6 +1865,7 @@ void setup() {
       #if (MQTT_ENABLE == 1)
         snprintf(topic_will, sizeof(topic_will), "%s%s/%s", mqtt_topic_prefix, hostname, "will");
         snprintf(topic_set, sizeof(topic_set), "%s%s/+/%s", mqtt_topic_prefix, hostname, "set");
+        snprintf(topic_actions, sizeof(topic_actions), "%s%s/actions/+", mqtt_topic_prefix, hostname);
         mqtt_client.setServer(mqtt_server_ip, mqtt_server_port);
         mqtt_client.setCallback(mqtt_callback);
         if (!mqtt_reconnect(true)) {
@@ -1777,9 +1892,10 @@ void setup() {
         const unsigned int max_retained_topics = 30;
         const unsigned int mqtt_service_port = 1883;
         snprintf(topic_set, sizeof(topic_set), "%s%s/+/%s", mqtt_topic_prefix, hostname, "set");
+        snprintf(topic_actions, sizeof(topic_actions), "%s%s/actions/+", mqtt_topic_prefix, hostname);
         MQTT_server_onData(mqtt_callback);
         if (MQTT_server_start(mqtt_service_port, max_subscriptions, max_retained_topics)) {
-          if (!MQTT_local_subscribe((unsigned char *)topic_set, 0)) {
+          if (!MQTT_local_subscribe((unsigned char *)topic_set, 0) || !MQTT_local_subscribe((unsigned char *)topic_actions, 0)) {
             ERROR_print("Cannot subscribe to local MQTT service\n");
           }
         } else {
@@ -1847,7 +1963,7 @@ void setup() {
   ******************************************************/
   if (ota && !force_offline) {
     //wifi connection is done during blynk connection
-    ArduinoOTA.setHostname(OTAhost);  //  Device name for OTA
+    ArduinoOTA.setHostname(hostname);  //  Device name for OTA
     ArduinoOTA.setPassword(OTApass);  //  Password for OTA
     ArduinoOTA.begin();
   }
@@ -1887,9 +2003,11 @@ void setup() {
     #ifdef USE_ZACWIRE_TSIC
     while (true) {
       //previousInput = temperature_simulate_steam();
+      //previousInput = temperature_simulate_normal();
       previousInput = TSIC.getTemp();
       delay(200);
       //Input = temperature_simulate_steam();
+      //Input = temperature_simulate_normal();
       Input = TSIC.getTemp();
       if (checkSensor(Input, previousInput)) {
         updateTemperatureHistory(Input);
@@ -1920,6 +2038,7 @@ void setup() {
   /********************************************************
      REST INIT()
   ******************************************************/
+  setHardwareLed(0);
   //Initialisation MUST be at the very end of the init(), otherwise the time comparison in loop() will have a big offset
   unsigned long currentTime = millis();
   previousMillistemp = currentTime;

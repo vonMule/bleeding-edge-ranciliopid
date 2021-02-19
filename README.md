@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.4.2
+Version 2.6.0
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
@@ -11,6 +11,7 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
 
 ## Most important features compared to rancilio-pid master:
 1. New PID Controller "Multi-state PID with steadyPower (Bias)"
+   - Target-Temperature for brewing and steaming (!) is automatically controlled by PID.
    - Auto-Tuning of all PID settings. No knowledge or special tunings required.
    - Distinct PID settings dependend on the current "state" of the maschine. 
    - Most of the settings are either static or semi-automatically tuned, which does not require an PHD (German: Diplom) to understand.
@@ -20,10 +21,25 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
      - Inner Zone (temperature near setPoint)
      - Outer Zone (temperature outside of "inner zone")
      - Brewing
+     - Steaming (!)
    - steadyPower is introduced which compensates the constant temperature loss due to environment
    - steadyPowerOffset is introduced which compensates the increased temperature loss when the maschine (brew head etc.) are still very cold.
    - PidController offers feature like I-value filtering, special handling of setPoint crossings and more (hard-coded)
    - PID Controller is now integral part of the software and not an external library.
+1. actionController, which allow you to trigger custom functions over any GPIO port and/or mqtt.
+   - fully dynamic mapping of any(!) available analog/digital gpio port to custom functions, which are currently:
+     - BREWING   := start brewing
+     - STEAMING  := automatically manages heat up maschine for streaming
+     - HOTWATER  := start pouring hotwater
+     - HEATER    := activate heater (not yet)
+     - PUMP      := activate pump (not yet)
+     - VALVE     := activate Valve  (not yet)
+     - CLEANING  := activate cleaning mode (not yet)
+     - TEMP_INC  := increase setPoint (not yet)
+     - TEMP_DEC  := decrease setPoint (not yet)
+   - while also supporting the switch types: toggles (eg switches) and triggers (eg push buttons)
+   - added MQTT Support to control actions using topics ../actions/<ACTION> with supported payloads of 0|1|-1 (off|on|switch)
+     Example: "custom/Küche.Rancilio2/actions/STEAMING"
 1. Freely choose if you want the software to use WIFI, BLYNK and/or MQTT. Everythink can be enabled/disabled and stil have a flawlessly working PID controller.
 1. Additionally if you want to to depend on a remotely running service (eg. blynk server on raspi), you can activate a MQTT-Server on the arduino itself!
 1. Offline Modus is fixed and enhanced. If userConfig.h's FORCE_OFFLINE is enabled, then PID fully is working without networking. Ideal in situations when there is no connectivity or you dont want to rely on it.
@@ -81,6 +97,58 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.6.0:
+  - Merged PR by finnito which changed/extended: (MANY THANKS FINNITO)
+    - Added support for ECM espresso maschine including logo.
+    - Added/Extended support for special functions (steam, hotwater, brew).
+    - Added custom steam functionality.
+    - Extended initial support to call special functions based on Pin A0 (analog levels) which can be used by eg. hardware buttons.
+    - Added new state to state maschine (6=steam).
+  - Refactored/Extended finnito's code to integrate our new "actionController":
+    - fully dynamic mapping of any(!) available analog/digital gpio port to custom functions, which are currently:
+      - BREWING   := start brewing
+      - STEAMING  := automatically manages heat up maschine for streaming
+      - HOTWATER  := start pouring hotwater
+      - HEATER    := activate heater (not yet)
+      - PUMP      := activate pump (not yet)
+      - VALVE     := activate Valve  (not yet)
+      - CLEANING  := activate cleaning mode (not yet)
+      - TEMP_INC  := increase setPoint (not yet)
+      - TEMP_DEC  := decrease setPoint (not yet)
+    - while also supporting the switch types: toggles (eg switches) and triggers (eg push buttons)
+    - added MQTT Support to control actions using topics ../actions/<ACTION> with supported payloads of 0|1|-1 (off|on|switch)
+      Example: "custom/Küche.Rancilio2/actions/STEAMING"
+  - Feature: Set userConfig.h ROTATE_DISPLAY to rotate display 180 degree.
+  - Feature: BrewReadyLed (now called HardwareLed) configured with ENABLE_HARDWARE_LED also lights up when temperature>steamTemp or >STEAM_READY_TEMP.
+  - Feature: OnlyPid=0: Disable pre-infusion and pause by setting userConfig settings to 0.
+  - Feature: OnlyPid=1: BrewDetection can now also be triggered by hardware using actionControle "BREWING".
+  - Feature: New userConfig setting SETPOINT_STEAM is also setable via [mqtt](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/MQTT-Setup)/[blynk](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Blynk-Setup).
+  - Feature: hardwareLed will glow for a few seconds when the maschine starts up. This helps determine a not starting node.
+  - Feature: Additional safe-guard to temporary disable heater if temperature is 10 degree above active setPoint.
+  - Important FIX: mqtt interface for STEADYPOWER_OFFSET_TIME working again. This setting is currenly wrongly set and need to be re-set for auto-tuning to work!
+  - Fix: EMERGENCY_TEMP setting disables pid when temperature is > and re-enables when < setPoint. Please check your setting to be reasonable high (eg. Rancilio 135 degree). Should at least be higher than SETPOINT_STEAM.
+  - Feature/Fix: New setting STEAM_READY_TEMP to show our special steaming-icon only when temperature is above.
+    - There is support for special "in-steaming-state" icons, but I am in no mood to paint them yet. Feel free. 
+  - BREWDETECTION_POWER is now in active right after a brew is detected and not when temp <1.5degree below setpoint.
+  - Attention: Major userConfig adaptions. Create a backup!
+    - BREAKING CHANGE: 
+      - OnlyPid=1: Software based brewDetection has to set with "2" (and not "1"!!) in userConfig BREWDETECTION.
+    - Added:
+      - SETPOINT_STEAM
+      - STEAM_READY_TEMP
+      - CONTROLS_CONFIG
+      - DEBUG_FORCE_GPIO_CHECK
+      - ROTATE_DISPLAY
+    - Removed:
+      - pinBrewButton (replaced by CONTROLS_CONFIG)
+      - EMERGENCY_ICON
+      - OTAHOST (use HOSTNAME instead)
+      - ENABLE_USER_MENU
+    - Changed:
+      - Default of userConfig EMERGENCY_TEMP from 125 to 128.
+      - Default of userConfig TEMPSENSORRECOVERY from 1 to 0.
+  - Sample Config for IoTMQTTPanel: IoTMQTTPanel-rancilio_v2.6.0_v1.json
+  - Update ZACwire-Library to v1.1.3.
 - 2.4.2 master:
   - Bugfix: Revert changes in regard to compiler warnings added in 2.4.1.
   - Bugfix (MQTT_ENABLE=1): Auto-Tuning settings are persisted across restarts.
@@ -289,8 +357,13 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 
 
 # Special Thanks
-To the great work of the rancilio-pid.de team, just to mention a few: andreas, markus, toppo78, miau.  
-Also to the nice people in the rancilio chat and the ones who contribute and give very much appreciated feedback like helge and Adrian!  
+To the great work of the rancilio-pid.de team.
+Also to the nice people in our rancilio discord channel and the ones who contribute and give very much appreciated feedback like 
+- helge/Helgelino
+- Adrian 
+- Finnito
+- PedroR/P1Rebo
+- nils-werner!  
   
 !! Thank you so much for the tasty cup of coffee I enjoy each day !!  
 

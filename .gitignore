@@ -1,4 +1,5 @@
 userConfig.h
 *.bak
 *.swp
+.vscode
 .pio/*

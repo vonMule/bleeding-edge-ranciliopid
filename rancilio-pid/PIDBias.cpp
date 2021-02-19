@@ -28,7 +28,7 @@ int PIDBias::signnum_c(double x) {
   if (x < 0.0) return -1;
 }
 
-PIDBias::PIDBias(double* Input, double* Output, double* steadyPower, double* steadyPowerOffset, unsigned long* steadyPowerOffset_Activated, int* steadyPowerOffsetTime, double* Setpoint,
+PIDBias::PIDBias(double* Input, double* Output, double* steadyPower, double* steadyPowerOffset, unsigned long* steadyPowerOffset_Activated, int* steadyPowerOffsetTime, double** Setpoint,
         double Kp, double Ki, double Kd)
 {
     myOutput = Output;
@@ -62,7 +62,7 @@ int PIDBias::Compute()
       
       lastOutput = *myOutput;
       double input = *myInput;
-      double error = *mySetpoint - input;
+      double error = **mySetpoint - input;
       double pastChange = pastTemperatureChange(10) / 2;  // difference of the last 10 seconds scaled down to one compute() cycle (=5 seconds).
 
       outputP = kp * error;
@@ -175,7 +175,6 @@ int PIDBias::Compute()
         *mySteadyPower = 4.8; 
       }
 
-      //TODO safe-guard against always moving up because of steadyPower (eg no steadyPower above error < 5)
 
       //If we are above setpoint, we dont want to overly reduce output when temperature is moving downwards
       if ( error < 0 ) {
@@ -222,6 +221,12 @@ int PIDBias::Compute()
         burstOutput = 0;
       }
 
+      //safe-guard against getting unusually hot (eg. steadyPower too high or no water in tank
+      if (error < -10) {
+        ERROR_print("Overwrite output=0 because we are too high (%0.2f) above setPoint (%0.2f)\n", error * -1, **mySetpoint);
+        output = 0;
+      }
+      
       if (output > outMax) output = outMax;
       else if(output < outMin) output = outMin;
       *myOutput = output;
@@ -230,7 +235,7 @@ int PIDBias::Compute()
       /*
       DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f = b:%5.2f + p:%5.2f + i:%5.2f(%5.2f) + d:%5.2f -\n", 
         *myInput,
-        (*mySetpoint - *myInput),
+        (**mySetpoint - *myInput),
         pastTemperatureChange(10)/2,
         convertOutputToUtilisation(output),
         *mySteadyPower + GetSteadyPowerOffsetCalculated(),

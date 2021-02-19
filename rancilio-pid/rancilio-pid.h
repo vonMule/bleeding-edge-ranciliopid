@@ -4,9 +4,13 @@
 #define LIBRARY_VERSION	0.0.1
 
 #include "userConfig.h"
-#if (ONLYPID==0 && pinBrewButton==0)
-#undef ENABLE_USER_MENU
-#define ENABLE_USER_MENU 0
+
+#if (DEBUG_FORCE_GPIO_CHECK==1)
+#define DEBUGMODE
+#endif
+
+#ifndef CONTROLS_CONFIG
+#define CONTROLS_CONFIG ""
 #endif
 
 #include "display.h"
