@@ -1,8 +1,8 @@
 /********************************************************
- * BLEEDING EDGE RANCILIO-PID. 
- * https://github.com/medlor/bleeding-edge-ranciliopid   
+ * BLEEDING EDGE RANCILIO-PID.
+ * https://github.com/medlor/bleeding-edge-ranciliopid
  *****************************************************/
- 
+
 void splitStringBySeperator(char* source, char seperator, char** resultLeft, char** resultRight) {
     char* separator1 = strchr(source, seperator);
     if (separator1 != 0)
@@ -52,7 +52,7 @@ controlMap* parseControlsConfig() {
 
     DEBUG_println(debugline);
 
-    // Read each controlsConfigPin pair 
+    // Read each controlsConfigPin pair
     // eg. CONTROLS_CONFIG "17:analog:toggle|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
     char* controlsConfigDefine = (char*) malloc(strlen(CONTROLS_CONFIG));
     strncpy(controlsConfigDefine, CONTROLS_CONFIG, strlen(CONTROLS_CONFIG));
@@ -111,14 +111,14 @@ controlMap* parseControlsConfig() {
           }
           nextControlMap = (controlMap*) calloc(1, sizeof (struct controlMap));
           nextControlMap->gpio = controlsConfigGpio;
-          nextControlMap->portType = controlsConfigPortType; 
-          nextControlMap->type = controlsConfigType; 
-          nextControlMap->lowerBoundary = lowerBoundary; 
-          nextControlMap->upperBoundary = upperBoundary; 
+          nextControlMap->portType = controlsConfigPortType;
+          nextControlMap->type = controlsConfigType;
+          nextControlMap->lowerBoundary = lowerBoundary;
+          nextControlMap->upperBoundary = upperBoundary;
           nextControlMap->action = convertActionToDefine(actionMapAction);
 
           nextControlMap->value = -1;
-          
+
           if (controlsConfig == NULL && lastControlMap == NULL ) {
             controlsConfig = nextControlMap;
             lastControlMap = controlsConfig;
@@ -239,12 +239,12 @@ int getActionOfControl(controlMap* controlsConfig, int port, int value) {
 }
 
 
-void actionController(int action, int newState) {  
-  actionController(action, newState, true); 
+void actionController(int action, int newState) {
+  actionController(action, newState, true);
 }
 
 
-void actionController(int action, int newState, bool publishAction) {  
+void actionController(int action, int newState, bool publishAction) {
   //newState := if newState >=0 set value to newState. If newState == -1 -> toggle between 0/1
   int oldState = actionState[action];
   if (newState == -1) {
@@ -282,7 +282,7 @@ void checkControls(controlMap* controlsConfig) {
     do {
       if (ptr->gpio == portRead) {continue;}
       portRead = ptr->gpio;
-      
+
       if ( strcmp(ptr->portType, "analog") == 0) {
         valueRead = analogRead(ptr->gpio);  //analog pin
       } else {
@@ -305,7 +305,7 @@ void checkControls(controlMap* controlsConfig) {
           //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=unchanged", ptr->gpio, convertDefineToAction(currentAction));
           //DEBUG_println(debugline);
         }
-        
+
       } else if (strcmp(ptr->type, "toggle") == 0) {
         if (currentAction == UNDEFINED_ACTION) {  //no boundaries match -> toggle is in "off" position
           if (gpioLastAction[ptr->gpio] != UNDEFINED_ACTION) {  //disable old action
@@ -365,7 +365,7 @@ void steamingAction(int state) {
   DEBUG_print("steamingAction(): %d\n", state);
 }
 
-void cleaningAction(int state) { 
+void cleaningAction(int state) {
   int cleaning = state;
   DEBUG_print("cleaningAction(): %d\n", state);
 }

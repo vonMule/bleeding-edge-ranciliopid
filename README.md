@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.6.0
+Version 2.6.1
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
@@ -97,6 +97,8 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.6.1:
+  - Feature: Hardware-Led in addition to simple LEDs also support WS2812b LED (stripes) (MANY THANKS P1Rebo for the PR)
 - 2.6.0:
   - Merged PR by finnito which changed/extended: (MANY THANKS FINNITO)
     - Added support for ECM espresso maschine including logo.
