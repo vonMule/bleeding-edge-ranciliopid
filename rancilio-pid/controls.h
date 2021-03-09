@@ -13,15 +13,20 @@
 #define TEMP_INC  8
 #define TEMP_DEC  9
 
+#ifdef ESP32
+#include "driver/rtc_io.h"
+#endif
+
 typedef struct controlMap
 {
-      int gpio;
-      char* portType;  //analog/digital
-      char* type;      //trigger/switch
-      int lowerBoundary;
-      int upperBoundary;
-      int value;
-      int action;
+      int   gpio;
+      char* portType;   //analog/digital
+      char* portMode; //INPUT_PULLUP/INPUT_PULLDOWN/INPUT
+      char* type;       //trigger/switch
+      int   lowerBoundary; 
+      int   upperBoundary;
+      int   value;
+      int   action;
       struct controlMap* nextControlMap;
 } controlMap;
 

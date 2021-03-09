@@ -9,12 +9,17 @@
 #define DEBUGMODE
 #endif
 
+#ifdef ESP32
+// ESP32 sometimes (after crash) is not able to connect to wifi. Workaround: set DISABLE_SERVICES_ON_STARTUP_ERRORS to 0
+#define DISABLE_SERVICES_ON_STARTUP_ERRORS 0
+#endif
+
 #ifndef CONTROLS_CONFIG
 #define CONTROLS_CONFIG ""
 #endif
 
-#include "display.h"
-#include "MQTT.h"
+//#include "display.h"
+//#include "MQTT.h"
 
 #include "src/RemoteDebug/RemoteDebug.h" //https://github.com/JoaoLopesF/RemoteDebug
 //#include <RemoteDebug.h>  // uncomment this line AND delete src/RemoteDebug/ folder, if you want to use system lib

@@ -54,7 +54,7 @@ controlMap* parseControlsConfig() {
 
     // Read each controlsConfigPin pair
     // eg. CONTROLS_CONFIG "17:analog:toggle|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
-    char* controlsConfigDefine = (char*) malloc(strlen(CONTROLS_CONFIG));
+    char* controlsConfigDefine = (char*) calloc(1, strlen(CONTROLS_CONFIG)+1);
     strncpy(controlsConfigDefine, CONTROLS_CONFIG, strlen(CONTROLS_CONFIG));
     char* controlsConfigBlock;
     while ((controlsConfigBlock = strtok_r(controlsConfigDefine, "#", &controlsConfigDefine)) != NULL) {
@@ -74,11 +74,13 @@ controlMap* parseControlsConfig() {
         //DEBUG_println(debugline);
 
         int controlsConfigGpio = -1;
+        char* controlsConfigPortMode = NULL;
         char* controlsConfigPortType = NULL;
         char* controlsConfigType = NULL;
-        splitStringBySeperator(controlsConfigBlock, ':', &controlsConfigGpio, &controlsConfigPortType);
+        splitStringBySeperator(controlsConfigBlock, ':', &controlsConfigGpio, &controlsConfigPortMode);
+        splitStringBySeperator(controlsConfigPortMode, ':', &controlsConfigPortMode, &controlsConfigPortType);
         splitStringBySeperator(controlsConfigPortType, ':', &controlsConfigPortType, &controlsConfigType);
-        //snprintf(debugline, sizeof(debugline), "controlsConfigGpio=%i controlsConfigPortType=%s controlsConfigType=%s", controlsConfigGpio, controlsConfigPortType, controlsConfigType);
+        //snprintf(debugline, sizeof(debugline), "Gpio=%i PortMode=%s PortType=%s Type=%s", controlsConfigGpio, controlsConfigPortMode, controlsConfigPortType, controlsConfigType);
         //DEBUG_println(debugline);
 
         char* p = controlsConfigActionMappings;
@@ -110,15 +112,14 @@ controlMap* parseControlsConfig() {
             continue;
           }
           nextControlMap = (controlMap*) calloc(1, sizeof (struct controlMap));
-          nextControlMap->gpio = controlsConfigGpio;
-          nextControlMap->portType = controlsConfigPortType;
-          nextControlMap->type = controlsConfigType;
+          nextControlMap->gpio          = controlsConfigGpio;
+          nextControlMap->portMode  = controlsConfigPortMode;
+          nextControlMap->portType      = controlsConfigPortType;
+          nextControlMap->type          = controlsConfigType;
           nextControlMap->lowerBoundary = lowerBoundary;
           nextControlMap->upperBoundary = upperBoundary;
-          nextControlMap->action = convertActionToDefine(actionMapAction);
-
-          nextControlMap->value = -1;
-
+          nextControlMap->action        = convertActionToDefine(actionMapAction);
+          nextControlMap->value         = -1;
           if (controlsConfig == NULL && lastControlMap == NULL ) {
             controlsConfig = nextControlMap;
             lastControlMap = controlsConfig;
@@ -139,7 +140,7 @@ void printControlsConfig(controlMap* controlsConfig) {
   }
   controlMap* ptr = controlsConfig;
   do {
-    snprintf(debugline, sizeof(debugline), "%2i(%7s,%7s): %4u-%-4u -> %s", ptr->gpio, ptr->portType, ptr->type, ptr->lowerBoundary, ptr->upperBoundary, convertDefineToAction(ptr->action));
+    snprintf(debugline, sizeof(debugline), "%2i(%15s,%7s,%7s): %4u-%-4u -> %s", ptr->gpio, ptr->portMode, ptr->portType, ptr->type, ptr->lowerBoundary, ptr->upperBoundary, convertDefineToAction(ptr->action));
     DEBUG_println(debugline);
   } while ((ptr = ptr->nextControlMap) != NULL);
 }
@@ -156,6 +157,7 @@ void publishActions() {
   }
 }
 
+
 void configureControlsHardware(controlMap* controlsConfig) {
   if (!controlsConfig) {
     DEBUG_println("controlsConfig is empty");
@@ -166,12 +168,12 @@ void configureControlsHardware(controlMap* controlsConfig) {
   do {
     if (ptr->gpio == port) {continue;}
     port = ptr->gpio;
-    snprintf(debugline, sizeof(debugline), "Set Hardware GPIO %2i to INPUT", ptr->gpio);
+    snprintf(debugline, sizeof(debugline), "Set Hardware GPIO %2i to %s", ptr->gpio, ptr->portMode);
     DEBUG_println(debugline);
     if ( strcmp(ptr->portType, "analog") == 0) {
       pinMode(ptr->gpio, INPUT);
-    } else {
-      pinMode(ptr->gpio, INPUT);
+    } else {;
+      pinMode(ptr->gpio, convertPortModeToDefine(ptr->portMode));
     }
   } while ((ptr = ptr->nextControlMap) != NULL);
 }
@@ -210,6 +212,15 @@ int convertActionToDefine(char* action) {
   else if (!strcmp(action, "TEMP_INC")) { return TEMP_INC;}
   else if (!strcmp(action, "TEMP_DEC")) { return TEMP_DEC;}
   return UNDEFINED_ACTION;
+}
+
+
+int convertPortModeToDefine(char* portMode) {
+  if (!strcmp(portMode, "INPUT_PULLUP")) { return INPUT_PULLUP;}
+  #ifdef ESP32
+  else if (!strcmp(portMode, "INPUT_PULLDOWN")) { return INPUT_PULLDOWN;}
+  #endif
+  return INPUT;
 }
 
 

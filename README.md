@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.6.1
+Version 2.7.0 beta 1
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
@@ -97,6 +97,19 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.7.0 beta 1:
+  - Attention: Until now the ESP32 code was only simulated and not running on real-world maschines.
+  - Feature: Support ESP32 with CPU pinning for improved performance.
+    - Unfortuately there is no mqtt-server broker library available for ESP32. (MQTT_ENABLE must not be 2 on ESP32)
+    - [ZACwire-Library](https://github.com/lebuni/ZACwire-Library) upgraded to v1.2.4b which supports ESP32 and pinning to secondary cpu. Thanks Adrian!
+    - Display function is pinned to secondary cpu to further improve performance. No more tearing on screen refresh.
+  - You can now set INPUT/INPUT_PULLDOWN/INPUT_PULLUP in CONTROLS_CONFIG. 
+  - Fix: Setting setPointSteam via mqtt did not work but did overwrite aggoTv instead. You should update to this version when using mqtt.
+  - Fix: Minor fixes here and there.
+  - PubSubClient updated to version 2.8.
+  - Quick documentation on how to setup ESP32 can be found in the [wiki](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/ESP32-Setup).
+  - Breaking changes:
+    - CONTROLS_CONFIG format changes to support new INPUT/INPUT_PULLDOWN/INPUT_PULLUP settings.
 - 2.6.1:
   - Feature: Hardware-Led in addition to simple LEDs also support WS2812b LED (stripes) (MANY THANKS P1Rebo for the PR)
 - 2.6.0:
