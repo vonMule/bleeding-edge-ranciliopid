@@ -37,7 +37,7 @@
 
 /*******
  * Hardware GPIO Pin Mapping (just change values but don't comment)
- * OLED Display: SDA GPIO21, SCK GPIO22 // Info only
+ * OLED Display: SDA GPIO01, SCK GPIO22 // Info only
  *******/
 #define pinTemperature    17    // read temperature (TSIC)  //sure to use this one, its allready used in BREW function
 #define pinRelayHeater    27   // trigger relais used to heat water
