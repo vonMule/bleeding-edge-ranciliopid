@@ -97,6 +97,9 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.7.0 beta 2:
+  - Update userConfig.h.SAMPLE (Thanks Helge)
+  - Fix typos (Thanks urbantrout)
 - 2.7.0 beta 1:
   - Attention: Until now the ESP32 code was only simulated and not running on real-world maschines.
   - Feature: Support ESP32 with CPU pinning for improved performance.

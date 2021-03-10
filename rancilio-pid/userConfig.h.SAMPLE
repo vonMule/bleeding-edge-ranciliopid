@@ -36,15 +36,14 @@
 //#define DEBUGMODE               // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
 
 /*******
- * Hardware GPIO Pin Mapping (just change values but don't comment)
- * OLED Display: SDA GPIO01, SCK GPIO22 // Info only
+ * Hardware GPIO Pin Mapping
+ * Hints can be found in our wiki: https://github.com/medlor/bleeding-edge-ranciliopid/wiki/ESP32-Setup
  *******/
-#define pinTemperature    17    // read temperature (TSIC)  //sure to use this one, its allready used in BREW function
-#define pinRelayHeater    27   // trigger relais used to heat water
-#define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve
-#define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump
-
-#define pinLed            23   // (ENABLE_HARDWARE_LED=1) Hardware LED (16 is also "free" to use)
+#define pinTemperature    2    // read temperature (TSIC): esp8266=2, esp32=17
+#define pinRelayHeater    14   // trigger relais used to heat water: esp8266=14, esp32=27
+#define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve: esp8266=13, esp32=16
+#define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump: esp8266=15, esp32=17
+#define pinLed            15   // (ENABLE_HARDWARE_LED=1) Hardware LED (16 is also "free" to use): esp8266=15, esp32=23
 
 /*******
  * GPIO Pin Usage: Here you can define how the GPIO boards (analog/digital) shall be used to execute functions.
@@ -67,16 +66,21 @@
  *    #define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"
  *
  *    b) Hardware Buttons via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
- *    #define CONTROLS_CONFIG "17:INPUT:analog:trigger|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING#"
+ *    #define CONTROLS_CONFIG "17:INPUT:analog:trigger|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:INPUT_PULLUP:digital:trigger|0-0:BREWING#"
  *
  *    c) Hardware Switches via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
- *    #define CONTROLS_CONFIG "17:INPUT:analog:toggle|245-260:BREWING;525-540:STEAMING;802-815:HOTWATER#"
+ *    #define CONTROLS_CONFIG "17:INPUT:analog:toggle|245-260:BREWING;525-540:STEAMING;802-815:HOTWATER#16:INPUT_PULLUP:digital:toggle|0-0:BREWING#"
  *
- *    d) Hardware Switch (On/Off) (GPIO02) which controls BREWING - Hardware Switch (On/Off) on GPIO32 which controls HOTWATER - Hardware Switch (On/Off) on GPIO33 which controls STEAMING -- all without an resistor (direct connected, uses internal resistor)
- *    #define CONTROLS_CONFIG "2:INPUT_PULLUP:digital:toggle|0-0:BREWING#32:INPUT_PULLUP:digital:toggle|0-0:HOTWATER#33:INPUT_PULLUP:digital:toggle|0-0:STEAMING#"
+ *    d) Multiple Hardware Switches:
+ *       - Hardware Switch (On/Off) on GPIO25 which controls BREWING
+ *       - Hardware Switch (On/Off) on GPIO32 which controls HOTWATER
+ *       - Hardware Switch (On/Off) on GPIO33 which controls STEAMING -- all without an resistor (direct connected, uses internal INPUT_PULLUP resistor)
+ *    #define CONTROLS_CONFIG "25:INPUT_PULLUP:digital:toggle|0-0:BREWING#32:INPUT_PULLUP:digital:toggle|0-0:HOTWATER#33:INPUT_PULLUP:digital:toggle|0-0:STEAMING#"
+ *
  *******/
 #define DEBUG_FORCE_GPIO_CHECK   0  // 0=off (default). 1=on. If on, PID is disabled and only trigger/toogles are detected and printed in DEBUG log.
 #define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"  //when a simple switch is connected on port A0 and this switch is used to trigger BREWING.
+
 
 /*******
  * Display Settings
@@ -120,8 +124,8 @@
 /*******
  * Preinfussion settings (only useful when ONLYPID=0)
  *******/
-#define PREINFUSION       2.6   //  length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion.
-#define PREINFUSION_PAUSE 3.3     // length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+#define PREINFUSION       1.5  //  length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion.
+#define PREINFUSION_PAUSE 2.0  // length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
 // dont forget to adapt BREWTIME mentioned above
 
 
