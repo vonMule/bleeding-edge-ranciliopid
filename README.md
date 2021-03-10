@@ -1,4 +1,4 @@
-# ranciliopid - Open source PID for your espresso maschine
+# ranciliopid - Open source PID for your espresso machine
 
 BLEEDING EDGE MASTER VERSION 
 
@@ -13,23 +13,23 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
 1. New PID Controller "Multi-state PID with steadyPower (Bias)"
    - Target-Temperature for brewing and steaming (!) is automatically controlled by PID.
    - Auto-Tuning of all PID settings. No knowledge or special tunings required.
-   - Distinct PID settings dependend on the current "state" of the maschine. 
+   - Distinct PID settings dependend on the current "state" of the machine. 
    - Most of the settings are either static or semi-automatically tuned, which does not require an PHD (German: Diplom) to understand.
    - Currently 5 states are implemented:
-     - Coldstart (maschine is cold)
+     - Coldstart (machine is cold)
      - Coldstart stabilisation (directly after coldstart)
      - Inner Zone (temperature near setPoint)
      - Outer Zone (temperature outside of "inner zone")
      - Brewing
      - Steaming (!)
    - steadyPower is introduced which compensates the constant temperature loss due to environment
-   - steadyPowerOffset is introduced which compensates the increased temperature loss when the maschine (brew head etc.) are still very cold.
+   - steadyPowerOffset is introduced which compensates the increased temperature loss when the machine (brew head etc.) is still very cold.
    - PidController offers feature like I-value filtering, special handling of setPoint crossings and more (hard-coded)
    - PID Controller is now integral part of the software and not an external library.
 1. actionController, which allow you to trigger custom functions over any GPIO port and/or mqtt.
    - fully dynamic mapping of any(!) available analog/digital gpio port to custom functions, which are currently:
      - BREWING   := start brewing
-     - STEAMING  := automatically manages heat up maschine for streaming
+     - STEAMING  := automatically manages heat up machine for steaming
      - HOTWATER  := start pouring hotwater
      - HEATER    := activate heater (not yet)
      - PUMP      := activate pump (not yet)
@@ -40,11 +40,11 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
    - while also supporting the switch types: toggles (eg switches) and triggers (eg push buttons)
    - added MQTT Support to control actions using topics ../actions/<ACTION> with supported payloads of 0|1|-1 (off|on|switch)
      Example: "custom/Küche.Rancilio2/actions/STEAMING"
-1. Freely choose if you want the software to use WIFI, BLYNK and/or MQTT. Everythink can be enabled/disabled and stil have a flawlessly working PID controller.
+1. Freely choose if you want the software to use WIFI, BLYNK and/or MQTT. Everythink can be enabled/disabled and still have a flawlessly working PID controller.
 1. Additionally if you want to to depend on a remotely running service (eg. blynk server on raspi), you can activate a MQTT-Server on the arduino itself!
 1. Offline Modus is fixed and enhanced. If userConfig.h's FORCE_OFFLINE is enabled, then PID fully is working without networking. Ideal in situations when there is no connectivity or you dont want to rely on it.
 1. Huge performance tunings and improvements under the hood which stabilizes the system (eg in situations of bad WIFI, hardware issues,..).
-1. MQTT support to integrate maschine in smart-home solutions and to easier extract details for graphing/alerting.
+1. MQTT support to integrate machine in smart-home solutions and to easier extract details for graphing/alerting.
 1. Added RemoteDebug over telnet so that we dont need USB to debug/tune pid anymore (https://github.com/JoaoLopesF/RemoteDebug). While using OTA updates you can remotely debug and update the software!
 1. "Brew Ready" Detection implemented, which detects when the temperature has stabilized at setPoint. It can send an
    MQTT event or have hardware pin 15 triggered (which can be used to turn a LED on).
@@ -55,7 +55,7 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
 
 ## ATTENTION:
 - This software is tested thoroughly with the pid-only hardware solution on Silvia 5e, and with a permanently run full-hardware solution on an 10 year old Silvia. Also a 10 year old Gaggia Classic is tested successfully. I am grateful for any further feedback. 
-- Please monitor our maschine's temperature closely the first few run times. The muti-state pid controller should never lead to temperatures greater than 5 degress above setpoint!
+- Please monitor our machine's temperature closely the first few run times. The muti-state pid controller should never lead to temperatures greater than 5 degress above setpoint!
 
 ## Sample bleeding-edge workings
 - You can use the mqtt interface to export live data for monitoring purposes as can be seen in this [Grafana Dashboard](https://snapshot.raintank.io/dashboard/snapshot/lYe7XigrehSfVsvAWYifEwd2d5hNC0dl).
@@ -117,15 +117,15 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
   - Feature: Hardware-Led in addition to simple LEDs also support WS2812b LED (stripes) (MANY THANKS P1Rebo for the PR)
 - 2.6.0:
   - Merged PR by finnito which changed/extended: (MANY THANKS FINNITO)
-    - Added support for ECM espresso maschine including logo.
+    - Added support for ECM espresso machine including logo.
     - Added/Extended support for special functions (steam, hotwater, brew).
     - Added custom steam functionality.
     - Extended initial support to call special functions based on Pin A0 (analog levels) which can be used by eg. hardware buttons.
-    - Added new state to state maschine (6=steam).
+    - Added new state to state machine (6=steam).
   - Refactored/Extended finnito's code to integrate our new "actionController":
     - fully dynamic mapping of any(!) available analog/digital gpio port to custom functions, which are currently:
       - BREWING   := start brewing
-      - STEAMING  := automatically manages heat up maschine for streaming
+      - STEAMING  := automatically manages heat up machine for steaming
       - HOTWATER  := start pouring hotwater
       - HEATER    := activate heater (not yet)
       - PUMP      := activate pump (not yet)
@@ -141,7 +141,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
   - Feature: OnlyPid=0: Disable pre-infusion and pause by setting userConfig settings to 0.
   - Feature: OnlyPid=1: BrewDetection can now also be triggered by hardware using actionControle "BREWING".
   - Feature: New userConfig setting SETPOINT_STEAM is also setable via [mqtt](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/MQTT-Setup)/[blynk](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Blynk-Setup).
-  - Feature: hardwareLed will glow for a few seconds when the maschine starts up. This helps determine a not starting node.
+  - Feature: hardwareLed will glow for a few seconds when the machine starts up. This helps determine a not-starting node.
   - Feature: Additional safe-guard to temporary disable heater if temperature is 10 degree above active setPoint.
   - Important FIX: mqtt interface for STEADYPOWER_OFFSET_TIME working again. This setting is currenly wrongly set and need to be re-set for auto-tuning to work!
   - Fix: EMERGENCY_TEMP setting disables pid when temperature is > and re-enables when < setPoint. Please check your setting to be reasonable high (eg. Rancilio 135 degree). Should at least be higher than SETPOINT_STEAM.
@@ -181,14 +181,14 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
   - Special winter theme added. Activate with ICON_COLLECTION=2 in userConfig.h.
   - Added support for a customizable screen-saver (#define ENABLE_SCREEN_SAVER)
   - Overwrite Version info at boot time via OVERWRITE_VERSION_DISPLAY_TEXT in userConfig.h.
-  - Added power-off countdown to hint the user when the maschine is going to shutdown (ENABLE_POWER_OFF_COUNTDOWN) (Silvia 5E)
+  - Added power-off countdown to hint the user when the machine is going to shutdown (ENABLE_POWER_OFF_COUNTDOWN) (Silvia 5E)
   - Power-off countdown starts 5min before shutdown.
   - Bugfix: Fix brew detection (OnlyPid)
   - Bugfix: End of BrewTimer correctly displayed (OnlyPid)
   - Bugfix: No power-off countdown when brewing.
   - Move display stuff into separate files
   - alpha code: Intitial support for an user-menu (ENABLE_USER_MENU/pinBrewButton)
-  - alpha code: Initial infos about how to add a case with hardware-buttons to control basic settings directly at maschine.
+  - alpha code: Initial infos about how to add a case with hardware-buttons to control basic settings directly at machine.
 - 2.3.0 master:
   - PID is completely auto-tuned and should work flawlessly after a few starts. No need to configure PID any longer. 
   - Bleeding-Edge settings can be configured remotely without requiring a running service (blynk, mqtt-server) running in your network or internet. (No extra raspi required)
@@ -205,7 +205,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
     - Copy contents of folder ranciliopid\arduino-libs to your arduino sketchbook location (normally C:\Users\YOUR_NAME\Documents\Arduino)
   - Improve PID:
     - Auto-tuning for starttemp is implemented. No need to adapt the STARTTEMP accordingly when SETPOINT is modified
-    - steadyPowerOffset is gradually decreased over time to better compensate the warm up of maschine.
+    - steadyPowerOffset is gradually decreased over time to better compensate the warm up of machine.
     - PID monitors and tunes steadyPowerOffset.
     - One time PID manipulation logic added.
     - PID's I parameter filter is reduced in certain situations more strictly.
@@ -226,7 +226,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
       - eg. Howto "Setup MQTT": https://github.com/medlor/bleeding-edge-ranciliopid/wiki/MQTT-Setup
     - Added link to sample daily Grafana dashboard.
   - Fix: userConfig.h: AUTH renamed to BLYNKAUTH
-  - Fix: No starttemp tuning when when maschine is already warm.
+  - Fix: No starttemp tuning when when machine is already warm.
   - Fix: burstPower working again.
   - Fix: If PID is manually disabled, heater utilization is correctly reported as 0%.
   - Fix: Heater overextending handling working as intended.
