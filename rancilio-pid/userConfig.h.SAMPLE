@@ -38,12 +38,12 @@
 /*******
  * Hardware GPIO Pin Mapping (just change values but don't comment)
  *******/
-#define pinTemperature    2    // read temperature (TSIC)
-#define pinRelayHeater    14   // trigger relais used to heat water
+#define pinTemperature    17    // read temperature (TSIC)
+#define pinRelayHeater    27   // trigger relais used to heat water
 #define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve
 #define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump
 
-#define pinLed            15   // (ENABLE_HARDWARE_LED=1) Hardware LED (16 is also "free" to use)
+#define pinLed            23   // (ENABLE_HARDWARE_LED=1) Hardware LED (16 is also "free" to use)
 
 /*******
  * GPIO Pin Usage: Here you can define how the GPIO boards (analog/digital) shall be used to execute functions.
@@ -63,13 +63,16 @@
  *
  *    Examples:
  *    a) Hardware Switch (On/Off) on A0(GPIO17) which controls BREWING when gpio-value >= 700.
- *    #define CONTROLS_CONFIG "17:analog:toggle|700-1024:BREWING#"
+ *    #define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"
  *
  *    b) Hardware Buttons via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
- *    #define CONTROLS_CONFIG "17:analog:trigger|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
+ *    #define CONTROLS_CONFIG "17:INPUT:analog:trigger|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING#"
  *
  *    c) Hardware Switches via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
- *    #define CONTROLS_CONFIG "17:analog:toggle|245-260:BREWING;525-540:STEAMING;802-815:HOTWATER#"
+ *    #define CONTROLS_CONFIG "17:INPUT:analog:toggle|245-260:BREWING;525-540:STEAMING;802-815:HOTWATER#"
+ *
+ *    d) Hardware Switch (On/Off) (GPIO02) which controls BREWING - Hardware Switch (On/Off) on GPIO32 which controls HOTWATER - Hardware Switch (On/Off) on GPIO33 which controls STEAMING -- all without an resistor (direct connected, uses internal resistor)
+ *    #define CONTROLS_CONFIG "2:INPUT_PULLUP:digital:toggle|0-0:BREWING#32:INPUT_PULLUP:digital:toggle|0-0:HOTWATER#33:INPUT_PULLUP:digital:toggle|0-0:STEAMING#"
  *******/
 #define DEBUG_FORCE_GPIO_CHECK   0  // 0=off (default). 1=on. If on, PID is disabled and only trigger/toogles are detected and printed in DEBUG log.
 #define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"  //when a simple switch is connected on port A0 and this switch is used to trigger BREWING.
@@ -116,8 +119,8 @@
 /*******
  * Preinfussion settings (only useful when ONLYPID=0)
  *******/
-#define PREINFUSION       1.5   //  length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion.
-#define PREINFUSION_PAUSE 2     // length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+#define PREINFUSION       2.6   //  length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion.
+#define PREINFUSION_PAUSE 3.3     // length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
 // dont forget to adapt BREWTIME mentioned above
 
 
