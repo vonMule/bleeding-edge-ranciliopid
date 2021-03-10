@@ -38,7 +38,7 @@
 /*******
  * Hardware GPIO Pin Mapping (just change values but don't comment)
  *******/
-#define pinTemperature    17    // read temperature (TSIC)
+#define pinTemperature    17    // read temperature (TSIC)  //sure to use this one, its allready used in BREW function
 #define pinRelayHeater    27   // trigger relais used to heat water
 #define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve
 #define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump
