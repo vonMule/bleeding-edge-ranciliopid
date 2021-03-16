@@ -62,8 +62,7 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
       only_once = 1;
       u8g2_init();
     }
-    
-    if ((millis() >= previousMillisDisplay + intervalDisplay) || only_once == 0) {
+    if ((millis() >= previousMillisDisplay + intervalDisplay) || previousMillisDisplay == 0) {
       previousMillisDisplay = millis();
       displaymessage_helper(activeState, displaymessagetext, displaymessagetext2);
     }

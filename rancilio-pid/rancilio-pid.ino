@@ -33,7 +33,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.7.0 beta 1";
+const char* sysVersion PROGMEM  = "2.7.0 beta 3";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -582,10 +582,10 @@ void setHardwareLed(bool mode) {
   if(enabledHardwareLed == 2 && mode != previousMode){
     previousMode = mode;
     if (mode){
-      fill_solid(leds, enabledHardwareLedNumber, CRGB(100, 100, 100));
+      fill_solid(leds, enabledHardwareLedNumber, CRGB(ENABLE_HARDWARE_LED_RGB_ON));
     }
     else{
-      fill_solid(leds, enabledHardwareLedNumber, CRGB(255, 255, 255));
+      fill_solid(leds, enabledHardwareLedNumber, CRGB(ENABLE_HARDWARE_LED_RGB_OFF));
     }
     FastLED.show();
   }
@@ -1185,6 +1185,7 @@ void updateState() {
       /* STATE 6 (Steam) DETECTION */
       if (steaming) {
         snprintf(debugline, sizeof(debugline), "Steaming Detected. Transition to state 6 (Steam)");
+        //digitalWrite(pinRelayVentil, relayOFF);
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
         if (*activeSetPoint != setPointSteam) {
