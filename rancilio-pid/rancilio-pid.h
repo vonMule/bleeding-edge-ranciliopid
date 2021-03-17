@@ -12,6 +12,9 @@
 #ifdef ESP32
 // ESP32 sometimes (after crash) is not able to connect to wifi. Workaround: set DISABLE_SERVICES_ON_STARTUP_ERRORS to 0
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 0
+#if (MQTT_ENABLE == 2)
+#error ERROR Not supported to set MQTT_ENABLE=2 on ESP32
+#endif
 #endif
 
 #ifndef CONTROLS_CONFIG

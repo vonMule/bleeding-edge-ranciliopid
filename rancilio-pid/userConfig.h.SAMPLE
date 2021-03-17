@@ -79,6 +79,9 @@
  *       - Hardware Switch (On/Off) on GPIO33 which controls STEAMING -- all without an resistor (direct connected, uses internal INPUT_PULLUP resistor)
  *    #define CONTROLS_CONFIG "25:INPUT_PULLUP:digital:toggle|0-0:BREWING#32:INPUT_PULLUP:digital:toggle|0-0:HOTWATER#33:INPUT_PULLUP:digital:toggle|0-0:STEAMING#"
  *
+ *    e) ESP32 FULL-CONTROL CONFIG (https://github.com/medlor/bleeding-edge-ranciliopid/wiki/ESP32-Setup)
+ *    #define CONTROLS_CONFIG "32:INPUT_PULLUP:digital:toggle|0-0:BREWING#33:INPUT_PULLUP:digital:toggle|0-0:HOTWATER#27:INPUT_PULLUP:digital:toggle|0-0:STEAMING#"
+ *
  *******/
 #define DEBUG_FORCE_GPIO_CHECK   0  // 0=off (default). 1=on. If on, PID is disabled and only trigger/toogles are detected and printed in DEBUG log.
 #define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"  //when a simple switch is connected on port A0 and this switch is used to trigger BREWING.

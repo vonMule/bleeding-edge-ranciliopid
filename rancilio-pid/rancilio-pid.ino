@@ -313,7 +313,7 @@ DeviceAddress sensorDeviceAddress;   // arrays to hold device address
 #ifdef USE_ZACWIRE_TSIC
 #include "src/ZACwire-Library/ZACwire.h"
 #ifdef ESP32
-ZACwire<pinTemperature> TSIC(306,130,10,0);
+ZACwire<pinTemperature> TSIC(306,130,20,0);
 #else
 ZACwire<pinTemperature> TSIC;
 #endif
@@ -2170,7 +2170,7 @@ void setup() {
             //read and use settings retained in mqtt and therefore dont use eeprom values
             eeprom_force_read = false;
             unsigned long started = millis();
-            while (mqtt_working() && (millis() < started + 2000))  //attention: delay might not be long enough over WAN
+            while (mqtt_working() && (millis() < started + 3000))  //attention: delay might not be long enough over WAN
             {
               mqtt_client.loop();
             }

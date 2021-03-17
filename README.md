@@ -97,6 +97,9 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.7.0 beta 4:
+  - Fix: ENABLE_HARDWARE_LED_RGB_ON/OFF now working (Thanks Helge!)
+  - minor stuff
 - 2.7.0 beta 3:
   - Feature: (ENABLE_HARDWARE_LED=2) New settings ENABLE_HARDWARE_LED_RGB_ON/ENABLE_HARDWARE_LED_RGB_OFF to set specific colors.
   - Fix: esp8266: Display is again working on first couple of seconds after power-on.
