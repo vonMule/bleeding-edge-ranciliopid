@@ -1,0 +1,150 @@
+{
+  "uuid": "a32dac31691a421adc4a4bb919a8e338",
+  "path": "Offline/bleeding_edge_full_control_pcb_layout",
+  "name": "bleeding_edge_full_control_pcb_layout",
+  "content": "",
+  "created_at": "2021-03-18 21:35:27",
+  "updated_at": "2021-03-24 22:09:21",
+  "stick": "",
+  "documents": [
+    {
+      "uuid": "6e83b01fce823ac0f2615de56f6ea0f9",
+      "title": "Sheet_1",
+      "description": "",
+      "docType": "1",
+      "master": "",
+      "thumb": "/images/thumb-default.png",
+      "components": {
+        "a718c1f9e6b441439cd8617f44e2f76d": 1,
+        "129cd077823746dba18cedcae06ed68a": 4,
+        "872ea293710d4671adbc52edf7e10b8a": 2,
+        "a18024a727234674886026c53a120490": 1,
+        "b0248eb51e084227889f2cb84eab79c4": 1
+      },
+      "BOM": [
+        [
+          "Value",
+          "Quantity",
+          "Package",
+          "Components",
+          "CustomPara"
+        ],
+        [
+          "Dual SSR (DC+/DC-/IN1/IN2)",
+          1,
+          "P2024A-PCB",
+          "U1",
+          {
+            "BOM_Manufacturer Part": "Terminal Block, PCB Mount, 5mm, 4 Way",
+            "BOM_Supplier Part": "P2024A",
+            "BOM_Supplier": "",
+            "puuid": "ef9e018a500b48caa4e28b487a973e4d",
+            "uuid": "129cd077823746dba18cedcae06ed68a"
+          }
+        ],
+        [
+          "BREW/WATER/STEAM_SWITCH / HARDWARE_LED",
+          1,
+          "P2024A-PCB",
+          "U4",
+          {
+            "BOM_Manufacturer Part": "Terminal Block, PCB Mount, 5mm, 4 Way",
+            "BOM_Supplier Part": "P2024A",
+            "BOM_Supplier": "",
+            "puuid": "ef9e018a500b48caa4e28b487a973e4d",
+            "uuid": "129cd077823746dba18cedcae06ed68a"
+          }
+        ],
+        [
+          "Ground_with_Resistor/Ground/3V/RESISTOR_CIRCUIT",
+          1,
+          "P2024A-PCB",
+          "U5",
+          {
+            "BOM_Manufacturer Part": "Terminal Block, PCB Mount, 5mm, 4 Way",
+            "BOM_Supplier Part": "P2024A",
+            "BOM_Supplier": "",
+            "puuid": "ef9e018a500b48caa4e28b487a973e4d",
+            "uuid": "129cd077823746dba18cedcae06ed68a"
+          }
+        ],
+        [
+          "BREW/STEAM/WATER_GpioAction / FREE",
+          1,
+          "P2024A-PCB",
+          "U6",
+          {
+            "BOM_Manufacturer Part": "Terminal Block, PCB Mount, 5mm, 4 Way",
+            "BOM_Supplier Part": "P2024A",
+            "BOM_Supplier": "",
+            "puuid": "ef9e018a500b48caa4e28b487a973e4d",
+            "uuid": "129cd077823746dba18cedcae06ed68a"
+          }
+        ],
+        [
+          "connector,_PCB_Mount,_5.08mm,_2_Way_blue_copy",
+          2,
+          "P2024A-PCB",
+          "SSR_(V+/V-),DISPLAY",
+          {
+            "BOM_Manufacturer Part": "Terminal Block, PCB Mount, 5mm, 3 Way",
+            "BOM_Supplier Part": "P2024A",
+            "BOM_Supplier": "",
+            "puuid": "ef9e018a500b48caa4e28b487a973e4d",
+            "uuid": "872ea293710d4671adbc52edf7e10b8a"
+          }
+        ],
+        [
+          "ESP32",
+          1,
+          "",
+          "ESP32",
+          {
+            "BOM_Manufacturer": "",
+            "BOM_Manufacturer Part": "",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "puuid": "",
+            "uuid": "a718c1f9e6b441439cd8617f44e2f76d"
+          }
+        ],
+        [
+          "POWER_3V",
+          1,
+          "P2024A-PCB",
+          "3V/GROUND/TEMP",
+          {
+            "BOM_Manufacturer Part": "Terminal Block, PCB Mount, 5mm, 3 Way",
+            "BOM_Supplier Part": "P2024A",
+            "BOM_Supplier": "",
+            "puuid": "ef9e018a500b48caa4e28b487a973e4d",
+            "uuid": "a18024a727234674886026c53a120490"
+          }
+        ],
+        [
+          "1k",
+          1,
+          "R0603",
+          "300OHM?",
+          {
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "BOM_Manufacturer Part": "",
+            "puuid": "1bf59dff03ec4233aa077dc7cf0e92a1",
+            "uuid": "b0248eb51e084227889f2cb84eab79c4"
+          }
+        ]
+      ],
+      "updateTime": 1616620161,
+      "createTime": 1616099908,
+      "histories": [],
+      "created_at": "2021-03-18 21:38:28",
+      "updated_at": "2021-03-24 22:09:21"
+    }
+  ],
+  "sort": [],
+  "title": "bleeding_edge_full_control_pcb_layout",
+  "foldername": "bleeding_edge_full_control_pcb_layout",
+  "schfilename": "bleeding_edge_full_control_pcb_layout.json",
+  "schfilemtime": 1616620159350
+}

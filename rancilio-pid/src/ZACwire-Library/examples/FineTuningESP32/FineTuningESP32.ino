@@ -1,13 +1,13 @@
 #include "ZACwire.h"
 
-ZACwire<17> Sensor(306,140,10,1);		// set pin "2" to receive signal from the TSic "206" with an expected bitWindow of "140µs" and an offset of "10µs". ISR executed on CPU1
+ZACwire<34> Sensor(306,130,10,0);		// set pin "2" to receive signal from the TSic "206" with an expected bitWindow of "140µs" and an offset of "10µs". ISR executed on CPU1
 
 float Input = 0;
 unsigned long previousMillistemp;       // initialisation at the end of init()
 const long refreshTempInterval = 100;  //How often to read the temperature sensor
 unsigned long currentMillistemp = 0;
 
-char debugline[120];
+char debugline[150];
 unsigned long loops = 0;
 unsigned long max_micros = 0;
 unsigned long last_report_micros = 0;
@@ -36,7 +36,7 @@ void loop() {
 
   if ( cur_micros >= last_report_micros + 100000 ) { //100ms
     snprintf(debugline, sizeof(debugline), "%lu loop() temp=%0.2f | loops/ms=%lu | spend_micros_last_loop=%lu | max_micros_since_last_report=%lu | avg_micros/loop=%lu\n", 
-        cur_micros/1000, Input, loops/100, (cur_micros-cur_micros_previous_loop), max_micros, (cur_micros - last_report_micros)/loops );
+        cur_micros/1000000, Input, loops/100, (cur_micros-cur_micros_previous_loop), max_micros, (cur_micros - last_report_micros)/loops );
     Serial.print(debugline);
     //Serial.println(max_micros);
     //Serial.println(loops/10);

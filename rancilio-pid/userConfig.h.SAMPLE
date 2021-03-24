@@ -41,11 +41,16 @@
  * Hardware GPIO Pin Mapping
  * Hints can be found in our wiki: https://github.com/medlor/bleeding-edge-ranciliopid/wiki/ESP32-Setup
  *******/
-#define pinTemperature    2    // read temperature (TSIC): esp8266=2, esp32=17
-#define pinRelayHeater    14   // trigger relais used to heat water: esp8266=14, esp32=27
-#define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve: esp8266=13, esp32=16
-#define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump: esp8266=15, esp32=17
-#define pinLed            15   // (ENABLE_HARDWARE_LED=1) Hardware LED (16 is also "free" to use): esp8266=15, esp32=23
+#define pinTemperature    2    // read temperature (TSIC): esp8266=2, esp32=26
+#define pinRelayHeater    14   // trigger relais used to heat water: esp8266=14, esp32=16
+#define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve: esp8266=13, esp32=18
+#define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump: esp8266=15, esp32=19
+#define pinLed            15   // (ENABLE_HARDWARE_LED=1) Hardware LED (16 is also "free" to use): esp8266=15, esp32=14
+
+#define ENABLE_GPIO_ACTION  0        // 0=off (default) | 1=GPIOs related to actions are set to HIGH when enabled (eg to be used by LEDs)
+#define pinBrewAction      15
+#define pinHotwaterAction   5
+#define pinSteamingAction   2
 
 /*******
  * GPIO Pin Usage: Here you can define how the GPIO boards (analog/digital) shall be used to execute functions.

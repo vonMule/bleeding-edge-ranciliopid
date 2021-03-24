@@ -171,7 +171,7 @@ void configureControlsHardware(controlMap* controlsConfig) {
     snprintf(debugline, sizeof(debugline), "Set Hardware GPIO %2i to %s", ptr->gpio, ptr->portMode);
     DEBUG_println(debugline);
     if ( strcmp(ptr->portType, "analog") == 0) {
-      pinMode(ptr->gpio, INPUT);
+      pinMode(ptr->gpio, convertPortModeToDefine(ptr->portMode));
     } else {;
       pinMode(ptr->gpio, convertPortModeToDefine(ptr->portMode));
     }
@@ -352,11 +352,13 @@ void brewingAction(int state) {
   if (OnlyPID) {
     if (brewDetection == 1) {
        brewing = state;  //brewing should only be set if the maschine is in reality brewing!
+       setGpioAction(BREWING, state);
     }
    return;
   }
   simulatedBrewSwitch = state;
   DEBUG_print("brewingAction(): simulatedBrewSwitch: %d\n", simulatedBrewSwitch);
+  setGpioAction(BREWING, state);
 }
 
 void hotwaterAction(int state) {
@@ -364,19 +366,21 @@ void hotwaterAction(int state) {
   if (OnlyPID) return;
   if (state == 1) {
     digitalWrite(pinRelayPumpe, relayON);
-    DEBUG_print("hotwaterAction(): pump relay: on\n");
   } else if (state == 0) {
     digitalWrite(pinRelayPumpe, relayOFF);
-    DEBUG_print("hotwaterAction(): pump relay: off\n");
   }
+  DEBUG_print("hotwaterAction(): %d\n", state);
+  setGpioAction(HOTWATER, state);
 }
 
 void steamingAction(int state) {
   steaming = state;
   DEBUG_print("steamingAction(): %d\n", state);
+  setGpioAction(STEAMING, state);
 }
 
 void cleaningAction(int state) {
   int cleaning = state;
   DEBUG_print("cleaningAction(): %d\n", state);
+  setGpioAction(CLEANING, state);
 }

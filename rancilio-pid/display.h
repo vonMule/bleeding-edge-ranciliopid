@@ -18,10 +18,6 @@ static int activeStateBuffer;
 static char displaymessagetextBuffer[30];
 static char displaymessagetext2Buffer[30];
 
-//#define OLED_RESET 16   // Output pin for disply reset pin
-#define OLED_SCL 5        // Output pin for dispaly clock pin
-#define OLED_SDA 4        // Output pin for dispaly data pin
-
 #define SCREEN_WIDTH 128  // OLED display width, in pixels
 #define SCREEN_HEIGHT 64  // OLED display height, in pixels
 

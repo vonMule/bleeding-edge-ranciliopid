@@ -33,7 +33,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.7.0 beta 3";
+const char* sysVersion PROGMEM  = "2.7.0 beta 5";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -301,7 +301,7 @@ const unsigned long loop_report_count = 100;
 ******************************************************/
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#define ONE_WIRE_BUS pinTemperature  // Data wire is plugged into port 2 on the Arduino
+#define ONE_WIRE_BUS pinTemperature  // Data wire
 OneWire oneWire(ONE_WIRE_BUS);       // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature.
 DeviceAddress sensorDeviceAddress;   // arrays to hold device address
@@ -311,9 +311,9 @@ DeviceAddress sensorDeviceAddress;   // arrays to hold device address
 ******************************************************/
 #define USE_ZACWIRE_TSIC
 #ifdef USE_ZACWIRE_TSIC
-#include "src/ZACwire-Library/ZACwire.h"
+#include "src/ZACwire-Library-beta/ZACwire.h"
 #ifdef ESP32
-ZACwire<pinTemperature> TSIC(306,130,20,0);
+ZACwire<pinTemperature> TSIC(306,125,0); //10=3x bis 2060 |20=1x in 1500sec | 30=5x bis 2060
 #else
 ZACwire<pinTemperature> TSIC;
 #endif
@@ -592,6 +592,54 @@ void setHardwareLed(bool mode) {
   #endif
 }
 
+void setGpioAction(int action, bool mode) {
+  #if (ENABLE_GPIO_ACTION != 1)
+  return;
+  #endif
+
+  #ifdef pinBrewAction
+  static bool brewingPreviousMode = false;
+  if (action == BREWING) {
+    if (brewingPreviousMode != mode) {
+      brewingPreviousMode = mode;
+      digitalWrite(pinBrewAction, mode);
+    }
+  }
+  #endif
+
+  #ifdef pinHotwaterAction
+  static bool hotwaterPreviousMode = false;
+  if (action == HOTWATER) {
+    if (hotwaterPreviousMode != mode) {
+      hotwaterPreviousMode = mode;
+      digitalWrite(pinHotwaterAction, mode);
+    }
+  }
+  #endif
+
+  #ifdef pinSteamingAction
+  static bool steamingPreviousMode = false;
+  if (action == STEAMING) {
+    if (steamingPreviousMode != mode) {
+      steamingPreviousMode = mode;
+      digitalWrite(pinSteamingAction, mode);
+    }
+  }
+  #endif
+
+  #if defined(pinBrewAction) && defined(pinHotwaterAction) && defined(pinSteamingAction)
+  static bool cleaningPreviousMode = false;
+  if (action == CLEANING) {
+    if (cleaningPreviousMode != mode) {
+      cleaningPreviousMode = mode;
+      digitalWrite(pinBrewAction, mode);
+      digitalWrite(pinHotwaterAction, mode);
+      digitalWrite(pinSteamingAction, mode);
+    }
+  }
+  #endif
+}
+
 /*****************************************************
  * fast temperature reading with TSIC 306
  * Code by Adrian with minor adaptions
@@ -692,7 +740,10 @@ double getTSICvalue() {
 bool checkSensor(float tempInput, float temppreviousInput) {
   bool sensorOK = false;
   if (!sensorError) {
-    if ( ( tempInput < 0 || tempInput > 150 || fabs(tempInput - temppreviousInput) > 5)) {
+    if ( tempInput == 221 ) {
+      error++;
+      DEBUG_print("temperature sensor connection broken: consec_errors=%d, temp_current=%0.2f, temp_prev=%0.2f\n", error, tempInput, temppreviousInput);
+    } else if ( ( tempInput < 0 || tempInput > 150 || fabs(tempInput - temppreviousInput) > 5)) {
       error++;
       DEBUG_print("temperature sensor reading: consec_errors=%d, temp_current=%0.2f, temp_prev=%0.2f\n", error, tempInput, temppreviousInput);
     } else {
@@ -1346,7 +1397,7 @@ void loop() {
     }
     brewReady = brewReadyCurrent;
   }
-  setHardwareLed(brewReady || Input >=setPointSteam || Input >= steamReadyTemp);
+  setHardwareLed((brewReady && screenSaverOn==false) || (steaming && Input >= steamReadyTemp));
 
   //network related stuff
   if (!force_offline) {
@@ -1482,7 +1533,6 @@ void loop() {
       Output = 0 ;
       DEBUG_print("Current config has disabled PID\n");
     } else if (pidON == 1 && pidMode == 0 && !emergencyStop) {
-      DEBUG_println("ins2");
       Output = 0; // safety: be 100% sure that PID.compute() starts fresh.
       pidMode = 1;
       bPID.SetMode(pidMode);
@@ -2108,6 +2158,21 @@ void setup() {
   setHardwareLed(1);
   #endif
 
+  #if (ENABLE_GPIO_ACTION==1)
+  #ifdef pinBrewAction
+  pinMode(pinBrewAction, OUTPUT);
+  setGpioAction(BREWING, 1);
+  #endif
+  #ifdef pinHotwaterAction
+  pinMode(pinHotwaterAction, OUTPUT);
+  setGpioAction(HOTWATER, 1);
+  #endif
+  #ifdef pinSteamingAction
+  pinMode(pinSteamingAction, OUTPUT);
+  setGpioAction(STEAMING, 1);
+  #endif
+  #endif
+
   DEBUG_print("\nMachine: %s\nVersion: %s\n", MACHINE_TYPE, sysVersion);
 
   #if defined(OVERWRITE_VERSION_DISPLAY_TEXT)
@@ -2335,6 +2400,9 @@ void setup() {
      REST INIT()
   ******************************************************/
   setHardwareLed(0);
+  setGpioAction(BREWING, 0);
+  setGpioAction(STEAMING, 0);
+  setGpioAction(HOTWATER, 0);
   //Initialisation MUST be at the very end of the init(), otherwise the time comparison in loop() will have a big offset
   unsigned long currentTime = millis();
   previousMillistemp = currentTime;

@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.7.0 beta 1
+Version 2.7.0 beta
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
@@ -97,6 +97,15 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.7.0 beta 5:
+  - (ESP32) Added two new [circuit-diagrams](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/circuit-diagrams) which show the complete wiring in "full-control" upgrade.
+  - ZACWire upgrade to v1.2.6b, which improves stability. (Thanks Adrian)
+  - Feature GpioAction: If actions are activated, specific GPIOs can be triggered also. This can be used eg. to light up LEDs in Rancilio's hardware-switches.
+    - userConfig.h: ENABLE_GPIO_ACTION / pinBrewAction / pinHotwaterAction / pinSteamingAction
+    - cleaning action is also supported by turning on the brew/hotwater/steaming gpios.
+  - During PowerOn GpioActions and HardwareLed are enabled for a couple of seconds.
+  - Fix: HardwareLed is only turned on, when temperature > steam_ready_temp AND steaming action is active.
+  - Fix: (DISPLAY=1) HardwareLed is not turned on when screensaver is running (even if brew_ready state is reached).
 - 2.7.0 beta 4:
   - Fix: ENABLE_HARDWARE_LED_RGB_ON/OFF now working (Thanks Helge!)
   - minor stuff

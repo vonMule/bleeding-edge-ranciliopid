@@ -4,7 +4,7 @@
   "name": "bleeding_edge-full_control",
   "content": "",
   "created_at": "2021-03-14 09:06:39",
-  "updated_at": "2021-03-16 22:32:07",
+  "updated_at": "2021-03-24 22:11:33",
   "stick": "",
   "documents": [
     {
@@ -27,8 +27,9 @@
         "87ffa5f9cd14437e92c8dc3db8a24975": 2,
         "d9b1be5071bf4880bd0cf34d3760c55e": 1,
         "5bec1d8463b94c119f6c2d3c826ae59c": 6,
-        "834270b04df04adbaf8068590c1d41e8": 2,
-        "c24ca9cee2ab44d69d0621215a97dc1f": 1
+        "c24ca9cee2ab44d69d0621215a97dc1f": 1,
+        "b0248eb51e084227889f2cb84eab79c4": 1,
+        "834270b04df04adbaf8068590c1d41e8": 1
       },
       "BOM": [
         [
@@ -47,17 +48,6 @@
             "BOM_Manufacturer Part": "Tribium",
             "puuid": "0be1516472144301b5723049d60f6173",
             "uuid": "1f47201987d24940ae48013a3efface2"
-          }
-        ],
-        [
-          "12V >5E",
-          1,
-          "LED-5MM",
-          "POWER_LED",
-          {
-            "BOM_Manufacturer Part": "",
-            "puuid": "8bfcf85a78c2410c8b725f485026a5e3",
-            "uuid": "5bec1d8463b94c119f6c2d3c826ae59c"
           }
         ],
         [
@@ -83,6 +73,17 @@
           }
         ],
         [
+          "12V >5E",
+          1,
+          "LED-5MM",
+          "POWER_LED",
+          {
+            "BOM_Manufacturer Part": "",
+            "puuid": "8bfcf85a78c2410c8b725f485026a5e3",
+            "uuid": "5bec1d8463b94c119f6c2d3c826ae59c"
+          }
+        ],
+        [
           "Water",
           1,
           "VIBE-MOTOR-10MM",
@@ -96,10 +97,10 @@
           }
         ],
         [
-          "t>160°C, NC",
+          "t>140°C, NC",
           1,
           "NONE",
-          "U11",
+          "U6",
           {
             "BOM_Manufacturer Part": "Thermostat",
             "BOM_Supplier Part": "",
@@ -109,10 +110,10 @@
           }
         ],
         [
-          "t>140°C, NC",
+          "t>160°C, NC",
           1,
           "NONE",
-          "U6",
+          "U11",
           {
             "BOM_Manufacturer Part": "Thermostat",
             "BOM_Supplier Part": "",
@@ -164,9 +165,9 @@
         ],
         [
           "330Ohm",
-          2,
+          1,
           "R805",
-          "RESISTOR,RESISTOR_1",
+          "RESISTOR1",
           {
             "BOM_Manufacturer Part": "",
             "puuid": "a5beb97903aa495e9938059075f05138",
@@ -201,7 +202,20 @@
           }
         ],
         [
-          "SSD Relay",
+          "1k",
+          1,
+          "R0603",
+          "RESISTOR_CIRCUIT_FOR_ADC",
+          {
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "BOM_Manufacturer Part": "",
+            "puuid": "1bf59dff03ec4233aa077dc7cf0e92a1",
+            "uuid": "b0248eb51e084227889f2cb84eab79c4"
+          }
+        ],
+        [
+          "Solid State Relay",
           1,
           "NONE",
           "U1",
@@ -254,16 +268,16 @@
           }
         ]
       ],
-      "updateTime": 1615930327,
+      "updateTime": 1616620293,
       "createTime": 1615709199,
       "histories": [],
       "created_at": "2021-03-14 09:06:39",
-      "updated_at": "2021-03-16 22:32:07"
+      "updated_at": "2021-03-24 22:11:33"
     }
   ],
   "sort": [],
   "title": "bleeding_edge-full_control",
   "foldername": "bleeding_edge-full_control",
   "schfilename": "bleeding_edge-full_control.json",
-  "schfilemtime": 1615930325400
+  "schfilemtime": 1616620291770
 }

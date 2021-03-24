@@ -4,6 +4,13 @@
 - convert all float to long.
 
 
+Feature Requests:
+- TOF Sensor: waterlevel
+- Feature wäre definitiv noch das zuheizen beim Wasserbezug im Hotwater
+
+
+
+
 # TODO Tests
 
 # Quick Performance tests 
