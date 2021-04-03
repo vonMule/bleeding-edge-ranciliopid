@@ -104,6 +104,13 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 
 ## Changelog
 - 2.7.1:
+  - Added PR for automatic cleaning mode (Thanks to urbantrout/Harald).
+    - TODO: check cleaning icon to all icon themes. Create another one?
+    - TODO update: wiki blynk states
+    - Adaptions:
+      - TODO: move config userconfig + print_settings() + Add define to start automatic cleaning on CLEANING action.
+  - TODO: blynk must call actionController and not actions' vars directly!
+  - Added new icon-collection "text", which just shows a non-moving logo with simple texts.
   - Update ZACwire-Library to v1.3.1.
 - 2.7.0:
   - Feature: FULLY SUPPORT ESP32 with CPU pinning for improved performance.

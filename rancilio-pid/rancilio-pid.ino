@@ -112,6 +112,7 @@ int activeState = 3;        // (0:= undefined / EMERGENCY_TEMP reached)
                             // 5:= Outer Zone detected (temperature outside of "inner zone")
                             // 6:= steam mode activated
                             // 7:= sleep mode activated
+                            // 8:= clean mode
 bool emergencyStop = false; // Notstop bei zu hoher Temperatur
 
 /********************************************************
@@ -150,7 +151,7 @@ double starttemp = STARTTEMP;
 double steamReadyTemp = STEAM_READY_TEMP;
 
 // State 1: Coldstart PID values
-const int coldStartStep1ActivationOffset = 5;
+const int coldStartStep1ActivationOffset = 15;
 // ... none ...
 
 // State 2: Coldstart stabilization PID values
@@ -234,7 +235,11 @@ unsigned long lastSteamMessage = 0;
 /********************************************************
    CLEANING
 ******************************************************/
-int cleaning        = 0;
+int cleaning        = 0;  // this is the trigger
+int cleaningCycles = 5;
+int cleaningInterval = 4;
+int cleaningPause = 3;
+int cycle = 1;
 
 /********************************************************
    SLEEPING
@@ -449,6 +454,18 @@ BLYNK_WRITE(V44) {
 }
 BLYNK_WRITE(V50) {
   setPointSteam = param.asDouble();
+}
+BLYNK_WRITE(V60) {
+  cleaning = param.asInt();
+}
+BLYNK_WRITE(V61) {
+  cleaningCycles = param.asInt();
+}
+BLYNK_WRITE(V62) {
+  cleaningInterval = param.asInt();
+}
+BLYNK_WRITE(V63) {
+  cleaningPause = param.asInt();
 }
 
 
@@ -835,6 +852,60 @@ void refreshTemp() {
   }
 }
 
+void clean() {
+  if (OnlyPID) {
+    return;
+  }
+  unsigned long aktuelleZeit = millis();
+  if (simulatedBrewSwitch && (brewing == 1 || waitingForBrewSwitchOff == false) ) {
+    totalbrewtime = (cleaningInterval + cleaningPause) * 1000;
+    if (brewing == 0) {
+      brewing = 1;  // Attention: For OnlyPID==0 brewing must only be changed in this function! Not externally.
+      startZeit = aktuelleZeit;
+      waitingForBrewSwitchOff = true;
+    }
+    bezugsZeit = aktuelleZeit - startZeit;
+    if (aktuelleZeit >= lastBrewMessage + 500) {
+      lastBrewMessage = aktuelleZeit;
+      DEBUG_print("clean(): time=%lu totalCycleTime=%lu cycleCount=%lu\n", bezugsZeit/1000, totalbrewtime/1000, cycle);
+    }
+    if (bezugsZeit <= totalbrewtime) {
+      if (bezugsZeit <= cleaningInterval * 1000) {  
+          digitalWrite(pinRelayVentil, relayON);
+          digitalWrite(pinRelayPumpe, relayON);
+      } else {
+        digitalWrite(pinRelayVentil, relayOFF);
+        digitalWrite(pinRelayPumpe, relayOFF);
+      }
+    } else {
+      if (cycle < cleaningCycles) {
+        startZeit = aktuelleZeit;
+        cycle = cycle + 1;
+      } else {
+        DEBUG_print("End clean()\n");
+        brewing = 0;
+        cycle = 1;
+        digitalWrite(pinRelayVentil, relayOFF);
+        digitalWrite(pinRelayPumpe, relayOFF);
+      }
+    }
+  } else if (simulatedBrewSwitch && !brewing) {  //corner-case: switch=On but brewing==0
+    waitingForBrewSwitchOff = true;  //just to be sure
+    bezugsZeit = 0;
+  } else if (!simulatedBrewSwitch) {
+    if (waitingForBrewSwitchOff) {
+      DEBUG_print("simulatedBrewSwitch=off\n");
+    }
+    waitingForBrewSwitchOff = false;
+    if (brewing == 1) {
+      digitalWrite(pinRelayVentil, relayOFF);
+      digitalWrite(pinRelayPumpe, relayOFF);
+      brewing = 0;
+      cycle = 1;
+    }
+    bezugsZeit = 0;
+  }
+}
 
 /********************************************************
     PreInfusion, Brew , if not Only PID
@@ -860,21 +931,21 @@ void brew() {
       DEBUG_print("brew(): bezugsZeit=%lu totalbrewtime=%lu\n", bezugsZeit/1000, totalbrewtime/1000);
     }
     if (bezugsZeit <= totalbrewtime) {
-      if (!cleaning && preinfusion > 0 && bezugsZeit <= preinfusion*1000) {
+      if (preinfusion > 0 && bezugsZeit <= preinfusion*1000) {
         if (brewState != 1) {
           brewState = 1;
           DEBUG_println("preinfusion");
           digitalWrite(pinRelayVentil, relayON);
           digitalWrite(pinRelayPumpe, relayON);
         }
-      } else if (!cleaning && preinfusion > 0 && bezugsZeit > preinfusion*1000 && bezugsZeit <= (preinfusion + preinfusionpause)*1000) {
+      } else if (preinfusion > 0 && bezugsZeit > preinfusion*1000 && bezugsZeit <= (preinfusion + preinfusionpause)*1000) {
         if (brewState != 2) {
           brewState = 2;
           DEBUG_println("Pause");
           digitalWrite(pinRelayVentil, relayON);
           digitalWrite(pinRelayPumpe, relayOFF);
         }
-      } else if (cleaning || preinfusion == 0 || bezugsZeit > (preinfusion + preinfusionpause)*1000) {
+      } else if (preinfusion == 0 || bezugsZeit > (preinfusion + preinfusionpause)*1000) {
         if (brewState != 3) {
           brewState = 3;
           DEBUG_println("Brew");
@@ -1055,7 +1126,7 @@ void updateState() {
         }
       }
       bPID.SetFilterSumOutputI(100);
-      if (Input >= starttemp + starttempOffset  || !pidMode || sleeping || cleaning) {  //80.5 if 44C. | 79,7 if 30C |
+      if (Input >= starttemp + starttempOffset  || !pidMode || steaming || sleeping || cleaning) {  //80.5 if 44C. | 79,7 if 30C |
         snprintf(debugline, sizeof(debugline), "** End of Coldstart. Transition to state 2 (constant steadyPower)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
@@ -1074,7 +1145,7 @@ void updateState() {
            (Input - setPoint >= -1.5  && pastTemperatureChange(10) >= 0.45) ||
            !pidMode || sleeping || cleaning) {
           //auto-tune starttemp
-          if (millis() < 400000 && steadyPowerOffset_Activated > 0 && pidMode && MachineColdOnStart && !sleeping && !cleaning) {  //ugly hack to only adapt setPoint after power-on
+          if (millis() < 400000 && steadyPowerOffset_Activated > 0 && pidMode && MachineColdOnStart && !steaming && !sleeping && !cleaning) {  //ugly hack to only adapt setPoint after power-on
           double tempChange = pastTemperatureChange(10);
           if (Input - setPoint >= 0) {
             if (tempChange > 0.05 && tempChange <= 0.15) {
@@ -1138,10 +1209,8 @@ void updateState() {
         snprintf(debugline, sizeof(debugline), "** End of Brew. Transition to state 2 (constant steadyPower)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
-        if (!cleaning) {
-          bPID.SetAutoTune(true);  //dont change mode during cleaning
-          mqtt_publish("brewDetected", "0");
-        }
+        bPID.SetAutoTune(true);  //dont change mode during cleaning
+        mqtt_publish("brewDetected", "0");
         bPID.SetSumOutputI(0);
         timerBrewDetection = 0;
         activeState = 2;
@@ -1203,6 +1272,17 @@ void updateState() {
       }
       break;
     }
+    case 8: //state 8 clean modus activated
+    {
+      if (!cleaning) {
+        snprintf(debugline, sizeof(debugline), "** End of Cleaning phase. Transition to state 3 (normal mode)");
+        DEBUG_println(debugline);
+        mqtt_publish("events", debugline);
+        bPID.SetAutoTune(true);
+        activeState = 3;
+      }
+      break;
+    }
 
     case 3: // normal PID mode
     default:
@@ -1231,9 +1311,33 @@ void updateState() {
         bPID.SetMode(MANUAL);
         break;
       }
+
+      /* STATE 8 (Clean) DETECTION */
+      if (cleaning) {
+        snprintf(debugline, sizeof(debugline), "Cleaning Detected. Transition to state 8 (Clean)");
+        DEBUG_println(debugline);
+        mqtt_publish("events", debugline);
+        bPID.SetAutoTune(false);  //do not tune
+        activeState = 8;
+        break;
+      }
+
+      /* STATE 6 (Steam) DETECTION */
+      if (steaming) {
+        snprintf(debugline, sizeof(debugline), "Steaming Detected. Transition to state 6 (Steam)");
+        //digitalWrite(pinRelayVentil, relayOFF);
+        DEBUG_println(debugline);
+        mqtt_publish("events", debugline);
+        if (*activeSetPoint != setPointSteam) {
+          activeSetPoint = &setPointSteam;
+          DEBUG_print("set activeSetPoint: %0.2f\n", *activeSetPoint);
+        }
+        activeState = 6;
+        break;
+      }
       
       /* STATE 1 (COLDSTART) DETECTION */
-      if (Input <= starttemp - coldStartStep1ActivationOffset && !cleaning) {
+      if (Input <= starttemp - coldStartStep1ActivationOffset) {
         snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to state 1 (coldstart)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
@@ -1266,7 +1370,7 @@ void updateState() {
           }
           userActivity = millis();
           timerBrewDetection = 1 ;
-          if (!cleaning) mqtt_publish("brewDetected", "1");
+          mqtt_publish("brewDetected", "1");
           snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to state 4 (brew)");
           DEBUG_println(debugline);
           mqtt_publish("events", debugline);
@@ -1274,20 +1378,6 @@ void updateState() {
           activeState = 4;
           break;
         }
-      }
-
-      /* STATE 6 (Steam) DETECTION */
-      if (steaming) {
-        snprintf(debugline, sizeof(debugline), "Steaming Detected. Transition to state 6 (Steam)");
-        //digitalWrite(pinRelayVentil, relayOFF);
-        DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
-        if (*activeSetPoint != setPointSteam) {
-          activeSetPoint = &setPointSteam;
-          DEBUG_print("set activeSetPoint: %0.2f\n", *activeSetPoint);
-        }
-        activeState = 6;
-        break;
       }
 
       /* STATE 5 (OUTER ZONE) DETECTION */
@@ -1563,10 +1653,14 @@ void loop() {
 
   checkControls(controlsConfig);  //transform controls to actions
 
-  //handle brewing if button is pressed (ONLYPID=0 for now, because ONLYPID=1_with_BREWDETECTION=1 is handled in actionControl)
-  //ideally brew() should be controlled in our state-maschine (TODO)
-  brew();
-  
+  if (activeState == 8) {
+    clean();
+  } else {
+    //handle brewing if button is pressed (ONLYPID=0 for now, because ONLYPID=1_with_BREWDETECTION=1 is handled in actionControl)
+    //ideally brew() should be controlled in our state-maschine (TODO)
+    brew();
+  }
+
   //check if PID should run or not. If not, set to manuel and force output to zero
   if (millis() > previousMillis_pidCheck + 300) {
     previousMillis_pidCheck = millis();
@@ -1666,6 +1760,26 @@ void loop() {
       }
       Output = 0;
 
+    /* state 8: Cleaning state active*/
+    } else if (activeState == 8) {
+      if (millis() - output_timestamp > 60000) {
+          output_timestamp = millis();
+          snprintf(debugline, sizeof(debugline), "cleaning...");
+          DEBUG_println(debugline);
+      }
+      if (!pidMode) {
+        Output = 0;
+      } else {
+        bPID.SetMode(AUTOMATIC);
+        if (aggTn != 0) {
+          aggKi = aggKp / aggTn;
+        } else {
+          aggKi = 0 ;
+        }
+        aggKd = aggTv * aggKp ;
+        bPID.SetTunings(aggKp, aggKi, aggKd);
+      }
+      
     /* state 3: Inner zone reached = "normal" low power mode */
     } else {
       if (!pidMode) {
@@ -1691,6 +1805,8 @@ void loop() {
     }
 
     displaymessage(activeState, "", "");
+        
+    //power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);  //XXX2 this is new. dont need this
     sendToBlynk();
     #if (1==0)
     performance_check();
