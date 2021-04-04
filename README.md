@@ -97,6 +97,18 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.7.0 beta 6:
+  - "Full Control" hardware setup is fully supported!
+  - Feature: Added new state "Sleeping", which shutdowns heater (and more stuff to come) either after a period on user inactivity (default 120min) or by user request using the new ControlAction "SLEEPING". Any user activity  (controlActions, Hardware-Buttons, MQTT Actions, brew Detection,..) will wake up the maschine.
+    - Display will go off during sleep.
+    - New setting: userConfig HEATER_INACTIVITY_TIMER (0 to disable)
+  - Feature: (!OnlyPid|Full Control) Simple CLEANING Mode which shutdowns heater and sets pre-infusion pause to 0seconds for as long as mode is active. Use cleaning ControlAction or activate steaming to restore normal operation.
+  - Feature: (Full Control) Added support to trigger any ControlAction based on multiple simultaneous hardware-button states (eg. if hotwater+steaming button is pressed then start the action cleaning).
+  - ZACWire upgrade to stable release v1.3.0. (Thanks Adrian)
+  - CHANGE: (DISPLAY=1) HardwareLed is not turned on when screensaver is running and ENABLE_HARDWARE_LED_OFF_WHEN_SCREENSAVER=1 (even if brew_ready state is reached).
+  - Fix: (ESP32) ADC requires simple multisampling to reduce outliers.
+  - Fix: No one-time heater flapping if maschine is waked up from sleep or pidOff.
+  - New images here and there.
 - 2.7.0 beta 5:
   - (ESP32) Added two new [circuit-diagrams](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/circuit-diagrams) which show the complete wiring in "full-control" upgrade.
   - ZACWire upgrade to v1.2.6b, which improves stability. (Thanks Adrian)

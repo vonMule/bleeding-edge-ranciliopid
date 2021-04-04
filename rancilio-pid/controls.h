@@ -2,7 +2,7 @@
 #define _control_H
 
 //supported actions
-#define UNDEFINED_ACTION  0
+#define UNDEFINED_ACTION  0  // can also be used as NOOP
 #define BREWING   1
 #define HOTWATER  2
 #define STEAMING  3
@@ -12,6 +12,7 @@
 #define CLEANING  7
 #define TEMP_INC  8
 #define TEMP_DEC  9
+#define SLEEPING  10
 
 #ifdef ESP32
 #include "driver/rtc_io.h"

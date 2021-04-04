@@ -23,7 +23,8 @@ void u8g2_prepare(void) {
 
 bool screenSaverCheck() {
   if (!enableScreenSaver) return false;
-  if (brewReady && (millis() >= lastBrewReady + brewReadyWaitPeriod) && (millis() >= userActivity + userActivityWaitPeriod)) {
+  if ((brewReady && (millis() >= lastBrewReady + brewReadyWaitPeriod) && (millis() >= userActivity + userActivityWaitPeriod)) || sleeping) {
+    return true;
   } else {
     if (screenSaverOn) {
       u8g2.setPowerSave(0);
@@ -88,7 +89,6 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
   static char line[10];
   u8g2.clearBuffer();
   u8g2.setBitmapMode(1);
-  //u8g2.drawFrame(0, 0, 128, 64);
 
   if (!screenSaverCheck()) {
     image_flip = !image_flip;
@@ -159,6 +159,8 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             u8g2.drawXBMP(0, 0, icon_width, icon_height, outer_zone_rotate_bits);
           }
         }
+        break;
+      case 7:  //sleeping state
         break;
       default:
         if (MACHINE_TYPE == "rancilio") {
@@ -252,8 +254,10 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         screen_saver_direction_right = true;
       }
     }
-    if ( enableScreenSaver == 1 ) {
-      u8g2.setPowerSave(1);
+    if ( enableScreenSaver == 1 || sleeping) {
+      if (!screenSaverOn) {
+        u8g2.setPowerSave(1);
+      }
     } else if ( enableScreenSaver == 2 ) {
       u8g2.drawXBMP(screen_saver_x_pos, 0, icon_width, icon_height, brew_ready_bits);
     } else if ( enableScreenSaver == 3 ) {

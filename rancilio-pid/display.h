@@ -28,7 +28,7 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   /
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);  //e.g. 0.96"
 #endif
 unsigned long previousMillisDisplay = 0;  // initialisation at the end of init()
-const long intervalDisplay = 1000;     // Update für Display   //TODO: TOBIAS 1000
+const long intervalDisplay = 1000;     // Update für Display
 bool image_flip = true;
 unsigned int enableScreenSaver = ENABLE_SCREEN_SAVER;
 bool screenSaverOn = false;

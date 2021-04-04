@@ -33,7 +33,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.7.0 beta 5";
+const char* sysVersion PROGMEM  = "2.7.0 beta 6";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -111,7 +111,7 @@ int activeState = 3;        // (0:= undefined / EMERGENCY_TEMP reached)
                             // 4:= Brew detected
                             // 5:= Outer Zone detected (temperature outside of "inner zone")
                             // 6:= steam mode activated
-                            // (7:= steam ready, TODO?)
+                            // 7:= sleep mode activated
 bool emergencyStop = false; // Notstop bei zu hoher Temperatur
 
 /********************************************************
@@ -232,6 +232,17 @@ int steaming             = 0;
 unsigned long lastSteamMessage = 0;
 
 /********************************************************
+   CLEANING
+******************************************************/
+int cleaning        = 0;
+
+/********************************************************
+   SLEEPING
+******************************************************/
+int sleeping        = 0;
+unsigned long previousMillis_sleepCheck = 0;
+
+/********************************************************
    Sensor check
 ******************************************************/
 bool sensorError    = false;
@@ -242,6 +253,7 @@ int maxErrorCounter = 10 ;  //define maximum number of consecutive polls (of int
  * Rest
  *****************************************************/
 unsigned long userActivity = 0;
+unsigned long userActivitySavedOnForcedSleeping = 0;
 unsigned long previousMillistemp;       // initialisation at the end of init()
 unsigned long previousMillis_ota_handle = 0;
 unsigned long previousMillis_mqtt_handle = 0;
@@ -288,6 +300,7 @@ unsigned long all_services_min_reconnect_interval = 160000; // 160sec minimum wa
 bool force_offline = FORCE_OFFLINE;
 unsigned long force_eeprom_sync = 0 ;
 const int force_eeprom_sync_waitTime = 3000;  // after updating a setting wait this number of milliseconds before writing to eeprom
+const int heaterInactivityTimer = HEATER_INACTIVITY_TIMER * 60 * 1000;  //disable heater if no activity within the last minutes
 
 unsigned long loops = 0;
 unsigned long max_micros = 0;
@@ -311,7 +324,7 @@ DeviceAddress sensorDeviceAddress;   // arrays to hold device address
 ******************************************************/
 #define USE_ZACWIRE_TSIC
 #ifdef USE_ZACWIRE_TSIC
-#include "src/ZACwire-Library-beta/ZACwire.h"
+#include "src/ZACwire-Library-master/ZACwire.h"
 #ifdef ESP32
 ZACwire<pinTemperature> TSIC(306,125,0); //10=3x bis 2060 |20=1x in 1500sec | 30=5x bis 2060
 #else
@@ -597,6 +610,21 @@ void setGpioAction(int action, bool mode) {
   return;
   #endif
 
+  #if defined(pinBrewAction) && defined(pinHotwaterAction) && defined(pinSteamingAction)
+  static bool cleaningPreviousMode = false;
+  if (action == CLEANING) {
+    if (cleaningPreviousMode != mode) {
+      cleaningPreviousMode = mode;
+      digitalWrite(pinBrewAction, mode);
+      digitalWrite(pinHotwaterAction, mode);
+      digitalWrite(pinSteamingAction, mode);
+    }
+  }
+  #endif
+
+  //no updates on GPIOActions when cleaning is active (leds shall always be on)
+  if (cleaning) return;
+
   #ifdef pinBrewAction
   static bool brewingPreviousMode = false;
   if (action == BREWING) {
@@ -627,17 +655,7 @@ void setGpioAction(int action, bool mode) {
   }
   #endif
 
-  #if defined(pinBrewAction) && defined(pinHotwaterAction) && defined(pinSteamingAction)
-  static bool cleaningPreviousMode = false;
-  if (action == CLEANING) {
-    if (cleaningPreviousMode != mode) {
-      cleaningPreviousMode = mode;
-      digitalWrite(pinBrewAction, mode);
-      digitalWrite(pinHotwaterAction, mode);
-      digitalWrite(pinSteamingAction, mode);
-    }
-  }
-  #endif
+
 }
 
 /*****************************************************
@@ -842,21 +860,21 @@ void brew() {
       DEBUG_print("brew(): bezugsZeit=%lu totalbrewtime=%lu\n", bezugsZeit/1000, totalbrewtime/1000);
     }
     if (bezugsZeit <= totalbrewtime) {
-      if (preinfusion > 0 && bezugsZeit <= preinfusion*1000) {
+      if (!cleaning && preinfusion > 0 && bezugsZeit <= preinfusion*1000) {
         if (brewState != 1) {
           brewState = 1;
           DEBUG_println("preinfusion");
           digitalWrite(pinRelayVentil, relayON);
           digitalWrite(pinRelayPumpe, relayON);
         }
-      } else if (preinfusion > 0 && bezugsZeit > preinfusion*1000 && bezugsZeit <= (preinfusion + preinfusionpause)*1000) {
+      } else if (!cleaning && preinfusion > 0 && bezugsZeit > preinfusion*1000 && bezugsZeit <= (preinfusion + preinfusionpause)*1000) {
         if (brewState != 2) {
           brewState = 2;
           DEBUG_println("Pause");
           digitalWrite(pinRelayVentil, relayON);
           digitalWrite(pinRelayPumpe, relayOFF);
         }
-      } else if (preinfusion == 0 || bezugsZeit > (preinfusion + preinfusionpause)*1000) {
+      } else if (cleaning || preinfusion == 0 || bezugsZeit > (preinfusion + preinfusionpause)*1000) {
         if (brewState != 3) {
           brewState = 3;
           DEBUG_println("Brew");
@@ -1037,8 +1055,8 @@ void updateState() {
         }
       }
       bPID.SetFilterSumOutputI(100);
-      if (Input >= starttemp + starttempOffset  || !pidMode ) {  //80.5 if 44C. | 79,7 if 30C |
-        snprintf(debugline, sizeof(debugline), "** End of Coldstart. Transition to step 2 (constant steadyPower)");
+      if (Input >= starttemp + starttempOffset  || !pidMode || sleeping || cleaning) {  //80.5 if 44C. | 79,7 if 30C |
+        snprintf(debugline, sizeof(debugline), "** End of Coldstart. Transition to state 2 (constant steadyPower)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
         bPID.SetSumOutputI(0);
@@ -1054,9 +1072,9 @@ void updateState() {
            (Input - setPoint <= 0  && pastTemperatureChange(20) <= 0.3) ||
            (Input - setPoint >= -1.0  && pastTemperatureChange(10) > 0.2) ||
            (Input - setPoint >= -1.5  && pastTemperatureChange(10) >= 0.45) ||
-           !pidMode ) {
+           !pidMode || sleeping || cleaning) {
           //auto-tune starttemp
-          if (millis() < 400000 && steadyPowerOffset_Activated > 0 && pidMode && MachineColdOnStart) {  //ugly hack to only adapt setPoint after power-on
+          if (millis() < 400000 && steadyPowerOffset_Activated > 0 && pidMode && MachineColdOnStart && !sleeping && !cleaning) {  //ugly hack to only adapt setPoint after power-on
           double tempChange = pastTemperatureChange(10);
           if (Input - setPoint >= 0) {
             if (tempChange > 0.05 && tempChange <= 0.15) {
@@ -1094,7 +1112,7 @@ void updateState() {
           DEBUG_print("Auto-Tune starttemp disabled\n");
         }
 
-        snprintf(debugline, sizeof(debugline), "** End of stabilizing. Transition to step 3 (normal mode)");
+        snprintf(debugline, sizeof(debugline), "** End of stabilizing. Transition to state 3 (normal mode)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
         bPID.SetSumOutputI(0);
@@ -1117,15 +1135,17 @@ void updateState() {
         if (OnlyPID && brewDetection == 2) brewing = 0;
         //DEBUG_print("Out Zone Detection: past(2)=%0.2f, past(3)=%0.2f | past(5)=%0.2f | past(10)=%0.2f | bezugsZeit=%lu\n", pastTemperatureChange(2), pastTemperatureChange(3), pastTemperatureChange(5), pastTemperatureChange(10), bezugsZeit / 1000);
         //DEBUG_print("t(0)=%0.2f | t(1)=%0.2f | t(2)=%0.2f | t(3)=%0.2f | t(5)=%0.2f | t(10)=%0.2f | t(13)=%0.2f\n", getTemperature(0), getTemperature(1), getTemperature(2), getTemperature(3), getTemperature(5), getTemperature(7), getTemperature(10), getTemperature(13));
-        snprintf(debugline, sizeof(debugline), "** End of Brew. Transition to step 2 (constant steadyPower)");
+        snprintf(debugline, sizeof(debugline), "** End of Brew. Transition to state 2 (constant steadyPower)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
-        bPID.SetAutoTune(true);
+        if (!cleaning) {
+          bPID.SetAutoTune(true);  //dont change mode during cleaning
+          mqtt_publish("brewDetected", "0");
+        }
         bPID.SetSumOutputI(0);
         timerBrewDetection = 0;
-        mqtt_publish("brewDetected", "0");
         activeState = 2;
-        lastBrewEnd = millis();
+        lastBrewEnd = millis(); 
       }
       break;
     }
@@ -1137,8 +1157,8 @@ void updateState() {
         bPID.SetFilterSumOutputI(9);
       }
 
-      if ( fabs(Input - *activeSetPoint) < outerZoneTemperatureDifference || steaming == 1 || (OnlyPID && brewDetection == 1 && simulatedBrewSwitch) ) {
-        snprintf(debugline, sizeof(debugline), "** End of outerZone. Transition to step 3 (normal mode)");
+      if ( fabs(Input - *activeSetPoint) < outerZoneTemperatureDifference || steaming || (OnlyPID && brewDetection == 1 && simulatedBrewSwitch) || !pidMode || sleeping || cleaning) {
+        snprintf(debugline, sizeof(debugline), "** End of outerZone. Transition to state 3 (normal mode)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
         if (pidMode == 1) bPID.SetMode(AUTOMATIC);
@@ -1154,8 +1174,8 @@ void updateState() {
       bPID.SetAutoTune(false);  //do not tune during steam phase
       bPID.SetSumOutputI(100);
 
-      if (!steaming) {  ///YYY1
-        snprintf(debugline, sizeof(debugline), "** End of Steaming phase. Now cooling down. Transition to step 3 (normal mode)");
+      if (!steaming) {
+        snprintf(debugline, sizeof(debugline), "** End of Steaming phase. Now cooling down. Transition to state 3 (normal mode)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
         if (*activeSetPoint != setPoint) {
@@ -1167,6 +1187,18 @@ void updateState() {
         bPID.SetAutoTune(false);
         Output = 0;
         timerBrewDetection = 0;
+        activeState = 3;
+      }
+      break;
+    }
+    case 7: //state 7 sleep modus activated (no heater,..)
+    {
+      if (!sleeping) {
+        snprintf(debugline, sizeof(debugline), "** End of Sleeping phase. Transition to state 3 (normal mode)");
+        DEBUG_println(debugline);
+        mqtt_publish("events", debugline);
+        bPID.SetAutoTune(true);
+        bPID.SetMode(AUTOMATIC);
         activeState = 3;
       }
       break;
@@ -1189,9 +1221,20 @@ void updateState() {
         bPID.SetFilterSumOutputI(4.5);
       }
 
+      /* STATE 7 (SLEEP) DETECTION */
+      if (sleeping) {
+        snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to state 7 (sleeping)");
+        DEBUG_println(debugline);
+        mqtt_publish("events", debugline);
+        activeState = 7;
+        bPID.SetAutoTune(false);
+        bPID.SetMode(MANUAL);
+        break;
+      }
+      
       /* STATE 1 (COLDSTART) DETECTION */
-      if (Input <= starttemp - coldStartStep1ActivationOffset) {
-        snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to step 1 (coldstart)");
+      if (Input <= starttemp - coldStartStep1ActivationOffset && !cleaning) {
+        snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to state 1 (coldstart)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
         steadyPowerOffset_Activated = millis();
@@ -1223,8 +1266,8 @@ void updateState() {
           }
           userActivity = millis();
           timerBrewDetection = 1 ;
-          mqtt_publish("brewDetected", "1");
-          snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to step 4 (brew)");
+          if (!cleaning) mqtt_publish("brewDetected", "1");
+          snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to state 4 (brew)");
           DEBUG_println(debugline);
           mqtt_publish("events", debugline);
           bPID.SetSumOutputI(0);
@@ -1249,10 +1292,11 @@ void updateState() {
 
       /* STATE 5 (OUTER ZONE) DETECTION */
       if ( Input > starttemp - coldStartStep1ActivationOffset &&
-           (fabs(Input - *activeSetPoint) > outerZoneTemperatureDifference)
+           (fabs(Input - *activeSetPoint) > outerZoneTemperatureDifference) &&
+           !cleaning
          ) {
         //DEBUG_print("Out Zone Detection: Avg(3)=%0.2f | Avg(5)=%0.2f Avg(20)=%0.2f Avg(2)=%0.2f\n", getAverageTemperature(3), getAverageTemperature(5), getAverageTemperature(20), getAverageTemperature(2));
-        snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to step 5 (outerZone)");
+        snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to state 5 (outerZone)");
         DEBUG_println(debugline);
         mqtt_publish("events", debugline);
         bPID.SetSumOutputI(0);
@@ -1397,7 +1441,7 @@ void loop() {
     }
     brewReady = brewReadyCurrent;
   }
-  setHardwareLed((brewReady && screenSaverOn==false) || (steaming && Input >= steamReadyTemp));
+  setHardwareLed( ((brewReady && (ENABLE_HARDWARE_LED_OFF_WHEN_SCREENSAVER==0 || screenSaverOn==false))) || (steaming && Input >= steamReadyTemp));
 
   //network related stuff
   if (!force_offline) {
@@ -1527,7 +1571,6 @@ void loop() {
   if (millis() > previousMillis_pidCheck + 300) {
     previousMillis_pidCheck = millis();
     if (pidON == 0 && pidMode == 1) {
-      DEBUG_println("ins1");
       pidMode = 0;
       bPID.SetMode(pidMode);
       Output = 0 ;
@@ -1543,12 +1586,28 @@ void loop() {
     }
   }
 
+  //update sleep status
+  if (millis() > previousMillis_sleepCheck + 300) {
+    if (sleeping) {
+      if (userActivity != userActivitySavedOnForcedSleeping) {
+        actionController(SLEEPING, 0, true);
+      }
+    } else if (heaterInactivityTimer >0) {
+      if (millis() > userActivity + heaterInactivityTimer) {
+        actionController(SLEEPING, 1, true);
+      }
+    }
+  }
+
   //Sicherheitsabfrage
   if (!sensorError && !emergencyStop && Input > 0) {
     updateState();
 
+    if (cleaning) {
+      Output = 0;
+      
     /* state 1: Water is very cold, set heater to full power */
-    if (activeState == 1) {
+    } else if (activeState == 1) {
       Output = windowSize;
 
     /* state 2: ColdstartTemp reached. Now stabilizing temperature after coldstart */
@@ -1568,22 +1627,6 @@ void loop() {
           bezugsZeit = millis() - lastBrewTime;
         }
       }
-      /*
-      if (OnlyPID == 0) {  //TODO TOBIAS
-         Output = convertUtilisationToOutput(brewDetectionPower);
-      } else if (OnlyPID == 1) {
-        if (setPoint - Input <= (outerZoneTemperatureDifference + 0.5)
-         ) {
-          //DEBUG_print("BREWDETECTION_POWER(%0.2f) might be too high\n", brewDetectionPower);
-          Output = convertUtilisationToOutput(steadyPower + bPID.GetSteadyPowerOffsetCalculated());
-        } else {
-          Output = convertUtilisationToOutput(brewDetectionPower);
-        }
-        if (timerBrewDetection == 1) {
-          bezugsZeit = millis() - lastBrewTime;
-        }
-      }
-      */
 
     /* state 5: Outer Zone reached. More power than in inner zone */
     } else if (activeState == 5) {
@@ -1615,18 +1658,16 @@ void loop() {
         } else {
           Output = 0;
         }
-        /*
-        if (millis() >= lastSteamMessage + 1000) {
-          lastSteamMessage = millis();
-          DEBUG_print("*nput=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f\n",
-            Input,
-            (*activeSetPoint - Input),
-            pastTemperatureChange(2),
-            convertOutputToUtilisation(Output)
-          );
-        }
-        */
       }
+         
+    /* state 7: Steaming state active*/
+    } else if (activeState == 7) {
+      if (millis() - output_timestamp > 60000) {
+          output_timestamp = millis();
+          snprintf(debugline, sizeof(debugline), "sleeping...");
+          DEBUG_println(debugline);
+      }
+      Output = 0;
 
     /* state 3: Inner zone reached = "normal" low power mode */
     } else {
@@ -2104,6 +2145,7 @@ void print_settings() {
   DEBUG_print("steadyPower: %0.2f | steadyPowerOffset: %0.2f | steadyPowerOffsetTime: %d\n", steadyPower, steadyPowerOffset, steadyPowerOffsetTime);
   DEBUG_print("pidON: %d\n", pidON);
   printControlsConfig(controlsConfig);
+  printMultiToggleConfig();
   DEBUG_print("========================\n");
 }
 

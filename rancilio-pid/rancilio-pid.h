@@ -7,6 +7,8 @@
 
 #if (DEBUG_FORCE_GPIO_CHECK==1)
 #define DEBUGMODE
+#define BLYNK_ENABLE 0
+#define MQTT_ENABLE 0
 #endif
 
 #ifdef ESP32

@@ -366,9 +366,6 @@ void mqtt_publish_settings() {
   mqtt_publish("pidON/set", number2string(pidON));
   mqtt_publish("brewDetectionSensitivity/set", number2string(brewDetectionSensitivity));
   mqtt_publish("brewDetectionPower/set", number2string(brewDetectionPower));
-  mqtt_publish("steadyPower/set", number2string(steadyPower));
-  mqtt_publish("steadyPowerOffset/set", number2string(steadyPowerOffset));
-  mqtt_publish("steadyPowerOffsetTime/set", number2string(steadyPowerOffsetTime));
   mqtt_publish("aggKp/set", number2string(aggKp));
   mqtt_publish("aggTn/set", number2string(aggTn));
   mqtt_publish("aggTv/set", number2string(aggTv));
@@ -376,4 +373,7 @@ void mqtt_publish_settings() {
   mqtt_publish("aggoTn/set", number2string(aggoTn));
   mqtt_publish("aggoTv/set", number2string(aggoTv));
   mqtt_publish("setPointSteam/set", number2string(setPointSteam));
+  mqtt_publish("steadyPowerOffset/set", number2string(steadyPowerOffset));
+  mqtt_publish("steadyPowerOffsetTime/set", number2string(steadyPowerOffsetTime));
+  mqtt_publish("steadyPower/set", number2string(steadyPower));  //this should be last in list
 }
