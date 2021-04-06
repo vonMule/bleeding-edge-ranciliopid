@@ -312,10 +312,10 @@ void PIDBias::Initialize()
    steadyPowerDefault = *mySteadyPower;
    steadyPowerOffsetCalculated = *mySteadyPowerOffset;
    filterSumOutputI = outMax;
-   lastTime = millis();
-   if(*myOutput > outMax) *myOutput = outMax;
+   lastTime = 0;
+   if (*myOutput > outMax) *myOutput = outMax;
    else if(*myOutput < outMin) *myOutput = outMin;
-   if(lastOutput > outMax) lastOutput = outMax;
+   if (lastOutput > outMax) lastOutput = outMax;
    else if(lastOutput < outMin) lastOutput = outMin;
 }
 

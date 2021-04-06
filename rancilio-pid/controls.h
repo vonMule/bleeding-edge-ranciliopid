@@ -2,7 +2,7 @@
 #define _control_H
 
 //supported actions
-#define UNDEFINED_ACTION  0
+#define UNDEFINED_ACTION  0  // can also be used as NOOP
 #define BREWING   1
 #define HOTWATER  2
 #define STEAMING  3
@@ -12,16 +12,22 @@
 #define CLEANING  7
 #define TEMP_INC  8
 #define TEMP_DEC  9
+#define SLEEPING  10
+
+#ifdef ESP32
+#include "driver/rtc_io.h"
+#endif
 
 typedef struct controlMap
 {
-      int gpio;
-      char* portType;  //analog/digital
-      char* type;      //trigger/switch
-      int lowerBoundary;
-      int upperBoundary;
-      int value;
-      int action;
+      int   gpio;
+      char* portType;   //analog/digital
+      char* portMode; //INPUT_PULLUP/INPUT_PULLDOWN/INPUT
+      char* type;       //trigger/switch
+      int   lowerBoundary; 
+      int   upperBoundary;
+      int   value;
+      int   action;
       struct controlMap* nextControlMap;
 } controlMap;
 

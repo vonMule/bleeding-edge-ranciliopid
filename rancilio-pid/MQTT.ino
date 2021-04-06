@@ -11,10 +11,10 @@ char* bool2string(bool in) {
     return "0";
   }
 }
+char int2string_int[7];
 char* int2string(int state) {
-  char str[7];
-  sprintf(str, "%d", state);
-  return str;
+  sprintf(int2string_int, "%d", state);
+  return int2string_int;
 }
 char number2string_double[22];
 char* number2string(double in) {
@@ -95,6 +95,7 @@ bool mqtt_reconnect(bool force_connect = false) {
       if (!mqtt_client.subscribe(topic_set) || !mqtt_client.subscribe(topic_actions)) { ERROR_print("Cannot subscribe to topic\n"); }
       mqtt_lastReconnectAttemptTime = 0;
       mqtt_reconnectAttempts = 0;
+      mqtt_connectTime = millis();
     } else {
       DEBUG_print("Cannot connect to mqtt server (consecutive failures=#%u)\n", mqtt_reconnectAttempts);
       if (mqtt_reconnectAttempts < mqtt_max_incremental_backoff) {
@@ -110,12 +111,15 @@ void mqtt_callback(char* topic, byte* data, unsigned int length) {
   char topic_str[255];
   os_memcpy(topic_str, topic, sizeof(topic_str));
   topic_str[255] = '\0';
-  char data_str[length+1];
+  char data_str[255];
   os_memcpy(data_str, data, length);
   data_str[length] = '\0';
   //DEBUG_print("MQTT: %s = %s\n", topic_str, data_str);
   if(strstr(topic_str, "/actions/") != NULL) {
-    mqtt_parse_actions(topic_str, data_str);
+    const int ignore_retained_actions_after_reconnect = 20000;
+    if (millis() >= mqtt_connectTime + ignore_retained_actions_after_reconnect) {
+      mqtt_parse_actions(topic_str, data_str);
+    }
   } else {
     mqtt_parse(topic_str, data_str);
   }
@@ -313,7 +317,7 @@ void mqtt_parse(char* topic_str, char* data_str) {
     return;
   }
   if (strcmp(configVar, "setPointSteam") == 0) {  //TOBIAS: update wiki (blynk address,..)
-    if (persist_setting("aggoTv", &setPointSteam, data_str)) {
+    if (persist_setting("setPointSteam", &setPointSteam, data_str)) {
       Blynk.virtualWrite(V50, String(setPointSteam, 1));
     }
     return;
@@ -328,7 +332,7 @@ boolean persist_setting(char* type, double* value, char* data_str) {
       steadyPowerMQTTDisableUpdateUntilProcessedTime = 0;
     }
     if (!almostEqual(data_double, *value)) {
-      //DEBUG_print("setting %s=%s (=%0.2f) (prev=%.2f)\n", type, data_str, data_double, *value);
+      DEBUG_print("setting %s=%s (=%0.2f) (prev=%.2f)\n", type, data_str, data_double, *value);
       *value = data_double;
       if (strcmp(type, "steadyPower") == 0) {
         steadyPowerSaved = *value; //prevent an additional mqtt "/set" call
@@ -362,9 +366,6 @@ void mqtt_publish_settings() {
   mqtt_publish("pidON/set", number2string(pidON));
   mqtt_publish("brewDetectionSensitivity/set", number2string(brewDetectionSensitivity));
   mqtt_publish("brewDetectionPower/set", number2string(brewDetectionPower));
-  mqtt_publish("steadyPower/set", number2string(steadyPower));
-  mqtt_publish("steadyPowerOffset/set", number2string(steadyPowerOffset));
-  mqtt_publish("steadyPowerOffsetTime/set", number2string(steadyPowerOffsetTime));
   mqtt_publish("aggKp/set", number2string(aggKp));
   mqtt_publish("aggTn/set", number2string(aggTn));
   mqtt_publish("aggTv/set", number2string(aggTv));
@@ -372,4 +373,7 @@ void mqtt_publish_settings() {
   mqtt_publish("aggoTn/set", number2string(aggoTn));
   mqtt_publish("aggoTv/set", number2string(aggoTv));
   mqtt_publish("setPointSteam/set", number2string(setPointSteam));
+  mqtt_publish("steadyPowerOffset/set", number2string(steadyPowerOffset));
+  mqtt_publish("steadyPowerOffsetTime/set", number2string(steadyPowerOffsetTime));
+  mqtt_publish("steadyPower/set", number2string(steadyPower));  //this should be last in list
 }

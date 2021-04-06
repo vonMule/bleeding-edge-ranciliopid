@@ -1,5 +1,5 @@
 /********************************************************
- * Version 2.6.1
+ * Version 2.7.0
  * Config must be configured by the user
  *****************************************************/
 
@@ -14,13 +14,14 @@
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
 #define ONLYPID 1             // 1=Only PID with no Preinfussion | 0=PID + Preinfussion
-#define TEMPSENSOR 2          // 1=DS19B20; 2=TSIC306
+#define TEMPSENSOR 2          // 1=DS19B20; 2=TSIC306. It is not recommended to use DS19B20 due to latencies.
 #define TEMPSENSORRECOVERY 0  // 1 = on, 2= off (default). If off, temp sensor errors will stop the heater until power cycle
 #define TRIGGERTYPE HIGH      // LOW = low trigger, HIGH = high trigger relay
 #define OTA true              // true=activate update via OTA
 #define GRAFANA 0             // 0=default(off), 1=enable grafana visualisation by Markus (simply ask him for free access)
 #define EMERGENCY_TEMP 135    // If temperature is higher then notifications are send via display/debug/mqtt and PID is temporary disabled.
                               // Set this to the higest temperature supported by your maschine minus a few degress. (Silvia 5E: 135)
+#define HEATER_INACTIVITY_TIMER 120  // 0=Disable. When there is no activity at the maschine for this amount of minutes, the heater should stop heating until new activity is detected.
 
 #define BREWTIME        30.0  // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
 
@@ -29,21 +30,29 @@
 #define BREWDETECTION_WAIT 90         // (ONLYPID=1) 50=default: Software based BrewDetection is disabled after brewing for this number (seconds)
 #define BREWDETECTION_POWER 50        // heater utiilization (in percent) during brew (BREWDETECTION must be 1)
 
-#define BREW_READY_DETECTION 0.3      // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (recommended value 0.3)
-#define ENABLE_HARDWARE_LED 0         // 0=off | 1=Single LED | 2=WS2812b - LEDs at GPO PinLed will lighten when BREW_READY_DETECTION triggers or temperature>SETPOINT_STEAM
-#define ENABLE_HARDWARE_LED_NUMBER 0  // 0=off | (ENABLE_HARDWARE_LED=2) Number of WS2812b-based LEDs connected
+#define BREW_READY_DETECTION        0.3 // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (recommended value 0.3)
+#define ENABLE_HARDWARE_LED         0   // 0=off | 1=Single LED | 2=WS2812b - LEDs at GPO pinLed will lighten when BREW_READY_DETECTION triggers or temperature>SETPOINT_STEAM
+#define ENABLE_HARDWARE_LED_OFF_WHEN_SCREENSAVER 1 // 1=yes | 0=no. If yes, disable LED when screensaver is running
+#define ENABLE_HARDWARE_LED_NUMBER  0   // 0=off | (ENABLE_HARDWARE_LED=2) Number of WS2812b-based LEDs connected
+#define ENABLE_HARDWARE_LED_RGB_ON  LightGreen  // (ENABLE_HARDWARE_LED=2) Color name when leds should be turned on. List of Colours: https://github.com/FastLED/FastLED/wiki/Pixel-reference
+#define ENABLE_HARDWARE_LED_RGB_OFF LightPink  // (ENABLE_HARDWARE_LED=2) Color name when leds should be turned off.
 
 //#define DEBUGMODE               // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
 
 /*******
- * Hardware GPIO Pin Mapping (just change values but don't comment)
+ * Hardware GPIO Pin Mapping
+ * Hints can be found in our wiki: https://github.com/medlor/bleeding-edge-ranciliopid/wiki/ESP32-Setup
  *******/
-#define pinTemperature    2    // read temperature (TSIC)
-#define pinRelayHeater    14   // trigger relais used to heat water
-#define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve
-#define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump
+#define pinTemperature    2    // read temperature (TSIC): esp8266=2, esp32=26
+#define pinRelayHeater    14   // trigger relais used to heat water: esp8266=14, esp32=16
+#define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve: esp8266=13, esp32=18
+#define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump: esp8266=15, esp32=19
+#define pinLed            15   // (ENABLE_HARDWARE_LED=1) Hardware LED (16 is also "free" to use): esp8266=15, esp32=14
 
-#define pinLed            15   // (ENABLE_HARDWARE_LED=1) Hardware LED (16 is also "free" to use)
+#define ENABLE_GPIO_ACTION  0        // 0=off (default) | 1=GPIOs related to actions are set to HIGH when enabled (eg to be used by LEDs)
+#define pinBrewAction      15
+#define pinHotwaterAction   5
+#define pinSteamingAction   2
 
 /*******
  * GPIO Pin Usage: Here you can define how the GPIO boards (analog/digital) shall be used to execute functions.
@@ -54,7 +63,7 @@
  *
  * Format of CONTROLS_CONFIG:
  *  CONTROLS_CONFIG = "<GPIO_CONFIG_BLOCK_1>#<GPIO_CONFIG_BLOCK_2>#<unlimited number of blocks>"
- *     GPIO_CONFIG_BLOCK_1 = "<GPIO_Number>:<analog|digital>:<toggle|trigger>|<ACTION_BLOCK_1>;<ACTION_BLOCK_2>;<unlimited number of blocks>"
+ *     GPIO_CONFIG_BLOCK_1 = "<GPIO_Number>:<INPUT_PULLDOWN|INPUT_PULLUP|INPUT>:<analog|digital>:<toggle|trigger>|<ACTION_BLOCK_1>;<ACTION_BLOCK_2>;<unlimited number of blocks>"
  *        GPIO number: ESP8266/nodemcu: A0 = 17 && esp32: https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
  *        "toggle" keeps its state and "trigger" only shortly changes its state before it resets.
  *        ACTION_BLOCK = "<lowerBoundary>-<upperBoundary>:<ACTION>"
@@ -63,17 +72,41 @@
  *
  *    Examples:
  *    a) Hardware Switch (On/Off) on A0(GPIO17) which controls BREWING when gpio-value >= 700.
- *    #define CONTROLS_CONFIG "17:analog:toggle|700-1024:BREWING#"
+ *    #define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"
  *
  *    b) Hardware Buttons via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
- *    #define CONTROLS_CONFIG "17:analog:trigger|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
+ *    #define CONTROLS_CONFIG "17:INPUT:analog:trigger|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:INPUT_PULLUP:digital:trigger|0-0:BREWING#"
  *
  *    c) Hardware Switches via eg. resistance network which is capably of delivering multiple distinct values for the ADC.
- *    #define CONTROLS_CONFIG "17:analog:toggle|245-260:BREWING;525-540:STEAMING;802-815:HOTWATER#"
+ *    #define CONTROLS_CONFIG "17:INPUT:analog:toggle|245-260:BREWING;525-540:STEAMING;802-815:HOTWATER#16:INPUT_PULLUP:digital:toggle|0-0:BREWING#"
+ *
+ *    d) Multiple Hardware Switches:
+ *       - Hardware Switch (On/Off) on GPIO25 which controls BREWING
+ *       - Hardware Switch (On/Off) on GPIO32 which controls HOTWATER
+ *       - Hardware Switch (On/Off) on GPIO33 which controls STEAMING -- all without an resistor (direct connected, uses internal INPUT_PULLUP resistor)
+ *    #define CONTROLS_CONFIG "25:INPUT_PULLUP:digital:toggle|0-0:BREWING#32:INPUT_PULLUP:digital:toggle|0-0:HOTWATER#33:INPUT_PULLUP:digital:toggle|0-0:STEAMING#"
+ *
+ *    e) ESP32 FULL-CONTROL CONFIG (https://github.com/medlor/bleeding-edge-ranciliopid/wiki/ESP32-Setup)
+ *    #define CONTROLS_CONFIG "32:INPUT_PULLUP:digital:toggle|0-0:BREWING#33:INPUT_PULLUP:digital:toggle|0-0:HOTWATER#27:INPUT_PULLUP:digital:toggle|0-0:STEAMING#"
+ *
  *******/
 #define DEBUG_FORCE_GPIO_CHECK   0  // 0=off (default). 1=on. If on, PID is disabled and only trigger/toogles are detected and printed in DEBUG log.
-//#define CONTROLS_CONFIG "17:analog:toggle|700-1024:BREWING#"  //when a simple switch is connected on port A0 and this switch is used to trigger BREWING.
-#define CONTROLS_CONFIG "17:analog:toggle|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
+#define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"  //when a simple switch is connected on port A0 and this switch is used to trigger BREWING.
+
+/*
+ * In "FullControl" modification, you can also trigger controlActions when multiple buttons (toggle) are activated the same time. This allows 
+ * to directly control more actions without using mqtt/blynk and GPIO ports.
+ * You can define up to 3 multi-toggles, which are defined by the ACTION and the list of GPIO ports (must be defined in CONTROLS_CONFIG) 
+ * in curly brackets. (The list shall include more than 1 and at most 5 GPIO ports).
+ * Only the first multi-toggle's ACTION which gpio's matches is triggered, so think about the order.
+ */
+#define MULTI_TOGGLE_1_ACTION "UNDEFINED_ACTION"  // default="UNDEFINED_ACTION"
+#define MULTI_TOGGLE_1_GPIOS {}                   // default/disable={} , enable=example: { 27, 32, 33 }
+#define MULTI_TOGGLE_2_ACTION "UNDEFINED_ACTION"  // default="UNDEFINED_ACTION"
+#define MULTI_TOGGLE_2_GPIOS {}                   // default/disable={} , enable=example: { 27, 33 }
+#define MULTI_TOGGLE_3_ACTION "UNDEFINED_ACTION"  // default="UNDEFINED_ACTION"
+#define MULTI_TOGGLE_3_GPIOS {}                   // default/disable={} , enable=example: { 27, 32 }
+
 
 /*******
  * Display Settings
@@ -117,8 +150,8 @@
 /*******
  * Preinfussion settings (only useful when ONLYPID=0)
  *******/
-#define PREINFUSION       1.5   //  length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion.
-#define PREINFUSION_PAUSE 2     // length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+#define PREINFUSION       1.5  //  length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion.
+#define PREINFUSION_PAUSE 2.0  // length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
 // dont forget to adapt BREWTIME mentioned above
 
 

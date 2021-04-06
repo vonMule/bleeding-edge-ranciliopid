@@ -1,16 +1,14 @@
 # TODO
-- re-test blynk QR Code (Apple?)
-- Add control buttons
-- screensaver
-- LED stripe support
-- Implement an automatic "steam mode".
 - mqtt events/ should deliver json not string.
 - String replacement (https://cpp4arduino.com/2020/02/07/how-to-format-strings-without-the-string-class.html)
 - convert all float to long.
-- Add telnet commands: https://github.com/JoaoLopesF/RemoteDebug/blob/7812322cc1724dd0e4c139f7353149ec8a96b4b9/examples/RemoteDebug_Advanced/RemoteDebug_Advanced.ino
-- Update PubSubClient 
-- Implement mqtt auth
-- display rotate
+
+
+Feature Requests:
+- TOF Sensor: waterlevel + abtropfschale
+  - Wasserdeckel 2-teilig drucken und mit TOF ausstatten.
+- Feature wäre definitiv noch das zuheizen beim Wasserbezug im Hotwater
+
 
 
 
@@ -21,8 +19,60 @@
   sendToBlynk(): 70ms if at least 2 virtualWrite() are called. -> After fix: 12ms.
                  12ms if only one virtualWrite() is called.
                  80-100ms per transferred attribute (virtualWrite+syncVirtual)
-- convert float/double to smaller bytes to improve performance (sprintf of float takes 0.3ms)
-- wifi costs 100micros/loop.
+
+ESP32: 
+WITHOUT NETWORK:
+ [0m(D p:^0100ms) 8 8999 loop() | loops/ms=35 | spend_micros_last_loop=27 | max_micros_since_last_report=884 | avg_micros/loop=28
+
+WITH NETWORK w/ OTA & w/ MQTT_ENABLE=1 & w/ BLYNK_ENABLE=0:
+ [0m(D p:^0100ms) 12 12355 loop() | loops/ms=7 | spend_micros_last_loop=130 | max_micros_since_last_report=1404 | avg_micros/loop=133
+
+WITH NETWORK w/o OTA & w/ MQTT_ENABLE=0 & w/ BLYNK_ENABLE=0:
+ [0m(D p:^0100ms) 17 17719 loop() | loops/ms=33 | spend_micros_last_loop=29 | max_micros_since_last_report=1152 | avg_micros/loop=29
+
+WITH NETWORK w/ OTA & w/ MQTT_ENABLE=0 & w/ BLYNK_ENABLE=0:
+ [0m(D p:^0100ms) 9 9212 loop() | loops/ms=12 | spend_micros_last_loop=86 | max_micros_since_last_report=1004 | avg_micros/loop=80  !!!!
+-> OTA costs: 50micros
+
+
+WITH NETWORK w/ tuned OTA & w/ MQTT_ENABLE=0 & w/ BLYNK_ENABLE=0:
+ [0m(D p:^0100ms) 13 13565 loop() | loops/ms=32 | spend_micros_last_loop=30 | max_micros_since_last_report=1223 | avg_micros/loop=30
+
+WITH NETWORK w/ tuned OTA & w/ MQTT_ENABLE=1 & w/ BLYNK_ENABLE=0:
+ [0m(D p:^0100ms) 26 26751 loop() | loops/ms=11 | spend_micros_last_loop=95 | max_micros_since_last_report=1189 | avg_micros/loop=87
+-> MQTT costs: 50micros
+
+WITH NETWORK w/ tuned OTA & w/ tuned MQTT_ENABLE=1 & w/ BLYNK_ENABLE=0:
+***  [0m(D p:^0100ms) 14 14303 loop() | loops/ms=20 | spend_micros_last_loop=47 | max_micros_since_last_report=1249 | avg_micros/loop=48
+& w/ Display Task:
+***  [0m(D p:^0100ms) 124 124803 loop() | loops/ms=19 | spend_micros_last_loop=50 | max_micros_since_last_report=1411 | avg_micros/loop=51
+& w/ tuned Debug:
+***  [0m(D p:^0100ms) 50 50543 loop() | loops/ms=39 | spend_micros_last_loop=25 | max_micros_since_last_report=1156 | avg_micros/loop=25    <---- version 2.7.0b1
+same with ESP8266:
+***  [0m(D p:^0100ms) 17 17652 loop() | loops/ms=20 | spend_micros_last_loop=47 | max_micros_since_last_report=2877 | avg_micros/loop=49    <---- version 2.7.0b1
+
+
+WITH NETWORK w/ tuned OTA & w/ MQTT_ENABLE=0 & w/ BLYNK_ENABLED=1:
+ [0m(D p:^0100ms) 34 34152 loop() | loops/ms=10 | spend_micros_last_loop=98 | max_micros_since_last_report=1443 | avg_micros/loop=92
+
+
+WITH NETWORK w/ tuned OTA & w/ MQTT_ENABLE=0 & w/ tuned BLYNK_ENABLED=1:
+***  [0m(D p:^0100ms) 14 14649 loop() | loops/ms=27 | spend_micros_last_loop=36 | max_micros_since_last_report=1204 | avg_micros/loop=37
+
+ESP8266:
+WITH NETWORK w/ tuned OTA & w/ MQTT_ENABLE=0 & w/ tuned BLYNK_ENABLED=1:
+***  [0m(D p:^0099ms) 45 45687 loop() | loops/ms=15 | spend_micros_last_loop=63 | max_micros_since_last_report=3195 | avg_micros/loop=66
+
+
+WITHOUT NETWORK:
+ESP32:
+ [0m(D p:^0100ms) 269 269912 loop() | loops/ms=33 | spend_micros_last_loop=29 | max_micros_since_last_report=1355 | avg_micros/loop=29
+
+ESP8266:
+WITHOUT NETWORK:
+ [0m(D p:^0100ms) 23 23236 loop() | loops/ms=20 | spend_micros_last_loop=47 | max_micros_since_last_report=2519 | avg_micros/loop=48
+
+
 
 # Sample brew detection
 (D p:^0004ms) 970 Input= 94.28 | error=-0.28 delta= 0.00 | Output=  4.95 b: 5.60 + p:-0.45 + i:-0.20(-0.20) + d:-0.00

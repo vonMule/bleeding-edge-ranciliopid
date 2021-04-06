@@ -1,0 +1,283 @@
+{
+  "uuid": "92e308642ce73c2861bd4254b240db3c",
+  "path": "Offline/bleeding_edge-full_control",
+  "name": "bleeding_edge-full_control",
+  "content": "",
+  "created_at": "2021-03-14 09:06:39",
+  "updated_at": "2021-03-29 23:12:13",
+  "stick": "",
+  "documents": [
+    {
+      "uuid": "2b6d0db67f65f61c356f18c068a4b3bf",
+      "title": "Sheet_1",
+      "description": "",
+      "docType": "1",
+      "master": "",
+      "thumb": "/images/thumb-default.png",
+      "components": {
+        "e3b0794f376741f2aa27b624d0af17c7": 4,
+        "a718c1f9e6b441439cd8617f44e2f76d": 1,
+        "a47f7d575269415ba58f20512b9e76c4": 1,
+        "c431bebfe38c47068c68d2f4a35cd7c7": 1,
+        "8562d4c6743046b4a9e32f38835172dc": 1,
+        "1f47201987d24940ae48013a3efface2": 1,
+        "77630b9baf714c7caa58c210a5781764": 1,
+        "59f61cf408bd47dcb0d3b41408a83afb": 1,
+        "67219f32bfa64b19b44b6006622213ed": 1,
+        "87ffa5f9cd14437e92c8dc3db8a24975": 2,
+        "d9b1be5071bf4880bd0cf34d3760c55e": 1,
+        "5bec1d8463b94c119f6c2d3c826ae59c": 6,
+        "c24ca9cee2ab44d69d0621215a97dc1f": 1,
+        "b0248eb51e084227889f2cb84eab79c4": 1,
+        "834270b04df04adbaf8068590c1d41e8": 1
+      },
+      "BOM": [
+        [
+          "Value",
+          "Quantity",
+          "Package",
+          "Components",
+          "CustomPara"
+        ],
+        [
+          "SSH1106_1.3",
+          1,
+          "SSH1106 1.3IN 128X64 I2C (HOLES)",
+          "DISP1",
+          {
+            "BOM_Manufacturer Part": "Tribium",
+            "puuid": "0be1516472144301b5723049d60f6173",
+            "uuid": "1f47201987d24940ae48013a3efface2"
+          }
+        ],
+        [
+          "LED_3.3V",
+          4,
+          "LED-5MM",
+          "LED4,LED3,LED2,LED1",
+          {
+            "BOM_Manufacturer Part": "",
+            "puuid": "8bfcf85a78c2410c8b725f485026a5e3",
+            "uuid": "5bec1d8463b94c119f6c2d3c826ae59c"
+          }
+        ],
+        [
+          "230V_<5E",
+          1,
+          "LED-5MM",
+          "POWER_LAMP",
+          {
+            "BOM_Manufacturer Part": "",
+            "puuid": "8bfcf85a78c2410c8b725f485026a5e3",
+            "uuid": "5bec1d8463b94c119f6c2d3c826ae59c"
+          }
+        ],
+        [
+          "3.3-12V >5E",
+          1,
+          "LED-5MM",
+          "POWER_LED(*)",
+          {
+            "BOM_Manufacturer Part": "",
+            "puuid": "8bfcf85a78c2410c8b725f485026a5e3",
+            "uuid": "5bec1d8463b94c119f6c2d3c826ae59c"
+          }
+        ],
+        [
+          "Water",
+          1,
+          "VIBE-MOTOR-10MM",
+          "PUMP",
+          {
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "BOM_Manufacturer Part": "",
+            "puuid": "c5b8a3e78af9421ea4f9402e6d23cb52",
+            "uuid": "59f61cf408bd47dcb0d3b41408a83afb"
+          }
+        ],
+        [
+          "t>140°C, NC",
+          1,
+          "NONE",
+          "U6",
+          {
+            "BOM_Manufacturer Part": "Thermostat",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "TME",
+            "puuid": "",
+            "uuid": "87ffa5f9cd14437e92c8dc3db8a24975"
+          }
+        ],
+        [
+          "t>160°C, NC",
+          1,
+          "NONE",
+          "U11",
+          {
+            "BOM_Manufacturer Part": "Thermostat",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "TME",
+            "puuid": "",
+            "uuid": "87ffa5f9cd14437e92c8dc3db8a24975"
+          }
+        ],
+        [
+          "TSIC 306",
+          1,
+          "ONSC-TO-92-3-135AC",
+          "TEMPSENSOR",
+          {
+            "BOM_Manufacturer": "IST AG",
+            "BOM_Manufacturer Part": "Innovative Sensor Technology",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "puuid": "9224f9cf46be438d9686e8846ee4103b",
+            "uuid": "8562d4c6743046b4a9e32f38835172dc"
+          }
+        ],
+        [
+          "Heater",
+          1,
+          "0805",
+          "R1",
+          {
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "Automation Direct",
+            "BOM_Manufacturer Part": "",
+            "puuid": "0d14e6c62b14419a891d7c175b7eca4f",
+            "uuid": "67219f32bfa64b19b44b6006622213ed"
+          }
+        ],
+        [
+          "2 Solid State Relay",
+          1,
+          "2 SOLID STATE RELAY",
+          "U7",
+          {
+            "BOM_Manufacturer": "",
+            "BOM_Manufacturer Part": "",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "puuid": "a948230105724ba2bfcf12896f1db6e5",
+            "uuid": "77630b9baf714c7caa58c210a5781764"
+          }
+        ],
+        [
+          "330Ohm",
+          1,
+          "R805",
+          "RESISTOR1",
+          {
+            "BOM_Manufacturer Part": "",
+            "puuid": "a5beb97903aa495e9938059075f05138",
+            "uuid": "834270b04df04adbaf8068590c1d41e8"
+          }
+        ],
+        [
+          "230VAC",
+          1,
+          "NONE",
+          "OUTLET/PLUG",
+          {
+            "BOM_Manufacturer Part": "230VAC",
+            "BOM_Supplier Part": "undefined",
+            "BOM_Supplier": "sss",
+            "puuid": "",
+            "uuid": "a47f7d575269415ba58f20512b9e76c4"
+          }
+        ],
+        [
+          "WROOM BREAKOUT BOARD",
+          1,
+          "",
+          "ESP32",
+          {
+            "BOM_Manufacturer": "",
+            "BOM_Manufacturer Part": "",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "puuid": "",
+            "uuid": "a718c1f9e6b441439cd8617f44e2f76d"
+          }
+        ],
+        [
+          "1k",
+          1,
+          "R0603",
+          "RESISTOR_CIRCUIT_FOR_ADC",
+          {
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "BOM_Manufacturer Part": "",
+            "puuid": "1bf59dff03ec4233aa077dc7cf0e92a1",
+            "uuid": "b0248eb51e084227889f2cb84eab79c4"
+          }
+        ],
+        [
+          "Solid State Relay",
+          1,
+          "NONE",
+          "U1",
+          {
+            "BOM_Manufacturer": "",
+            "BOM_Manufacturer Part": "",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "puuid": "",
+            "uuid": "c24ca9cee2ab44d69d0621215a97dc1f"
+          }
+        ],
+        [
+          "230VAC - 5VDC",
+          1,
+          "230VAC - 5VDC",
+          "POWER_SUPPLY",
+          {
+            "BOM_Manufacturer": "",
+            "BOM_Manufacturer Part": "",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "puuid": "145a0ea2bdb645249af2a8fa25750e47",
+            "uuid": "c431bebfe38c47068c68d2f4a35cd7c7"
+          }
+        ],
+        [
+          "230V",
+          1,
+          "NONE",
+          "HEATER_LAMP",
+          {
+            "BOM_Manufacturer Part": "Light",
+            "puuid": "",
+            "uuid": "d9b1be5071bf4880bd0cf34d3760c55e"
+          }
+        ],
+        [
+          "Switch",
+          4,
+          "KEY-TH_4P-L12.0-W12.0-P5.00-LS13.4",
+          "BREW,WATER,STEAM,POWER",
+          {
+            "BOM_Supplier": "",
+            "BOM_Manufacturer": "rancilio",
+            "BOM_Manufacturer Part": "Rancilio Switch",
+            "BOM_Supplier Part": "C14121",
+            "puuid": "edd89808420c4d5095e6c8f9436f843a",
+            "uuid": "e3b0794f376741f2aa27b624d0af17c7"
+          }
+        ]
+      ],
+      "updateTime": 1617052333,
+      "createTime": 1615709199,
+      "histories": [],
+      "created_at": "2021-03-14 09:06:39",
+      "updated_at": "2021-03-29 23:12:13"
+    }
+  ],
+  "sort": [],
+  "title": "bleeding_edge-full_control",
+  "foldername": "bleeding_edge-full_control",
+  "schfilename": "bleeding_edge-full_control.json",
+  "schfilemtime": 1617052330340
+}
