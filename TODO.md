@@ -5,7 +5,8 @@
 
 
 Feature Requests:
-- TOF Sensor: waterlevel
+- TOF Sensor: waterlevel + abtropfschale
+  - Wasserdeckel 2-teilig drucken und mit TOF ausstatten.
 - Feature wäre definitiv noch das zuheizen beim Wasserbezug im Hotwater
 
 

@@ -33,7 +33,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.7.0 beta 6";
+const char* sysVersion PROGMEM  = "2.7.0";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -464,7 +464,7 @@ WidgetLED brewReadyLed(V14);
 bool wifi_working() {
   #ifdef ESP32
   //DEBUG_print("status=%d ip=%s\n", WiFi.status() == WL_CONNECTED, WiFi.localIP().toString());
-  return ((!force_offline) && (WiFi.status() == WL_CONNECTED));  //TODO 2.7.x correct to remove IPAddress(0) check?
+  return ((!force_offline) && (WiFi.status() == WL_CONNECTED) && (WiFi.localIP() != IPAddress(0U)));  //TODO 2.7.x correct to remove IPAddress(0) check?
   #else
   return ((!force_offline) && (WiFi.status() == WL_CONNECTED) && (WiFi.localIP() != IPAddress(0U)));
   #endif
@@ -1603,11 +1603,8 @@ void loop() {
   if (!sensorError && !emergencyStop && Input > 0) {
     updateState();
 
-    if (cleaning) {
-      Output = 0;
-      
     /* state 1: Water is very cold, set heater to full power */
-    } else if (activeState == 1) {
+    if (activeState == 1) {
       Output = windowSize;
 
     /* state 2: ColdstartTemp reached. Now stabilizing temperature after coldstart */

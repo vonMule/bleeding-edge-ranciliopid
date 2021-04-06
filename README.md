@@ -2,14 +2,14 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.7.0 beta
+Version 2.7.0
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
 
-## Most important features compared to rancilio-pid master:
+## Most important features compared to the original rancilio-pid software:
 1. New PID Controller "Multi-state PID with steadyPower (Bias)"
    - Target-Temperature for brewing and steaming (!) is automatically controlled by PID.
    - Auto-Tuning of all PID settings. No knowledge or special tunings required.
@@ -34,12 +34,18 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
      - HEATER    := activate heater (not yet)
      - PUMP      := activate pump (not yet)
      - VALVE     := activate Valve  (not yet)
-     - CLEANING  := activate cleaning mode (not yet)
+     - CLEANING  := activate cleaning mode
+     - SLEEPING  := activate sleeping mode
      - TEMP_INC  := increase setPoint (not yet)
      - TEMP_DEC  := decrease setPoint (not yet)
    - while also supporting the switch types: toggles (eg switches) and triggers (eg push buttons)
    - added MQTT Support to control actions using topics ../actions/<ACTION> with supported payloads of 0|1|-1 (off|on|switch)
      Example: "custom/Küche.Rancilio2/actions/STEAMING"
+1. FULL ESP32 (and of cause esp8266) support in bleeding-edge main-branch.
+1. Support of three hardware modifications which matches you requirements and offers the best flexibility.
+   - PidOnly: This is the most basic modifcations in which only the heater is controlled by the esp.
+   - Standard: In this modifcations in addition to the heater, "brewing" is also controlled by the esp which allows pre-infusion (by cutting the "hardware-button switched" power to the valve and the pump on demand).
+   - FullControl: (ESP32 only) All functionality is directly controlled by the esp. This allows full customization and implementation of any feature. Also all functionality can therefore remotely be activated/deactivated. The ESP32 can run 24/7 if required.
 1. Freely choose if you want the software to use WIFI, BLYNK and/or MQTT. Everythink can be enabled/disabled and still have a flawlessly working PID controller.
 1. Additionally if you want to to depend on a remotely running service (eg. blynk server on raspi), you can activate a MQTT-Server on the arduino itself!
 1. Offline Modus is fixed and enhanced. If userConfig.h's FORCE_OFFLINE is enabled, then PID fully is working without networking. Ideal in situations when there is no connectivity or you dont want to rely on it.
@@ -97,54 +103,45 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
-- 2.7.0 beta 6:
-  - "Full Control" hardware setup is fully supported!
-  - Feature: Added new state "Sleeping", which shutdowns heater (and more stuff to come) either after a period on user inactivity (default 120min) or by user request using the new ControlAction "SLEEPING". Any user activity  (controlActions, Hardware-Buttons, MQTT Actions, brew Detection,..) will wake up the maschine.
-    - Display will go off during sleep.
-    - New setting: userConfig HEATER_INACTIVITY_TIMER (0 to disable)
-  - Feature: (!OnlyPid|Full Control) Simple CLEANING Mode which shutdowns heater and sets pre-infusion pause to 0seconds for as long as mode is active. Use cleaning ControlAction or activate steaming to restore normal operation.
-  - Feature: (Full Control) Added support to trigger any ControlAction based on multiple simultaneous hardware-button states (eg. if hotwater+steaming button is pressed then start the action cleaning).
-  - ZACWire upgrade to stable release v1.3.0. (Thanks Adrian)
-  - CHANGE: (DISPLAY=1) HardwareLed is not turned on when screensaver is running and ENABLE_HARDWARE_LED_OFF_WHEN_SCREENSAVER=1 (even if brew_ready state is reached).
-  - Fix: (ESP32) ADC requires simple multisampling to reduce outliers.
-  - Fix: No one-time heater flapping if maschine is waked up from sleep or pidOff.
-  - New images here and there.
-- 2.7.0 beta 5:
-  - (ESP32) Added two new [circuit-diagrams](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/circuit-diagrams) which show the complete wiring in "full-control" upgrade.
-  - ZACWire upgrade to v1.2.6b, which improves stability. (Thanks Adrian)
-  - Feature GpioAction: If actions are activated, specific GPIOs can be triggered also. This can be used eg. to light up LEDs in Rancilio's hardware-switches.
+- 2.7.0:
+  - Feature: FULLY SUPPORT ESP32 with CPU pinning for improved performance.
+    - Unfortuately there is no mqtt-server broker library available for ESP32. (MQTT_ENABLE must not be 2 or disabled on ESP32)
+    - Display function is pinned to secondary cpu to further improve performance. No more tearing on screen refresh.
+  - [ZACwire-Library](https://github.com/lebuni/ZACwire-Library) upgrade to stable release v1.3.0 which supports ESP32 and pinning to secondary cpu. Thanks Adrian!
+  - Feature: "FULL CONTROL" hardware modification is fully supported (in addition to the previous "PidOnly" and "standard" modification)!
+    - FullControl have all(!) functionality directly controlled by the esp (eg. without the need to manually switch any buttons).
+    - Instead of having the hardware-switches control brew/hotwater/steaming and have the esp just "cut" the wire, the FullControl modification detects button presses directly and translates them to any custom functionality (using ControlActions, MultiToggle and optionally GpioActions). This allows maximum flexibility.
+  - Feature: The "MultiToggle" feature triggers any ControlAction based on multiple simultaneous hardware-button states (eg. if hotwater+steaming button is pressed then start the action cleaning).
+    - This allows to use a total of six ControlActions just by using the three rancilio's hardware-switches and reduces the need for external control (mqtt, blynk, resistor-circuit, ..).
+    - New UserConfig variables: MULTI_TOGGLE_?_ACTION and MULTI_TOGGLE_?_GPIOS.
+  - Feature: GpioAction: If actions are activated, specific GPIOs can be triggered also. This can be used eg. to light up LEDs in Rancilio's [custom modified hardware-switches](https://voir.pt/2017/12/30/rancilio-silvia-bezugsschalter-als-softwareschalter-umruesten/).
     - userConfig.h: ENABLE_GPIO_ACTION / pinBrewAction / pinHotwaterAction / pinSteamingAction
-    - cleaning action is also supported by turning on the brew/hotwater/steaming gpios.
-  - During PowerOn GpioActions and HardwareLed are enabled for a couple of seconds.
+    - CLEANING action will turn on the brew/hotwater/steaming gpios to make this state easily visible even when no display is used.
+    - During PowerOn GpioActions and HardwareLed are enabled for a couple of seconds.
+  - Feature: Added new state "SLEEPING", which shutdowns heater and turns display off either after a period on user inactivity (default 120min) or by user request using the new ControlAction "SLEEPING". Any user activity  (controlActions, Hardware-Buttons, MQTT Actions, brew Detection,..) will wake up the maschine.
+    - New userConfig setting: userConfig HEATER_INACTIVITY_TIMER (0 to disable)
+  - Feature: (!OnlyPid|Full Control) Added a CLEANING mode which sets pre-infusion pause to 0seconds and disables auto-tuning for as long as mode is active. Use "CLEANING" ControlAction or activate steaming to restore normal operation.
+  - Feature: You can now set INPUT/INPUT_PULLDOWN/INPUT_PULLUP in CONTROLS_CONFIG. 
+  - Feature: (ENABLE_HARDWARE_LED=2) New settings ENABLE_HARDWARE_LED_RGB_ON/ENABLE_HARDWARE_LED_RGB_OFF to set specific colors.
+  - Breaking changes:
+    - CONTROLS_CONFIG format changes to support new INPUT/INPUT_PULLDOWN/INPUT_PULLUP settings.
+  - CHANGE: (DISPLAY=1) HardwareLed is not turned on when screensaver is running and ENABLE_HARDWARE_LED_OFF_WHEN_SCREENSAVER=1 (even if brew_ready state is reached).
+  - Fix: Setting setPointSteam via mqtt did not work but did overwrite aggoTv instead. You should update to this version when using mqtt.
+  - Fix: No one-time heater flapping if maschine is waked up from sleep or pidOff.
   - Fix: HardwareLed is only turned on, when temperature > steam_ready_temp AND steaming action is active.
   - Fix: (DISPLAY=1) HardwareLed is not turned on when screensaver is running (even if brew_ready state is reached).
-- 2.7.0 beta 4:
-  - Fix: ENABLE_HARDWARE_LED_RGB_ON/OFF now working (Thanks Helge!)
-  - minor stuff
-- 2.7.0 beta 3:
-  - Feature: (ENABLE_HARDWARE_LED=2) New settings ENABLE_HARDWARE_LED_RGB_ON/ENABLE_HARDWARE_LED_RGB_OFF to set specific colors.
-  - Fix: esp8266: Display is again working on first couple of seconds after power-on.
+  - Fix: Minor fixes here and there.
+  - PubSubClient updated to version 2.8.
+  - Update userConfig.h.SAMPLE (Thanks Helge)
+  - Fix typos (Thanks urbantrout)
+  - (ESP32) Added two new [circuit-diagrams](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/circuit-diagrams) which show the complete wiring in "full-control" upgrade.
   - Added several 3d models to print:
     - display-case-with-buttons
     - dual-ssr-relay-case
     - pcb-case (eg. to be used for esp32 on a pcb)
-  - Added initial circuit-diagrams for esp32 (alpha) using easyEda. More to come.
-- 2.7.0 beta 2:
-  - Update userConfig.h.SAMPLE (Thanks Helge)
-  - Fix typos (Thanks urbantrout)
-- 2.7.0 beta 1:
-  - Attention: Until now the ESP32 code was only simulated and not running on real-world maschines.
-  - Feature: Support ESP32 with CPU pinning for improved performance.
-    - Unfortuately there is no mqtt-server broker library available for ESP32. (MQTT_ENABLE must not be 2 on ESP32)
-    - [ZACwire-Library](https://github.com/lebuni/ZACwire-Library) upgraded to v1.2.4b which supports ESP32 and pinning to secondary cpu. Thanks Adrian!
-    - Display function is pinned to secondary cpu to further improve performance. No more tearing on screen refresh.
-  - You can now set INPUT/INPUT_PULLDOWN/INPUT_PULLUP in CONTROLS_CONFIG. 
-  - Fix: Setting setPointSteam via mqtt did not work but did overwrite aggoTv instead. You should update to this version when using mqtt.
-  - Fix: Minor fixes here and there.
-  - PubSubClient updated to version 2.8.
+  - New images here and there.
   - Quick documentation on how to setup ESP32 can be found in the [wiki](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/ESP32-Setup).
-  - Breaking changes:
-    - CONTROLS_CONFIG format changes to support new INPUT/INPUT_PULLDOWN/INPUT_PULLUP settings.
+  - Thanks to Tobias for his helpful blog posts at [https://voir.pt](https://voir.pt/2017/12/30/rancilio-silvia-bezugsschalter-als-softwareschalter-umruesten/)
 - 2.6.1:
   - Feature: Hardware-Led in addition to simple LEDs also support WS2812b LED (stripes) (MANY THANKS P1Rebo for the PR)
 - 2.6.0:
