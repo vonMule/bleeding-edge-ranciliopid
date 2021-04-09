@@ -33,7 +33,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.7.0";
+const char* sysVersion PROGMEM  = "2.7.1";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file

@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.7.0
+Version 2.7.1
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
@@ -103,6 +103,8 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.7.1:
+  - Update ZACwire-Library to v1.3.1.
 - 2.7.0:
   - Feature: FULLY SUPPORT ESP32 with CPU pinning for improved performance.
     - Unfortuately there is no mqtt-server broker library available for ESP32. (MQTT_ENABLE must not be 2 or disabled on ESP32)
