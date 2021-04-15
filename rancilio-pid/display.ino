@@ -53,7 +53,7 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
     if ((millis() >= previousMillisDisplay + intervalDisplay) || only_once == 0) {
       previousMillisDisplay = millis();
       activeStateBuffer = activeState;
-      #if (ICON_COLLECTION==3)
+      #if (DISPLAY_TEXT_STATE==1)
       if (strlen(displaymessagetext) > 0) {
         snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
         snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);  
@@ -204,7 +204,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
           if (image_flip) {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, clean_bits);
           } else {
-            u8g2.drawXBMP(0, 0, icon_width, icon_height, clean_bits);
+            u8g2.drawXBMP(0, 0, icon_width, icon_height, clean_rotate_bits);
           }
           break;
       }

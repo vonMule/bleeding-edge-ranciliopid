@@ -1,9 +1,9 @@
 /********************************************************
- * BLEEDING EDGE FORK OF RANCILIO-PID.
+ * BLEEDING EDGE FORK OF RANCILIO-PID
+ * https://github.com/medlor/bleeding-edge-ranciliopid
  *
- * This enhancement implementation is initially based on 
- * rancilio-pid (http://rancilio-pid.de/) but was greatly
- * enhanced. 
+ * The "old" origin can be found at http://rancilio-pid.de/
+ * 
  * In case of questions just contact, Tobias <medlor@web.de>
  *****************************************************/
 
@@ -206,6 +206,7 @@ int steadyPowerOffsetTime   = STEADYPOWER_OFFSET_TIME;  // timeframe (in ms) for
 unsigned long steadyPowerOffset_Activated = 0;
 unsigned long steadyPowerOffsetDecreaseTimer = 0;
 unsigned long lastUpdateSteadyPowerOffset = 0;  //last time steadyPowerOffset was updated
+bool MaschineColdstartRunOnce = false;
 bool MachineColdOnStart = true;
 double starttempOffset = 0;  //Increasing this lead to too high temp and emergency measures taking place. For my rancilio it is best to leave this at 0.
 
@@ -235,10 +236,11 @@ unsigned long lastSteamMessage = 0;
 /********************************************************
    CLEANING
 ******************************************************/
-int cleaning        = 0;  // this is the trigger
-int cleaningCycles = 5;
-int cleaningInterval = 4;
-int cleaningPause = 3;
+int cleaning         = 0;       // this is the trigger XXX2
+int cleaningEnableAutomatic = CLEANING_ENABLE_AUTOMATIC;
+int cleaningCycles   = CLEANING_CYCLES;
+int cleaningInterval = CLEANING_INTERVAL;
+int cleaningPause    = CLEANING_PAUSE;
 int cycle = 1;
 
 /********************************************************
@@ -329,7 +331,7 @@ DeviceAddress sensorDeviceAddress;   // arrays to hold device address
 ******************************************************/
 #define USE_ZACWIRE_TSIC
 #ifdef USE_ZACWIRE_TSIC
-#include "src/ZACwire-Library-master/ZACwire.h"
+#include "src/ZACwire-Library-beta/ZACwire.h"
 #ifdef ESP32
 ZACwire<pinTemperature> TSIC(306,125,0); //10=3x bis 2060 |20=1x in 1500sec | 30=5x bis 2060
 #else
@@ -389,6 +391,10 @@ BLYNK_APP_CONNECTED() {
   DEBUG_print("Blynk Client Connected.\n");
   print_settings();
   printControlsConfig(controlsConfig);
+  // one time refresh on connect cause BLYNK_READ seems not to work always
+  Blynk.virtualWrite(V61, cleaningCycles);
+  Blynk.virtualWrite(V62, cleaningInterval);
+  Blynk.virtualWrite(V63, cleaningPause);
 }
 // This is called when Smartphone App is closed
 BLYNK_APP_DISCONNECTED() {
@@ -455,17 +461,59 @@ BLYNK_WRITE(V44) {
 BLYNK_WRITE(V50) {
   setPointSteam = param.asDouble();
 }
-BLYNK_WRITE(V60) {
-  cleaning = param.asInt();
+BLYNK_READ(V51) {
+  Blynk.virtualWrite(V61, cleaningCycles);
 }
-BLYNK_WRITE(V61) {
-  cleaningCycles = param.asInt();
+BLYNK_READ(V52) {
+  Blynk.virtualWrite(V62, cleaningInterval);
 }
-BLYNK_WRITE(V62) {
-  cleaningInterval = param.asInt();
+BLYNK_READ(V53) {
+  Blynk.virtualWrite(V63, cleaningPause);
 }
-BLYNK_WRITE(V63) {
-  cleaningPause = param.asInt();
+BLYNK_WRITE(V101) {
+  int val = param.asInt();
+  if (millis() <= 7000 && val != 0) {
+    actionController(BREWING, 0);
+    Blynk.virtualWrite(V101, 0);
+  } else {
+    actionController(BREWING, val);
+  }
+}
+BLYNK_WRITE(V102) {  
+  int val = param.asInt();
+  if (millis() <= 7000 && val != 0) {
+    actionController(HOTWATER, 0);
+    Blynk.virtualWrite(V102, 0);
+  } else {
+    actionController(HOTWATER, val);
+  }
+}
+BLYNK_WRITE(V103) {
+  int val = param.asInt();
+  if (millis() <= 7000 && val != 0) {
+    actionController(STEAMING, 0);
+    Blynk.virtualWrite(V103, 0);
+  } else {
+    actionController(STEAMING, val);
+  }
+}
+BLYNK_WRITE(V107) {
+  int val = param.asInt();
+  if (millis() <= 7000 && val != 0) {
+    actionController(CLEANING, 0);
+    Blynk.virtualWrite(V107, 0);
+  } else {
+    actionController(CLEANING, val);
+  }
+}
+BLYNK_WRITE(V110) {
+  int val = param.asInt();
+  if (millis() <= 7000 && val != 0) {
+    actionController(SLEEPING, 0);
+    Blynk.virtualWrite(V110, 0);
+  } else {
+    actionController(SLEEPING, val);
+  }
 }
 
 
@@ -858,19 +906,19 @@ void clean() {
   }
   unsigned long aktuelleZeit = millis();
   if (simulatedBrewSwitch && (brewing == 1 || waitingForBrewSwitchOff == false) ) {
-    totalbrewtime = (cleaningInterval + cleaningPause) * 1000;
+    totalbrewtime = (cleaningEnableAutomatic ? (cleaningInterval + cleaningPause) : 20) * 1000;
     if (brewing == 0) {
       brewing = 1;  // Attention: For OnlyPID==0 brewing must only be changed in this function! Not externally.
       startZeit = aktuelleZeit;
       waitingForBrewSwitchOff = true;
     }
     bezugsZeit = aktuelleZeit - startZeit;
-    if (aktuelleZeit >= lastBrewMessage + 500) {
+    if (aktuelleZeit >= lastBrewMessage + 1000) {
       lastBrewMessage = aktuelleZeit;
-      DEBUG_print("clean(): time=%lu totalCycleTime=%lu cycleCount=%lu\n", bezugsZeit/1000, totalbrewtime/1000, cycle);
+      DEBUG_print("clean(): time=%lu/%lu cycleCount=%d/%d\n", bezugsZeit/1000, totalbrewtime/1000, cycle, cleaningCycles);
     }
     if (bezugsZeit <= totalbrewtime) {
-      if (bezugsZeit <= cleaningInterval * 1000) {  
+      if (!cleaningEnableAutomatic || bezugsZeit <= cleaningInterval * 1000) {  
           digitalWrite(pinRelayVentil, relayON);
           digitalWrite(pinRelayPumpe, relayON);
       } else {
@@ -878,7 +926,7 @@ void clean() {
         digitalWrite(pinRelayPumpe, relayOFF);
       }
     } else {
-      if (cycle < cleaningCycles) {
+      if (cleaningEnableAutomatic && cycle < cleaningCycles) {
         startZeit = aktuelleZeit;
         cycle = cycle + 1;
       } else {
@@ -926,7 +974,7 @@ void brew() {
     }
     bezugsZeit = aktuelleZeit - startZeit;
 
-    if (aktuelleZeit >= lastBrewMessage + 500) {
+    if (aktuelleZeit >= lastBrewMessage + 1000) {
       lastBrewMessage = aktuelleZeit;
       DEBUG_print("brew(): bezugsZeit=%lu totalbrewtime=%lu\n", bezugsZeit/1000, totalbrewtime/1000);
     }
@@ -1111,12 +1159,11 @@ void sendToBlynk() {
     state Detection
 ******************************************************/
 void updateState() {
-  static bool runOnce = false;
   switch (activeState) {
     case 1: // state 1 running, that means full heater power. Check if target temp is reached
     {
-      if (!runOnce) {
-        runOnce = true;
+      if (!MaschineColdstartRunOnce) {
+        MaschineColdstartRunOnce = true;
         const int machineColdStartLimit = 45;
         if (Input <= starttemp && Input >= machineColdStartLimit) {  //special auto-tuning settings when maschine is already warm
           MachineColdOnStart = false;
@@ -1923,6 +1970,9 @@ void sync_eeprom(bool startup_read, bool force_read) {
     brewDetectionPower = preferences.getDouble("bDetPow", 0.0);
     pidON = preferences.getInt("pidON", 0);
     setPointSteam = preferences.getDouble("sPointSte", 0.0);
+    //cleaningCycles = preferences.getInt("clCycles", 0);
+    //cleaningInterval = preferences.getInt("clInt", 0);
+    //cleaningPause = preferences.getInt("clPause", 0);
   }
   //always read the following values during setup() (which are not saved in blynk)
   if (startup_read && (current_version == expected_eeprom_version)) {
@@ -1950,6 +2000,9 @@ void sync_eeprom(bool startup_read, bool force_read) {
   double bDetPow_sav = 0;
   int pidON_sav = 0;
   double sPointSte_sav = 0;
+  //int clCycles_sav = 0;
+  //int clInt_sav = 0;
+  //int clPause_sav = 0;
 
   if (current_version == expected_eeprom_version) {
     aggKp_sav = preferences.getDouble("aggKp", 0.0);
@@ -1972,6 +2025,9 @@ void sync_eeprom(bool startup_read, bool force_read) {
     bDetPow_sav = preferences.getDouble("bDetPow", 0.0);
     pidON_sav = preferences.getInt("pidON", 0);
     sPointSte_sav = preferences.getDouble("sPointSte", 0.0);
+    //clCycles_sav = preferences.getInt("clCycles", 0);
+    //clInt_sav = preferences.getInt("clInt", 0);
+    //clPause_sav = preferences.getInt("clPause", 0);
   }
 
   //get saved userConfig.h values
@@ -1993,6 +2049,9 @@ void sync_eeprom(bool startup_read, bool force_read) {
   double burstPower_cfg;
   double bDetPow_cfg;
   double sPointSte_cfg;
+  //int clCycles_cfg;
+  //int clInt_cfg;
+  //int clPause_cfg;
 
   aggKp_cfg = preferences.getDouble("aggKp_cfg", 0.0);
   aggTn_cfg = preferences.getDouble("aggTn_cfg", 0.0);
@@ -2011,7 +2070,10 @@ void sync_eeprom(bool startup_read, bool force_read) {
   stePowOT_cfg = preferences.getInt("stePowOT_cfg");
   //burstPower_cfg = preferences.getDouble("burstPower_cfg", 0);
   bDetPow_cfg = preferences.getDouble("bDetPow_cfg", 0.0);
-  sPointSte_cfg = preferences.getDouble("sPointSte_cfg", 0.0); 
+  sPointSte_cfg = preferences.getDouble("sPointSte_cfg", 0.0);
+  //clCycles_cfg = preferences.getInt("clCycles_cfg");
+  //clInt_cfg = preferences.getInt("clInt_cfg");
+  //clPause_cfg = preferences.getInt("clPause_cfg");
 
   //use userConfig.h value if if differs from *_cfg
   if (AGGKP != aggKp_cfg) { aggKp = AGGKP; preferences.putDouble("aggKp_cfg", aggKp); }
@@ -2032,7 +2094,10 @@ void sync_eeprom(bool startup_read, bool force_read) {
   //if (BURSTPOWER != burstPower_cfg) { burstPower = BURSTPOWER; preferences.putDouble(470, burstPower); }
   if (BREWDETECTION_POWER != bDetPow_cfg) { brewDetectionPower = BREWDETECTION_POWER; preferences.putDouble("bDetPow_cfg", brewDetectionPower); DEBUG_print("EEPROM: brewDetectionPower (%0.2f) is read from userConfig.h\n", brewDetectionPower); }
   if (SETPOINT_STEAM != sPointSte_cfg) { setPointSteam = SETPOINT_STEAM; preferences.putDouble("sPointSte_cfg", setPointSteam); DEBUG_print("EEPROM: setPointSteam (%0.2f) is read from userConfig.h\n", setPointSteam); }
-
+  //if (CLEANING_CYCLES != clCycles_cfg) { cleaningCycles = CLEANING_CYCLES; preferences.putInt("clCycles_cfg", cleaningCycles); }
+  //if (CLEANING_INTERVAL != clInt_cfg) { cleaningInterval = CLEANING_INTERVAL; preferences.putInt("clInt_cfg", cleaningInterval); }
+  //if (CLEANING_PAUSE != clPause_cfg) { cleaningPause = CLEANING_PAUSE; preferences.putInt("clPause_cfg", cleaningPause); }
+  
   //save latest values to eeprom and sync back to blynk
   if ( aggKp != aggKp_sav) { preferences.putDouble("aggKp", aggKp); Blynk.virtualWrite(V4, aggKp); }
   if ( aggTn != aggTn_sav) { preferences.putDouble("aggTn", aggTn); Blynk.virtualWrite(V5, aggTn); }
@@ -2054,6 +2119,9 @@ void sync_eeprom(bool startup_read, bool force_read) {
   if ( brewDetectionPower != bDetPow_sav) { preferences.putDouble("bDetPow", brewDetectionPower); Blynk.virtualWrite(V36, brewDetectionPower); DEBUG_print("EEPROM: brewDetectionPower (%0.2f) is saved (previous:%0.2f)\n", brewDetectionPower, bDetPow_sav); }
   if ( pidON != pidON_sav) { preferences.putInt("pidON", pidON); Blynk.virtualWrite(V13, pidON); DEBUG_print("EEPROM: pidON (%d) is saved (previous:%d)\n", pidON, pidON_sav); }
   if ( setPointSteam != sPointSte_sav) { preferences.putDouble("sPointSte", setPointSteam); Blynk.virtualWrite(V50, setPointSteam); DEBUG_print("EEPROM: setPointSteam (%0.2f) is saved\n", setPointSteam); }
+  //if ( cleaningCycles != clCycles_sav) { preferences.putInt("clCycles", cleaningCycles); Blynk.virtualWrite(V61, cleaningCycles); }
+  //if ( cleaningInterval != clInt_sav) { preferences.putInt("clInt", cleaningInterval); Blynk.virtualWrite(V62, cleaningInterval); }
+  //if ( cleaningPause != clPause_sav) { preferences.putInt("clPause", cleaningPause); Blynk.virtualWrite(V63, cleaningPause); }
   preferences.end();
   DEBUG_print("EEPROM: sync_eeprom() finished.\n");
 }
@@ -2255,6 +2323,7 @@ void print_settings() {
   DEBUG_print("setPoint: %0.2f | setPointSteam: %0.2f | activeSetPoint: %0.2f | \n", setPoint, setPointSteam, *activeSetPoint);
   DEBUG_print("brewDetection: %d | brewDetectionSensitivity: %0.2f | brewDetectionPower: %0.2f\n", brewDetection, brewDetectionSensitivity, brewDetectionPower);
   DEBUG_print("brewtime: %0.2f | preinfusion: %0.2f | preinfusionpause: %0.2f\n", brewtime, preinfusion, preinfusionpause);
+  DEBUG_print("cleaningCycles: %d | cleaningInterval: %d | cleaningPause: %d\n", cleaningCycles, cleaningInterval, cleaningPause);
   DEBUG_print("steadyPower: %0.2f | steadyPowerOffset: %0.2f | steadyPowerOffsetTime: %d\n", steadyPower, steadyPowerOffset, steadyPowerOffsetTime);
   DEBUG_print("pidON: %d\n", pidON);
   printControlsConfig(controlsConfig);

@@ -344,10 +344,10 @@ void actionController(int action, int newState, bool publishAction) {
   if (newState != oldState) {
     userActivity = millis();
     if (action == HOTWATER) { actionController(BREWING, 0); actionController(SLEEPING, 0); actionState[action] = newState; hotwaterAction(newState); if (publishAction) mqtt_publish("actions/HOTWATER", int2string(newState));}
-    else if (action == BREWING) { actionController(STEAMING, 0); actionController(HOTWATER, 0); actionController(SLEEPING, 0); actionState[action] = newState; brewingAction(newState); if (publishAction) mqtt_publish("actions/BREWING", int2string(newState));}
-    else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(SLEEPING, 0); actionState[action] = newState; steamingAction(newState); if (publishAction) mqtt_publish("actions/STEAMING", int2string(newState));}
-    else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionController(SLEEPING, 0); actionState[action] = newState; cleaningAction(newState); if (publishAction) mqtt_publish("actions/CLEANING", int2string(newState));}
-    else if (action == SLEEPING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionState[action] = newState; sleepingAction(newState); if (publishAction) mqtt_publish("actions/SLEEPING", int2string(newState));}
+    else if (action == BREWING) { actionController(STEAMING, 0); actionController(HOTWATER, 0); actionController(SLEEPING, 0); actionState[action] = newState; brewingAction(newState); if (publishAction) mqtt_publish("actions/BREWING", int2string(newState)); Blynk.virtualWrite(V101, newState);}
+    else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(SLEEPING, 0); actionState[action] = newState; steamingAction(newState); if (publishAction) mqtt_publish("actions/STEAMING", int2string(newState)); Blynk.virtualWrite(V103, newState);}
+    else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionController(SLEEPING, 0); actionState[action] = newState; cleaningAction(newState); if (publishAction) mqtt_publish("actions/CLEANING", int2string(newState)); Blynk.virtualWrite(V107, newState);}
+    else if (action == SLEEPING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionState[action] = newState; sleepingAction(newState); if (publishAction) mqtt_publish("actions/SLEEPING", int2string(newState)); Blynk.virtualWrite(V110, newState);}
     snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
     DEBUG_println(debugline);
   }
@@ -587,4 +587,10 @@ void sleepingAction(int state) {
   userActivitySavedOnForcedSleeping = userActivity;
   sleeping = state;
   DEBUG_print("sleepingAction(): %d\n", state);
+  if (!state) {
+    lastBrewEnd = millis();
+    //reset some special auto-tuning variables
+    MaschineColdstartRunOnce = false;
+    steadyPowerOffsetModified = steadyPowerOffset;
+  }
 }

@@ -105,13 +105,17 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 ## Changelog
 - 2.7.1:
   - Added PR for automatic cleaning mode (Thanks to urbantrout/Harald).
-    - TODO: check cleaning icon to all icon themes. Create another one?
-    - TODO update: wiki blynk states
     - Adaptions:
-      - TODO: move config userconfig + print_settings() + Add define to start automatic cleaning on CLEANING action.
-  - TODO: blynk must call actionController and not actions' vars directly!
-  - Added new icon-collection "text", which just shows a non-moving logo with simple texts.
-  - Update ZACwire-Library to v1.3.1.
+      - New cleaning icon: ["washing hand"](https://thenounproject.com/matfine/collection/cleaning-icon/?i=2749704) by [Mat fine](https://thenounproject.com/matfine) from [the Noun Project](https://thenounproject.com/matfine/collection/cleaning-icon/?i=2749704) licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/legalcode)
+      - New Blynk VPins (read-only/pull) defined: see [Blynk-Setup](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Blynk-Setup)
+      - New userConfig Settings: 
+        - CLEANING_CYCLES, CLEANING_INTERVAL, CLEANING_PAUSE.
+        - Set CLEANING_ENABLE_AUTOMATIC=1 to use automatic cleaning program instead of manual modus.
+  - Blynk is fully supporting actionController. Therefore any action can be called via blynk. (see [Blynk-Setup](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Blynk-Setup))
+  - Added new icon-collection "static" which just shows a non-moving logo.
+  - Added userConfig DISPLAY_TEXT_STATE which outputs few status information (Please wait, Ready, Turned off, Cleaning, ..) in the display (supported by all icon-collections).
+  - Fix: Waking up after SLEEPING action re-enables cold-start autotuning.
+  - Update ZACwire-Library to v1.3.1. and 1.3.0 (beta). (Thanks again Adrian :-) )
 - 2.7.0:
   - Feature: FULLY SUPPORT ESP32 with CPU pinning for improved performance.
     - Unfortuately there is no mqtt-server broker library available for ESP32. (MQTT_ENABLE must not be 2 or disabled on ESP32)
@@ -412,16 +416,22 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
   - Fix: Pid.Compute() is now in sync with isrCounter and is not loosing one tick each second. Heater flapping is reduced.
 
 
-# Special Thanks
+# Credits & Special Thanks
 To the great work of the rancilio-pid.de team.
 Also to the nice people in our rancilio discord channel and the ones who contribute and give very much appreciated feedback like 
 - helge/Helgelino
 - Adrian 
 - Finnito
 - PedroR/P1Rebo
-- nils-werner!  
-  
+- urbantrout
+- nils-werner
+
 !! Thank you so much for the tasty cup of coffee I enjoy each day !!  
+
+## Also special thanks to the great icon artwork
+- ["washing hand"](https://thenounproject.com/matfine/collection/cleaning-icon/?i=2749704) by [Mat fine](https://thenounproject.com/matfine) from [the Noun Project](https://thenounproject.com/matfine/collection/cleaning-icon/?i=2749704) licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/legalcode)
+- ["Glückliche Gesichter Emoticons"](https://pixabay.com/de/illustrations/gl%C3%BCckliche-gesichter-emoticons-5049116/) by [Annalise Batista](https://pixabay.com/de/users/annaliseart-7089643/) licensed under [Pixabay license](https://pixabay.com/de/service/terms/#license)
+  
 
 
 # Disclaimer
