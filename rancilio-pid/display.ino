@@ -54,7 +54,7 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
       previousMillisDisplay = millis();
       activeStateBuffer = activeState;
       #if (DISPLAY_TEXT_STATE==1)
-      if (strlen(displaymessagetext) > 0) {
+      if (strlen(displaymessagetext) > 0 || screenSaverOn) {
         snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
         snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);  
       } else {
