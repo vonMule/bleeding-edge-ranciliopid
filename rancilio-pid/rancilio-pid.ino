@@ -33,7 +33,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.7.1b";
+const char* sysVersion PROGMEM  = "2.7.1b2";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -236,7 +236,7 @@ unsigned long lastSteamMessage = 0;
 /********************************************************
    CLEANING
 ******************************************************/
-int cleaning         = 0;       // this is the trigger XXX2
+int cleaning         = 0;       // this is the trigger
 int cleaningEnableAutomatic = CLEANING_ENABLE_AUTOMATIC;
 int cleaningCycles   = CLEANING_CYCLES;
 int cleaningInterval = CLEANING_INTERVAL;
@@ -296,6 +296,7 @@ char* blynkReadyLedColor = "#000000";
 unsigned long lastCheckBrewReady = 0;
 unsigned long lastBrewReady = 0;
 unsigned long lastBrewEnd = 0;    //used to determime the time it takes to reach brewReady==true
+unsigned int power_off_timer = 0;
 bool brewReady = false;
 const int expected_eeprom_version = 6;        // EEPROM values are saved according to this versions layout. Increase if a new layout is implemented.
 unsigned long eeprom_save_interval = 28*60*1000UL;  //save every 28min
@@ -308,6 +309,7 @@ bool force_offline = FORCE_OFFLINE;
 unsigned long force_eeprom_sync = 0 ;
 const int force_eeprom_sync_waitTime = 3000;  // after updating a setting wait this number of milliseconds before writing to eeprom
 const int heaterInactivityTimer = HEATER_INACTIVITY_TIMER * 60 * 1000;  //disable heater if no activity within the last minutes
+int PreviousPowerOffTimerMin = 0;
 
 unsigned long loops = 0;
 unsigned long max_micros = 0;
@@ -472,47 +474,48 @@ BLYNK_READ(V53) {
 }
 BLYNK_WRITE(V101) {
   int val = param.asInt();
-  if (millis() <= 7000 && val != 0) {
-    actionController(BREWING, 0);
+  //TODO replace hardcoded with dynamically startup-time in which time-frame we ignore "saved" ON events.
+  if (millis() <= 10000 && val != 0) {
+    actionController(BREWING, 0, true, false);
     Blynk.virtualWrite(V101, 0);
   } else {
-    actionController(BREWING, val);
+    actionController(BREWING, val, true, false);
   }
 }
 BLYNK_WRITE(V102) {  
   int val = param.asInt();
-  if (millis() <= 7000 && val != 0) {
-    actionController(HOTWATER, 0);
+  if (millis() <= 10000 && val != 0) {
+    actionController(HOTWATER, 0, true, false);
     Blynk.virtualWrite(V102, 0);
   } else {
-    actionController(HOTWATER, val);
+    actionController(HOTWATER, val, true, false);
   }
 }
 BLYNK_WRITE(V103) {
   int val = param.asInt();
-  if (millis() <= 7000 && val != 0) {
-    actionController(STEAMING, 0);
+  if (millis() <= 10000 && val != 0) {
+    actionController(STEAMING, 0, true, false);
     Blynk.virtualWrite(V103, 0);
   } else {
-    actionController(STEAMING, val);
+    actionController(STEAMING, val, true, false);
   }
 }
 BLYNK_WRITE(V107) {
   int val = param.asInt();
-  if (millis() <= 7000 && val != 0) {
-    actionController(CLEANING, 0);
+  if (millis() <= 10000 && val != 0) {
+    actionController(CLEANING, 0, true, false);
     Blynk.virtualWrite(V107, 0);
   } else {
-    actionController(CLEANING, val);
+    actionController(CLEANING, val, true, false);
   }
 }
 BLYNK_WRITE(V110) {
   int val = param.asInt();
-  if (millis() <= 7000 && val != 0) {
-    actionController(SLEEPING, 0);
+  if (millis() <= 10000 && val != 0) {
+    actionController(SLEEPING, val, true, false);
     Blynk.virtualWrite(V110, 0);
   } else {
-    actionController(SLEEPING, val);
+    actionController(SLEEPING, val, true, false);
   }
 }
 
@@ -878,9 +881,9 @@ void refreshTemp() {
       {
         previousInput = getCurrentTemperature();
         previousMillistemp = currentMillistemp;
+        Temperatur_C = TSIC.getTemp();
         //Temperatur_C = temperature_simulate_steam();
         //Temperatur_C = temperature_simulate_normal();
-        Temperatur_C = TSIC.getTemp();
         if (checkSensor(Temperatur_C, previousInput)) {
             updateTemperatureHistory(Temperatur_C);
             Input = getAverageTemperature(5);
@@ -1143,12 +1146,21 @@ void sendToBlynk() {
         blynksendcounter++;
       }
     }
-    if (blynksendcounter >= 5) {
+    if (blynksendcounter == 5) {
+      power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
+      int power_off_timer_min = power_off_timer >=0 ? ((power_off_timer+59)/60):0;
+      if ( power_off_timer_min != PreviousPowerOffTimerMin) {
+        Blynk.virtualWrite(V45, String(power_off_timer_min));
+        PreviousPowerOffTimerMin = power_off_timer_min;
+      } else {
+        blynksendcounter++;
+      }
+    }
+    if (blynksendcounter >= 6) {
       if (String(Input, 2) != PreviousInputString) {
         Blynk.virtualWrite(V2, String(Input, 2)); //send value to server
         PreviousInputString = String(Input, 2);
       }
-      //Blynk.syncVirtual(V2);  //get value from server
       blynksendcounter = 0;
     }
     blynksendcounter++;
@@ -1670,6 +1682,10 @@ void loop() {
             mqtt_publish("heaterUtilization", number2string(convertOutputToUtilisation(Output)));
             mqtt_publish("pastTemperatureChange", number2string(pastTemperatureChange(10)));
             mqtt_publish("brewReady", bool2string(brewReady));
+            if (ENABLE_POWER_OFF_COUNTDOWN != 0 ) {
+              power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
+              mqtt_publish("powerOffTimer", int2string(power_off_timer >=0 ? ((power_off_timer+59)/60):0));  //in minutes always rounded up
+            }
             //mqtt_publish_settings();  //not needed because we update live on occurence
            }
         }
@@ -1853,7 +1869,6 @@ void loop() {
 
     displaymessage(activeState, "", "");
         
-    //power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);  //XXX2 this is new. dont need this
     sendToBlynk();
     #if (1==0)
     performance_check();
@@ -2587,13 +2602,13 @@ void setup() {
     }
     delay(120);
     while (true) {
+      previousInput = TSIC.getTemp();
       //previousInput = temperature_simulate_steam();
       //previousInput = temperature_simulate_normal();
-      previousInput = TSIC.getTemp();
       delay(200);
+      Input = TSIC.getTemp();
       //Input = temperature_simulate_steam();
       //Input = temperature_simulate_normal();
-      Input = TSIC.getTemp();
       if (checkSensor(Input, previousInput)) {
         updateTemperatureHistory(Input);
         break;

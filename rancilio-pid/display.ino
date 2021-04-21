@@ -22,8 +22,8 @@ void u8g2_prepare(void) {
 }
 
 bool screenSaverCheck() {
-  if (!enableScreenSaver) return false;
-  if ((brewReady && (millis() >= lastBrewReady + brewReadyWaitPeriod) && (millis() >= userActivity + userActivityWaitPeriod)) || sleeping) {
+  if ( (enableScreenSaver && brewReady && (millis() >= lastBrewReady + brewReadyWaitPeriod) && (millis() >= userActivity + userActivityWaitPeriod)) ||
+       sleeping) {
     return true;
   } else {
     if (screenSaverOn) {
@@ -54,7 +54,7 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
       previousMillisDisplay = millis();
       activeStateBuffer = activeState;
       #if (DISPLAY_TEXT_STATE==1)
-      if (strlen(displaymessagetext) > 0 || screenSaverOn) {
+      if (strlen(displaymessagetext) > 0 || screenSaverOn || activeState == 4) {  //dont show state in certain situations
         snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
         snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);  
       } else {
@@ -315,7 +315,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
   const unsigned int powerOffCountDownStart = 300;
   const unsigned int align_right_countdown_min = LCDWidth - 52 ;
   const unsigned int align_right_countdown_sec = LCDWidth - 52 + 20;
-  int power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ( (millis() - lastBrewEnd) / 1000);
+  power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ( (millis() - lastBrewEnd) / 1000);
   if (power_off_timer <= powerOffCountDownStart && !brewing && displaymessagetext == "" && displaymessagetext2 == "" ) {
     u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
     u8g2.drawGlyph(align_right_countdown_min - 15, 37 + 7, 0x004e);

@@ -322,11 +322,16 @@ int getActionOfControl(controlMap* controlsConfig, int port, int value) {
 
 
 void actionController(int action, int newState) {
-  actionController(action, newState, true);
+  actionController(action, newState, true, true);
 }
 
 
-void actionController(int action, int newState, bool publishAction) {
+void actionController(int action, int newState, bool publishActionMqtt) {
+  actionController(action, newState, publishActionMqtt, true);
+}
+
+
+void actionController(int action, int newState, bool publishAction, bool publishActionBlynk) {
   if (action == UNDEFINED_ACTION) { return; }
   //newState := if newState >=0 set value to newState. If newState == -1 -> toggle between 0/1
   int oldState = actionState[action];
@@ -344,15 +349,22 @@ void actionController(int action, int newState, bool publishAction) {
   if (newState != oldState) {
     userActivity = millis();
     if (action == HOTWATER) { actionController(BREWING, 0); actionController(SLEEPING, 0); actionState[action] = newState; hotwaterAction(newState); if (publishAction) mqtt_publish("actions/HOTWATER", int2string(newState));}
-    else if (action == BREWING) { actionController(STEAMING, 0); actionController(HOTWATER, 0); actionController(SLEEPING, 0); actionState[action] = newState; brewingAction(newState); if (publishAction) mqtt_publish("actions/BREWING", int2string(newState)); Blynk.virtualWrite(V101, newState);}
-    else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(SLEEPING, 0); actionState[action] = newState; steamingAction(newState); if (publishAction) mqtt_publish("actions/STEAMING", int2string(newState)); Blynk.virtualWrite(V103, newState);}
-    else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionController(SLEEPING, 0); actionState[action] = newState; cleaningAction(newState); if (publishAction) mqtt_publish("actions/CLEANING", int2string(newState)); Blynk.virtualWrite(V107, newState);}
-    else if (action == SLEEPING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionState[action] = newState; sleepingAction(newState); if (publishAction) mqtt_publish("actions/SLEEPING", int2string(newState)); Blynk.virtualWrite(V110, newState);}
+    else if (action == BREWING) { actionController(STEAMING, 0); actionController(HOTWATER, 0); actionController(SLEEPING, 0); actionState[action] = newState; brewingAction(newState); actionPublish("actions/BREWING", V101, newState, publishAction, publishActionBlynk);}
+    else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(SLEEPING, 0); actionState[action] = newState; steamingAction(newState); actionPublish("actions/STEAMING", V103, newState, publishAction, publishActionBlynk);}
+    else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionController(SLEEPING, 0); actionState[action] = newState; cleaningAction(newState); actionPublish("actions/CLEANING", V107, newState, publishAction, publishActionBlynk);}
+    else if (action == SLEEPING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionState[action] = newState; sleepingAction(newState); actionPublish("actions/SLEEPING", V110, newState, publishAction, publishActionBlynk);}
     snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
     DEBUG_println(debugline);
+  } else {
+    //snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d) NOCHANGE", convertDefineToAction(action), actionState[action], oldState);
+    //DEBUG_println(debugline);
   }
-  //snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
-  //DEBUG_println(debugline);
+}
+
+void actionPublish(char* mqtt_topic, unsigned int blynk_vpin, int newState, bool publishActionMQTT, bool publishActionBlynk) {
+  //TODO add mapping table of action/setting to mqtt-topic&blynk_vpin
+  if (publishActionMQTT) mqtt_publish(mqtt_topic, int2string(newState)); 
+  if (publishActionBlynk) Blynk.virtualWrite(blynk_vpin, newState);
 }
 
 boolean checkArrayInArray(int a[], int sizeof_a, int b[], int sizeof_b) {
