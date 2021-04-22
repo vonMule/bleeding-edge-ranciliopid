@@ -512,7 +512,7 @@ BLYNK_WRITE(V107) {
 BLYNK_WRITE(V110) {
   int val = param.asInt();
   if (millis() <= 10000 && val != 0) {
-    actionController(SLEEPING, val, true, false);
+    actionController(SLEEPING, 0, true, false);
     Blynk.virtualWrite(V110, 0);
   } else {
     actionController(SLEEPING, val, true, false);
