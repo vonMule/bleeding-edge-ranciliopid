@@ -2,13 +2,15 @@
 #include <Preferences.h>
 Preferences preferences;
 
-#define ESP32
-#define pinTemperature    2    // read temperature (TSIC)
-uint8_t pin = pinTemperature;
+//#define ESP32
+
+#define pinTemperature 26
+//const uint8_t pin = pinTemperature;
 
 #include "src/ZACwire-Library/ZACwire.h"
-ZACwire<pinTemperature> TSIC;
-
+#ifdef ESP32
+ZACwire<pinTemperature> TSIC(306,125,0);
+#endif
 
 uint16_t temperature = 0;
 float Temperatur_C = 0;
@@ -98,104 +100,33 @@ void setup() {
   Serial.begin(115200);
   delay(100);
   Serial.println("start");
+  if (TSIC.begin() != true) {
+      Serial.println("TSIC Tempsensor cannot be initialized");
+  }
 }
 
 void loop() {
   unsigned long currentMillistemp = millis();
-  if (currentMillistemp >= previousMillistemp + 500)
+  if (currentMillistemp >= previousMillistemp + 200)
   {
     previousMillistemp = currentMillistemp;
-
-    //ADRIAN CHANGE THIS
-    //Input = getTemp(); 
     Input = TSIC.getTemp();
 
-    Serial.print(millis()/1000);
-    Serial.print(" temp=");
-    Serial.println(Input);
+    if (Input >= 150 || Input <= 0) {
+      Serial.print(millis()/1000);
+      Serial.print(" temp=");
+      Serial.println(Input);
+    }
   }
-  if (currentMillistemp >= previousEeprom + 8000)
+
+  if (currentMillistemp >= previousEeprom + 300000)
   {
     previousEeprom = currentMillistemp;
     sync_eeprom(false, true);
   }
+
 }
-
-
-static void IRAM_ATTR readTemp() {     //gets called with every rising edge
-  static bool ByteNr;
-  unsigned long microtime = micros();
-    deltaTime = microtime - deltaTime;  //measure time to previous rising edge
-    if (deltaTime > 1000) {       //true at start bit
-      ByteTime = microtime;   //for measuring Tstrobe/bitWindow
-    backUP = !backUP;
-      BitCounter = ByteNr = rawTemp[0][backUP] = rawTemp[1][backUP] = 0;
-    }
-  if (++BitCounter == 11) {   //after stop bit
-    ByteTime = microtime - ByteTime;
-    ByteNr = 1;
-  }
-  rawTemp[ByteNr][backUP] <<= 1;
-  if (deltaTime > bitWindow);   //Logic 0
-  else if (deltaTime < bitWindow - 40 || rawTemp[ByteNr][backUP] & 2) rawTemp[ByteNr][backUP] |= 1; //Logic 1
-    deltaTime = microtime;
-}
-  
-
-bool begin() {      //start collecting data, needs to be called 100ms before the first getTemp()
-    pinMode(pin, INPUT);
-    bitWindow = 125;    //change from 0 to 125 to give the getTemp the info begin() was already executed
-    deltaTime = micros();
-    if (!pulseInLong(pin, LOW)) return false; //check if there is an incoming signal
-    isrPin = digitalPinToInterrupt(pin);
-    if (isrPin == -1) return false;
-    attachInterrupt(isrPin, readTemp, RISING);
-    return true;
-}
-
-float getTemp() {       //gives back temperature in °C
-  static bool misreading = false;
-  static byte newBitWindow;
-  byte parity1 = 0, parity2 = 0;
-  if (!bitWindow) { //check if begin() was already called
-    begin();
-    delay(110);
-  }
-
-  if (BitCounter != 20) misreading = true;  //use misreading-backup when newer reading is incomplete
-  else newBitWindow = ((ByteTime << 5) + (ByteTime << 4) + ByteTime >> 9) + 20; //divide by 10.5 and add 20 (found out by trial and error)
-  uint16_t tempHigh = rawTemp[0][backUP^misreading];    //get high significant bits from ISR
-  uint16_t tempLow = rawTemp[1][backUP^misreading];   //get low   ''    ''
-  if (abs(bitWindow-newBitWindow) < 20) bitWindow += (newBitWindow >> 3) - (bitWindow >> 3);  //adjust bitWindow time, which varies with rising temperature
-  for (byte i = 0; i < 9; ++i) {
-    if (tempHigh & 1 << i) ++parity1; //count "1" bits, which have to be even --> failure check
-    if (tempLow & 1 << i) ++parity2;
-  }
-  if (tempHigh | tempLow && ~(parity1 | parity2) & 1) {       // check for failure
-    tempHigh >>= 1;                   // delete parity bits
-    tempLow >>= 1;
-    tempLow |= tempHigh << 8;   //join high and low significant figures
-    misreading = false;
-    if (_Sensortype < 400) return (float(tempLow * 250L >> 8) - 499) / 10;  //calculates °C
-    else return (float(tempLow * 175L >> 9) - 99) / 10;
-  }
-  else if (!misreading) {   //restart with backUP raw temperature
-    misreading = true;
-    getTemp();
-  }
-  else {
-    misreading = false;
-    return 222;   //set to 222 if reading failed
-  }
-}
-
-void end() {
-      detachInterrupt(isrPin);
-}
-    
-
-
-    
+ 
 void sync_eeprom(bool startup_read, bool force_read) {
   Serial.println("EEPROM: sync_eeprom");
   preferences.begin("config");
@@ -324,40 +255,40 @@ void sync_eeprom(bool startup_read, bool force_read) {
   if (AGGOKP != aggoKp_config_saved) { aggoKp = AGGOKP; preferences.putDouble("aggoKp", aggoKp); }
   if (AGGOTN != aggoTn_config_saved) { aggoTn = AGGOTN; preferences.putDouble("aggoTn", aggoTn); }
   if (AGGOTV != aggoTv_config_saved) { aggoTv = AGGOTV; preferences.putDouble("aggoTv", aggoTv); }
-  if (SETPOINT != setPoint_config_saved) { setPoint = SETPOINT; preferences.putDouble("setPoint", setPoint); Serial.println("EEPROM: setPoint is read from userConfig.h\n"); }
-  if (BREWTIME != brewtime_config_saved) { brewtime = BREWTIME; preferences.putDouble("brewtime", brewtime); Serial.println("EEPROM: brewtime  is read from userConfig.h\n"); }
+  if (SETPOINT != setPoint_config_saved) { setPoint = SETPOINT; preferences.putDouble("setPoint", setPoint); }
+  if (BREWTIME != brewtime_config_saved) { brewtime = BREWTIME; preferences.putDouble("brewtime", brewtime); }
   if (PREINFUSION != preinfusion_config_saved) { preinfusion = PREINFUSION; preferences.putDouble("preinfusion", preinfusion); }
   if (PREINFUSION_PAUSE != preinfusionpause_config_saved) { preinfusionpause = PREINFUSION_PAUSE; preferences.putDouble("preinfusionpause", preinfusionpause); }
-  if (STARTTEMP != starttemp_config_saved) { starttemp = STARTTEMP; preferences.putDouble("starttemp", starttemp); Serial.println("EEPROM: starttemp is read from userConfig.h\n"); }
+  if (STARTTEMP != starttemp_config_saved) { starttemp = STARTTEMP; preferences.putDouble("starttemp", starttemp);}
   if (BREWDETECTION_SENSITIVITY != brewDetectionSensitivity_config_saved) { brewDetectionSensitivity = BREWDETECTION_SENSITIVITY; preferences.putDouble("brewDetectionSensitivity", brewDetectionSensitivity); }
   if (STEADYPOWER != steadyPower_config_saved) { steadyPower = STEADYPOWER; preferences.putDouble("steadyPower", steadyPower); }
   if (STEADYPOWER_OFFSET != steadyPowerOffset_config_saved) { steadyPowerOffset = STEADYPOWER_OFFSET; preferences.putDouble("steadyPowerOffset", steadyPowerOffset); }
   if (STEADYPOWER_OFFSET_TIME != steadyPowerOffsetTime_config_saved) { steadyPowerOffsetTime = STEADYPOWER_OFFSET_TIME; preferences.putInt("steadyPowerOffsetTime", steadyPowerOffsetTime); }
   //if (BURSTPOWER != burstPower_config_saved) { burstPower = BURSTPOWER; preferences.putDouble(470, burstPower); }
-  if (BREWDETECTION_POWER != brewDetectionPower_config_saved) { brewDetectionPower = BREWDETECTION_POWER; preferences.putDouble("brewDetectionPower", brewDetectionPower); Serial.println("EEPROM: brewDetectionPower is read from userConfig.h\n"); }
-  if (SETPOINT_STEAM != setPointSteam_config_saved) { setPointSteam = SETPOINT_STEAM; preferences.putDouble("setPointSteam", setPointSteam); Serial.println("EEPROM: setPointSteam  is read from userConfig.h\n"); }
+  if (BREWDETECTION_POWER != brewDetectionPower_config_saved) { brewDetectionPower = BREWDETECTION_POWER; preferences.putDouble("brewDetectionPower", brewDetectionPower); }
+  if (SETPOINT_STEAM != setPointSteam_config_saved) { setPointSteam = SETPOINT_STEAM; preferences.putDouble("setPointSteam", setPointSteam); }
 
   //save latest values to eeprom and sync back to blynk
   if ( aggKp != aggKp_latest_saved) { preferences.putDouble("aggKp", aggKp);  }
   if ( aggTn != aggTn_latest_saved) { preferences.putDouble("aggTn", aggTn); }
   if ( aggTv != aggTv_latest_saved) { preferences.putDouble("aggTv", aggTv); }
-  if ( setPoint != setPoint_latest_saved) { preferences.putDouble("setPoint", setPoint);Serial.println("EEPROM: setPoint () is saved\n"); }
-  if ( brewtime != brewtime_latest_saved) { preferences.putDouble("brewtime", brewtime);Serial.println("EEPROM: brewtime is saved (previous)\n"); }
+  if ( setPoint != setPoint_latest_saved) { preferences.putDouble("setPoint", setPoint);}
+  if ( brewtime != brewtime_latest_saved) { preferences.putDouble("brewtime", brewtime); }
   if ( preinfusion != preinfusion_latest_saved) { preferences.putDouble("preinfusion", preinfusion); }
   if ( preinfusionpause != preinfusionpause_latest_saved) { preferences.putDouble("preinfusionpause", preinfusionpause); }
-  if ( starttemp != starttemp_latest_saved) { preferences.putDouble("starttemp", starttemp);Serial.println("EEPROM: starttemp  is saved\n"); }
+  if ( starttemp != starttemp_latest_saved) { preferences.putDouble("starttemp", starttemp); }
   if ( aggoKp != aggoKp_latest_saved) { preferences.putDouble("aggoKp", aggoKp); ; }
   if ( aggoTn != aggoTn_latest_saved) { preferences.putDouble("aggoTn", aggoTn); }
   if ( aggoTv != aggoTv_latest_saved) { preferences.putDouble("aggoTv", aggoTv); }
   if ( brewDetectionSensitivity != brewDetectionSensitivity_latest_saved) { preferences.putDouble("brewDetectionSensitivity", brewDetectionSensitivity); }
-  if ( steadyPower != steadyPower_latest_saved) { preferences.putDouble("steadyPower", steadyPower); Serial.println("EEPROM: steadyPower  is saved (previous:)\n"); }
+  if ( steadyPower != steadyPower_latest_saved) { preferences.putDouble("steadyPower", steadyPower); }
   if ( steadyPowerOffset != steadyPowerOffset_latest_saved) { preferences.putDouble("steadyPowerOffset", steadyPowerOffset);  }
   if ( steadyPowerOffsetTime != steadyPowerOffsetTime_latest_saved) { preferences.putInt("steadyPowerOffsetTime", steadyPowerOffsetTime);}
   if ( burstPower != burstPower_latest_saved) { preferences.putDouble("burstPower", burstPower); }
   if ( estimated_cycle_refreshTemp != estimated_cycle_refreshTemp_latest_saved) { preferences.putUInt("estimated_cycle_refreshTemp", estimated_cycle_refreshTemp); }
   if ( brewDetectionPower != brewDetectionPower_latest_saved) { preferences.putDouble("brewDetectionPower", brewDetectionPower); }
-  if ( pidON != pidON_latest_saved) { preferences.putInt("pidON", pidON);Serial.println("EEPROM: pidON  is saved \n"); }
-  if ( setPointSteam != setPointSteam_latest_saved) { preferences.putDouble("setPointSteam", setPointSteam); Serial.println("EEPROM: setPointSteam () is saved\n"); }
+  if ( pidON != pidON_latest_saved) { preferences.putInt("pidON", pidON); }
+  if ( setPointSteam != setPointSteam_latest_saved) { preferences.putDouble("setPointSteam", setPointSteam); }
   preferences.end();
   Serial.println("EEPROM: sync_eeprom() finished");
 }

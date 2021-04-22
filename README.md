@@ -106,7 +106,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - 2.7.1b2:
   - Feature: (Silvia5E): ENABLE_POWER_OFF_COUNTDOWN timer (in minutes) is available via mqtt("powerOffTimer")/blynk(V45).
   - Fix: Blynk sometimes crashes when controlActions are changed.
-  - Fix: SLEEPING action will turn of display even if ENABLE_SCREEN_SAVER=0.
+  - Fix: SLEEPING action will turn off display even if ENABLE_SCREEN_SAVER=0.
   - Fix: DISPLAY_TEXT_STATE is not shown during BREWING.
 - 2.7.1b:
   - Added PR for automatic cleaning mode (Thanks to urbantrout/Harald).
