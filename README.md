@@ -103,6 +103,11 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.8.0 beta1:
+  - Feature: Add support to detect low water using a VL53L0X Time of Flight distance sensor. see [Howto](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Water-level-measurement-using-VL53L0X-(Time-of-Flight-distance-sensor))
+  - Renamed DEBUG_FORCE_GPIO_CHECK to ENABLE_CALIBRATION_MODE.
+  - Fix: Show general logo when MASCHINE_TYPE is set to unknown.
+  - Update ZACWire to v1.3.2b6. (Thanks Adrian)
 - 2.7.1b2:
   - Feature: (Silvia5E): ENABLE_POWER_OFF_COUNTDOWN timer (in minutes) is available via mqtt("powerOffTimer")/blynk(V45).
   - Fix: Blynk sometimes crashes when controlActions are changed.

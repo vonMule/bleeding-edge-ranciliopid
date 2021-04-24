@@ -1,5 +1,5 @@
 /********************************************************
- * Version 2.7.1
+ * Version 2.8.0
  * Config must be configured by the user
  *****************************************************/
 
@@ -35,7 +35,9 @@
 #define ENABLE_HARDWARE_LED_RGB_ON  LightGreen  // (ENABLE_HARDWARE_LED=2) Color name when leds should be turned on. List of Colours: https://github.com/FastLED/FastLED/wiki/Pixel-reference
 #define ENABLE_HARDWARE_LED_RGB_OFF LightPink  // (ENABLE_HARDWARE_LED=2) Color name when leds should be turned off.
 
-//#define DEBUGMODE               // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
+//#define DEBUGMODE                // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
+#define ENABLE_CALIBRATION_MODE 0  // 0=off (default). 1=on. If on, PID is disabled and CALIBRATION information is logged in DEBUG log (eg. CONTROLS_CONFIG, WATER_LEVEL_SENSOR)
+
 
 /*******
  * Hardware GPIO Pin Mapping
@@ -88,7 +90,6 @@
  *    #define CONTROLS_CONFIG "32:INPUT_PULLUP:digital:toggle|0-0:BREWING#33:INPUT_PULLUP:digital:toggle|0-0:HOTWATER#27:INPUT_PULLUP:digital:toggle|0-0:STEAMING#"
  *
  *******/
-#define DEBUG_FORCE_GPIO_CHECK   0  // 0=off (default). 1=on. If on, PID is disabled and only trigger/toogles are detected and printed in DEBUG log.
 #define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"  //when a simple switch is connected on port A0 and this switch is used to trigger BREWING.
 
 /*
@@ -121,6 +122,16 @@
                                           // to shutdown (Silvia 5E: 1800). Show countdown for the last 3 minutes.
 #define STEAM_READY_TEMP 116              // (display only) if temperature is higher then this value then the steam-ready icon is shown
                                           // (Rancilio: 116, ECM Casa Prima: 130?, ...)
+
+
+/*******
+ * Water level measurement 
+ *******/
+#define WATER_LEVEL_SENSOR_ENABLE  0          // 0=Off (default), 1=On  (only VL53L0X supported)
+#define WATER_LEVEL_SENSOR_SDA    17          // (ESP32 only: dedicated I2C bus required)
+#define WATER_LEVEL_SENSOR_SCL     4          // (ESP32 only: dedicated I2C bus required)
+#define WATER_LEVEL_SENSOR_LOW_THRESHOLD 200  // use ENABLE_CALIBRATION_MODE=1 to manually determine correct value (in mm). If measurement is > than this number, the system determines low water.
+
 
 /*******
  * General PID values
