@@ -1,4 +1,5 @@
 userConfig.h*
+!userConfig.h.SAMPLE
 *.bak
 *.swp
 .vscode
