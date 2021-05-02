@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.7.1b
+Version 2.7.1
 
 forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
 
@@ -103,12 +103,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
-- 2.7.1b2:
-  - Feature: (Silvia5E): ENABLE_POWER_OFF_COUNTDOWN timer (in minutes) is available via mqtt("powerOffTimer")/blynk(V45).
-  - Fix: Blynk sometimes crashes when controlActions are changed.
-  - Fix: SLEEPING action will turn off display even if ENABLE_SCREEN_SAVER=0.
-  - Fix: DISPLAY_TEXT_STATE is not shown during BREWING.
-- 2.7.1b:
+- 2.7.1:
   - Added PR for automatic cleaning mode (Thanks to urbantrout/Harald).
     - Adaptions:
       - New cleaning icon: ["washing hand"](https://thenounproject.com/matfine/collection/cleaning-icon/?i=2749704) by [Mat fine](https://thenounproject.com/matfine) from [the Noun Project](https://thenounproject.com/matfine/collection/cleaning-icon/?i=2749704) licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/legalcode)
@@ -116,11 +111,15 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
       - New userConfig Settings: 
         - CLEANING_CYCLES, CLEANING_INTERVAL, CLEANING_PAUSE.
         - Set CLEANING_ENABLE_AUTOMATIC=1 to use automatic cleaning program instead of manual modus.
+  - Feature: (Silvia5E): ENABLE_POWER_OFF_COUNTDOWN timer (in minutes) is available via mqtt("powerOffTimer")/blynk(V45).
   - Blynk is fully supporting actionController. Therefore any action can be called via blynk. (see [Blynk-Setup](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Blynk-Setup))
   - Added new icon-collection "static" which just shows a non-moving logo.
   - Added userConfig DISPLAY_TEXT_STATE which outputs few status information (Please wait, Ready, Turned off, Cleaning, ..) in the display (supported by all icon-collections).
     - Text is not displayed when screensaver is running.
   - Fix: Waking up after SLEEPING action re-enables cold-start autotuning.
+  - Fix: Blynk sometimes crashes when controlActions are changed.
+  - Fix: SLEEPING action will turn off display even if ENABLE_SCREEN_SAVER=0.
+  - Fix: DISPLAY_TEXT_STATE is not shown during BREWING.
   - Update ZACwire-Library to v1.3.1. and 1.3.0 (beta). (Thanks again Adrian :-) )
 - 2.7.0:
   - Feature: FULLY SUPPORT ESP32 with CPU pinning for improved performance.
