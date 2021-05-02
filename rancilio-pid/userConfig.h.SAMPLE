@@ -1,5 +1,5 @@
 /********************************************************
- * Version 2.7.0
+ * Version 2.7.1
  * Config must be configured by the user
  *****************************************************/
 
@@ -22,8 +22,6 @@
 #define EMERGENCY_TEMP 135    // If temperature is higher then notifications are send via display/debug/mqtt and PID is temporary disabled.
                               // Set this to the higest temperature supported by your maschine minus a few degress. (Silvia 5E: 135)
 #define HEATER_INACTIVITY_TIMER 120  // 0=Disable. When there is no activity at the maschine for this amount of minutes, the heater should stop heating until new activity is detected.
-
-#define BREWTIME        30.0  // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
 
 #define BREWDETECTION 2               // 0 = off | 1 = on using Hardware (ONLYPID=0 or ONLYPID=1_using_ControlAction_BREWING) | 2 = on using Software (ONLYPID=1 auto-detection)
 #define BREWDETECTION_SENSITIVITY 0.6 // If temperature drops in the past 3 seconds by this number (Celcius), then a brew is detected (BREWDETECTION must be 1)
@@ -113,7 +111,8 @@
  *******/
 #define DISPLAY 0                         // 0=Deaktiviert, 1=SH1106_128X64, 2=SSD1306_128X64
 #define ROTATE_DISPLAY 0                  // 0=Off (Default), 1=180 degree clockwise rotation
-#define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter"
+#define DISPLAY_TEXT_STATE 1              // 1=On  (Default), 0=Off display text of Maschine-state
+#define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter", 3:="text"
 #define DISPLAY_TEXT "Bleeding-Edge PID"  // Text is displayed on bootup (max 21 chars)
 //#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)
 #define ENABLE_FAILURE_STATUS_ICONS 1     // 1 = on (default), 0 = off. If enabled show status icons if services are offline.
@@ -147,12 +146,22 @@
 #define AGGOTN 40       // Tn (Rancilio Silvia 5E: 40, ...)
 #define AGGOTV 40       // Tv (Rancilio Silvia 5E: 40, ...)
 
+
 /*******
- * Preinfussion settings (only useful when ONLYPID=0)
+ * BREW & Preinfusion settings
  *******/
-#define PREINFUSION       1.5  //  length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion.
-#define PREINFUSION_PAUSE 2.0  // length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
-// dont forget to adapt BREWTIME mentioned above
+#define BREWTIME         30   // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
+#define PREINFUSION       0   // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
+#define PREINFUSION_PAUSE 0   // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+
+
+/*******
+ * CLEANING PROGRAM settings (ONLYPID!=0)
+ *******/
+#define CLEANING_ENABLE_AUTOMATIC 1  // Default=1 (enable cleaning program), 0=Off (disable cleaning program), Shall we start automatic cleaning program when state==CLEANING and the brew button/action is triggered?
+#define CLEANING_CYCLES   5          // Default=5, How many cleaning cycles to execute?
+#define CLEANING_INTERVAL 4          // Default=4, How many seconds shall we flush hotwater?
+#define CLEANING_PAUSE    3          // Default=3, How many seconds shall we pause after flushing hotwater?
 
 
 /*******

@@ -1,6 +1,6 @@
 /*  ZACwire - Library for reading temperature sensors TSIC 206/306/506
   created by Adrian Immer in 2020
-  v1.2.6b
+  v1.3.0
 */
 
 #ifndef ZACwire_h
@@ -13,7 +13,7 @@ class ZACwire {
   
   public:
   
-	ZACwire(int Sensortype = 306, byte defaultBitWindow = 125, bool core = 0){
+	ZACwire(int Sensortype = 306, byte defaultBitWindow = 125, bool core = 1){
       _Sensortype = Sensortype;
       _defaultBitWindow = defaultBitWindow + (range >> 1);	//expected BitWindow in µs, depends on sensor & temperature
       _core = core;									//only ESP32: choose cpu0 or cpu1
@@ -37,7 +37,7 @@ class ZACwire {
 		static bool misreading = false;
 		byte newBitWindow = _defaultBitWindow;
 		byte parity1 = 0, parity2 = 0;
-		if ((unsigned int)millis() - lastISR >> 8) {	//check wire connection for the last 256ms
+		if ((unsigned int)millis() - lastISR > 255) {	//check wire connection for the last 255ms
 			if (bitWindow) return 221;				// temp=221 if sensor not connected
 			else {									// w/o bitWindow, begin() wasn't called before
 				begin();

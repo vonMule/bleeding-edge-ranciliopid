@@ -9,7 +9,7 @@ const int Display = DISPLAY;
 #elif (ICON_COLLECTION == 1)
 #include "icon_smiley.h"
 #else
-#include "icon_simple.h"
+#include "icon_simple.h"  // also used as placeholder for ICON_COLLECTION==3
 #endif
 #include <U8g2lib.h>
 #include <Wire.h>

@@ -332,7 +332,7 @@ boolean persist_setting(char* type, double* value, char* data_str) {
       steadyPowerMQTTDisableUpdateUntilProcessedTime = 0;
     }
     if (!almostEqual(data_double, *value)) {
-      DEBUG_print("setting %s=%s (=%0.2f) (prev=%.2f)\n", type, data_str, data_double, *value);
+      //DEBUG_print("setting %s=%s (=%0.2f) (prev=%.2f)\n", type, data_str, data_double, *value);
       *value = data_double;
       if (strcmp(type, "steadyPower") == 0) {
         steadyPowerSaved = *value; //prevent an additional mqtt "/set" call
