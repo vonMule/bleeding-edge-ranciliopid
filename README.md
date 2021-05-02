@@ -2,9 +2,9 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.7.1b
+Version 2.8.0b2
 
-forked of the Rancilio-Silvia PID for Arduino described at http://rancilio-pid.de.
+forked of [Rancilio-Silvia PID](http://rancilio-pid.de).
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -26,8 +26,15 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
    - steadyPowerOffset is introduced which compensates the increased temperature loss when the machine (brew head etc.) is still very cold.
    - PidController offers feature like I-value filtering, special handling of setPoint crossings and more (hard-coded)
    - PID Controller is now integral part of the software and not an external library.
-1. actionController, which allow you to trigger custom functions over any GPIO port and/or mqtt.
-   - fully dynamic mapping of any(!) available analog/digital gpio port to custom functions, which are currently:
+1. FULL ESP32 (and of cause esp8266) support in bleeding-edge main-branch.
+1. Support of three hardware modifications which matches you requirements and offers the best flexibility.
+   - PidOnly: This is the most basic modifcations in which only the heater is controlled by the esp.
+   - Standard: In this modifcations in addition to the heater, "brewing" is also controlled by the esp which enables pre-infusion (by cutting the "hardware-button switched" power to the valve and the pump on demand).
+   - FullControl: (ESP32 only) All functionality is directly controlled by the esp. This allows full customization and implementation of any feature. Also all functionality can therefore remotely be activated/deactivated. The ESP32 can run 24/7 if required.
+1. Freely choose if you want the software to use WIFI, BLYNK and/or MQTT. Everythink can be enabled/disabled and still have a flawlessly working PID controller.
+1. Additionally if you want to to depend on a remotely running service (eg. blynk server on raspi), you can activate a MQTT-Server on the arduino itself!
+1. By using the actionController you can freely configure the system to trigger custom ACTIONS (=functions) when a GPIO port is triggered (eg by a switch) or when commands are received over network (mqtt/blynk).
+   - fully dynamic mapping of any(!) available analog/digital gpio port to trigger following custom ACTIONS:
      - BREWING   := start brewing
      - STEAMING  := automatically manages heat up machine for steaming
      - HOTWATER  := start pouring hotwater
@@ -39,18 +46,15 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
      - TEMP_INC  := increase setPoint (not yet)
      - TEMP_DEC  := decrease setPoint (not yet)
    - while also supporting the switch types: toggles (eg switches) and triggers (eg push buttons)
-   - added MQTT Support to control actions using topics ../actions/<ACTION> with supported payloads of 0|1|-1 (off|on|switch)
+   - added MQTT support to control ACTIONS using topics ../actions/<ACTION> with supported payloads of 0|1|-1 (off|on|switch)
      Example: "custom/Küche.Rancilio2/actions/STEAMING"
-1. FULL ESP32 (and of cause esp8266) support in bleeding-edge main-branch.
-1. Support of three hardware modifications which matches you requirements and offers the best flexibility.
-   - PidOnly: This is the most basic modifcations in which only the heater is controlled by the esp.
-   - Standard: In this modifcations in addition to the heater, "brewing" is also controlled by the esp which allows pre-infusion (by cutting the "hardware-button switched" power to the valve and the pump on demand).
-   - FullControl: (ESP32 only) All functionality is directly controlled by the esp. This allows full customization and implementation of any feature. Also all functionality can therefore remotely be activated/deactivated. The ESP32 can run 24/7 if required.
-1. Freely choose if you want the software to use WIFI, BLYNK and/or MQTT. Everythink can be enabled/disabled and still have a flawlessly working PID controller.
-1. Additionally if you want to to depend on a remotely running service (eg. blynk server on raspi), you can activate a MQTT-Server on the arduino itself!
+   - added Blynk support to control ACTIONS using virtual pins
+1. MultiToggle triggers any ACTION based on multiple simultaneous hardware-button states (eg. if hotwater+steaming button is pressed then start the action CLEANING). MultiToggle can trigger up to six ACTIONS just by using the three rancilio's hardware-switches and therefore reduces the need for external control (mqtt, blynk, resistor-circuit, ..).
+1. GpioAction: When actions are activated, specific GPIOs can be triggered also. This can be used eg. to light up LEDs in Rancilio's custom modified hardware-switches.
 1. Offline Modus is fixed and enhanced. If userConfig.h's FORCE_OFFLINE is enabled, then PID fully is working without networking. Ideal in situations when there is no connectivity or you dont want to rely on it.
 1. Huge performance tunings and improvements under the hood which stabilizes the system (eg in situations of bad WIFI, hardware issues,..).
 1. MQTT support to integrate machine in smart-home solutions and to easier extract details for graphing/alerting.
+1. ACTION "SLEEPING" can be used to shutdown heater and turn the display off either after a period on user inactivity (default 120min) or by user request. Any user activity (controlActions, Hardware-Buttons, MQTT Actions, brew Detection,..) will wake up the maschine.
 1. Added RemoteDebug over telnet so that we dont need USB to debug/tune pid anymore (https://github.com/JoaoLopesF/RemoteDebug). While using OTA updates you can remotely debug and update the software!
 1. "Brew Ready" Detection implemented, which detects when the temperature has stabilized at setPoint. It can send an
    MQTT event or have hardware pin 15 triggered (which can be used to turn a LED on).
@@ -103,6 +107,8 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.8.0 beta2:
+  - Update ZACWire to v1.3.2. (Thanks Adrian)
 - 2.8.0 beta1:
   - Feature: Add support to detect low water using a VL53L0X Time of Flight distance sensor. see [Howto](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Water-level-measurement-using-VL53L0X-(Time-of-Flight-distance-sensor))
   - Renamed DEBUG_FORCE_GPIO_CHECK to ENABLE_CALIBRATION_MODE.
@@ -191,8 +197,8 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
       Example: "custom/Küche.Rancilio2/actions/STEAMING"
   - Feature: Set userConfig.h ROTATE_DISPLAY to rotate display 180 degree.
   - Feature: BrewReadyLed (now called HardwareLed) configured with ENABLE_HARDWARE_LED also lights up when temperature>steamTemp or >STEAM_READY_TEMP.
-  - Feature: OnlyPid=0: Disable pre-infusion and pause by setting userConfig settings to 0.
-  - Feature: OnlyPid=1: BrewDetection can now also be triggered by hardware using actionControle "BREWING".
+  - Feature: OnlyPid=0: Disable pre-infusion and pause if userConfig settings are set to 0.
+  - Feature: OnlyPid=1: BrewDetection can also be triggered by hardware using actionControl "BREWING".
   - Feature: New userConfig setting SETPOINT_STEAM is also setable via [mqtt](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/MQTT-Setup)/[blynk](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Blynk-Setup).
   - Feature: hardwareLed will glow for a few seconds when the machine starts up. This helps determine a not-starting node.
   - Feature: Additional safe-guard to temporary disable heater if temperature is 10 degree above active setPoint.

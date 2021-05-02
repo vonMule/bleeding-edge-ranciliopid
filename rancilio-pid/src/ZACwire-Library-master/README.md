@@ -65,6 +65,12 @@ void loop() {
 
 
 
+## Wiring
+Connect V+ to a power supply with 3.0V to 5.5V. For most accurate results connect it to 5V, because that's the voltage the sensor was calibrated with.
+
+The output of the signal pin switches between GND and V+ to send informations, so take care that your µC is capable of reading both V+ and GND.
+
+![TSIC](https://user-images.githubusercontent.com/62163284/116116897-f5ed5900-a6bb-11eb-95b8-ba8f4ef129cc.png)
 
 
 
@@ -80,4 +86,4 @@ Change this, if the **first few readings** of the sensor fail (t = 222°C).
 
 `bool core` can only be used on a dual core ESP32. You can decide on which core the ISR should run, default is Core1. Using Core0 might cause some corrupted readings (up to 0.1%), but can be the better option if Core1 is very busy.
  
-If .getTemp() gives you **221** as an output, the library detected an unusual long period without new signals. Please check your cables or try using the RC filter, that is mentioned in the datasheet of the TSic.
+If .getTemp() gives you **221** as an output, the library detected an unusual long period above 255ms without new signals. Please check your cables or try using the RC filter, that is mentioned in the datasheet of the TSic.

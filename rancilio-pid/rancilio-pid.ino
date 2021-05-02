@@ -33,7 +33,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.8.0 beta1";
+const char* sysVersion PROGMEM  = "2.8.0 beta2";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -352,7 +352,7 @@ unsigned long previousMillis_water_level_check = 0;
 ******************************************************/
 #define USE_ZACWIRE_TSIC
 #ifdef USE_ZACWIRE_TSIC
-#include "src/ZACwire-Library-beta/ZACwire.h"
+#include "src/ZACwire-Library-master/ZACwire.h"
 #ifdef ESP32
 ZACwire<pinTemperature> TSIC(306,120,0);
 #else
