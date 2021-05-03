@@ -24,7 +24,7 @@ typedef struct controlMap
       char* portType;   //analog/digital
       char* portMode; //INPUT_PULLUP/INPUT_PULLDOWN/INPUT
       char* type;       //trigger/switch
-      int   lowerBoundary; 
+      int   lowerBoundary;
       int   upperBoundary;
       int   value;
       int   action;
@@ -45,6 +45,9 @@ int gpioLastAction[MAX_NUM_GPIO];
 controlMap* parseControlsConfig();
 void printControlsConfig(controlMap*);
 void checkControls(controlMap*);
+void actionController(int, int);
+void actionController(int, int, bool);
+void actionController(int, int, bool, bool);
 
 int simulatedBrewSwitch = 0;
 
