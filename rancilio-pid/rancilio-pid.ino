@@ -33,7 +33,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.8.0 beta2";
+const char* sysVersion PROGMEM  = "2.8.0";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -333,16 +333,10 @@ DeviceAddress sensorDeviceAddress;   // arrays to hold device address
 /********************************************************
    Water level sensor  30x TEMP
 ******************************************************/
-#if (WATER_LEVEL_SENSOR_ENABLE)  //XXX2
-#ifdef VL53L0X_ADA
-#include "Adafruit_VL53L0X.h"
-Adafruit_VL53L0X lox = Adafruit_VL53L0X();
-VL53L0X_RangingMeasurementData_t measure;
-#else
+#if (WATER_LEVEL_SENSOR_ENABLE)
 #include <Wire.h>
 #include <VL53L0X.h>
 VL53L0X water_sensor;
-#endif
 #endif
 int water_sensor_check_timer = 10000;  // how often shall the water level be checked (in ms). must be >4000!
 unsigned long previousMillis_water_level_check = 0;
@@ -1973,15 +1967,14 @@ void loop() {
  ***********************************/
 void maintenance() {
   #if (WATER_LEVEL_SENSOR_ENABLE)
-  //if (WATER_LEVEL_SENSOR_ENABLE == 0) return;
-  if (millis() >= previousMillis_water_level_check + water_sensor_check_timer) {  //XXX22
+  if (millis() >= previousMillis_water_level_check + water_sensor_check_timer) {
     previousMillis_water_level_check = millis();
     unsigned int water_level_measured = water_sensor.readRangeContinuousMillimeters();
     if (water_sensor.timeoutOccurred()) {
       ERROR_println("Water level sensor: TIMEOUT"); 
       snprintf(displaymessage_line1, sizeof(displaymessage_line1), "Water sensor defect");
     } else if (water_level_measured >= WATER_LEVEL_SENSOR_LOW_THRESHOLD) {
-      DEBUG_print("Water level is low: %d mm (low_threshold: %d)\n", water_level_measured, WATER_LEVEL_SENSOR_LOW_THRESHOLD);
+      DEBUG_print("Water level is low: %u mm (low_threshold: %u)\n", water_level_measured, WATER_LEVEL_SENSOR_LOW_THRESHOLD);
       snprintf(displaymessage_line1, sizeof(displaymessage_line1), "Water is low!");
     } else {
       displaymessage_line1[0] = '\0';
@@ -1990,21 +1983,12 @@ void maintenance() {
   #endif
 }
 
-void debugWaterLevelSensor() {  //XXX2
+void debugWaterLevelSensor() {
   #if (WATER_LEVEL_SENSOR_ENABLE)
   unsigned long start = millis();
-  #ifdef VL53L0X_ADA
-    lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-    if (measure.RangeStatus != 4) {  // phase failures have incorrect data
-      DEBUG_print("WATER_LEVEL_SENSOR: %u mm (took: %lu ms)\n", measure.RangeMilliMeter, millis()-start);
-    } else {
-      ERROR_println("WATER_LEVEL_SENSOR: out of range");
-    }
-  #else
-  unsigned int water_level_measured = water_sensor.readRangeContinuousMillimeters();
+   unsigned int water_level_measured = water_sensor.readRangeContinuousMillimeters();
   if (water_sensor.timeoutOccurred()) { ERROR_println("WATER_LEVEL_SENSOR: TIMEOUT"); }
   else DEBUG_print("WATER_LEVEL_SENSOR: %u mm (low_threshold: %u) (took: %lu ms)\n", water_level_measured, WATER_LEVEL_SENSOR_LOW_THRESHOLD, millis()-start);
-  #endif
   #endif
 }
 
@@ -2702,14 +2686,7 @@ void setup() {
   /********************************************************
      WATER LEVEL SENSOR
   ******************************************************/ 
-  #if (WATER_LEVEL_SENSOR_ENABLE)  //XXX2
-  #ifdef VL53L0X_ADA
-  Wire1.begin(WATER_LEVEL_SENSOR_SDA, WATER_LEVEL_SENSOR_SCL, 100000); // SDA pin 16, SCL pin 17, 100kHz frequency
-  if (!lox.begin(VL53L0X_I2C_ADDR , false, &Wire1)) {
-    ERROR_println("Water level sensor cannot be initialized");
-    displaymessage(0, "Water sensor defect", "");
-  }
-  #else
+  #if (WATER_LEVEL_SENSOR_ENABLE)
   #ifdef ESP32
   Wire1.begin(WATER_LEVEL_SENSOR_SDA, WATER_LEVEL_SENSOR_SCL, 100000); //Wire0 cannot be re-used due to core0 stickyness
   water_sensor.setBus(&Wire1);
@@ -2727,8 +2704,6 @@ void setup() {
   water_sensor.setMeasurementTimingBudget(200000);
   // continuous timed mode
   water_sensor.startContinuous(ENABLE_CALIBRATION_MODE == 1 ? 1000 : water_sensor_check_timer / 2);
-  #endif
-  
   #endif
 
   /********************************************************

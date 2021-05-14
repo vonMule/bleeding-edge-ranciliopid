@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.8.0b2
+Version 2.8.0
 
 forked of [Rancilio-Silvia PID](http://rancilio-pid.de).
 
@@ -107,13 +107,13 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
-- 2.8.0 beta2:
-  - Update ZACWire to v1.3.2. (Thanks Adrian)
-- 2.8.0 beta1:
+- 2.8.0:
   - Feature: Add support to detect low water using a VL53L0X Time of Flight distance sensor. see [Howto](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Water-level-measurement-using-VL53L0X-(Time-of-Flight-distance-sensor))
-  - Renamed DEBUG_FORCE_GPIO_CHECK to ENABLE_CALIBRATION_MODE.
+  - Helge supplied a 3d printing model for rancilio silvia's water tank lid which can be used with the VL53L0X sensor. (thanks Helge!)
+  - Update ZACWire to v1.3.2. (Thanks Adrian)
+  - UserConfig change: 
+    - Renamed DEBUG_FORCE_GPIO_CHECK to ENABLE_CALIBRATION_MODE.
   - Fix: Show general logo when MASCHINE_TYPE is set to unknown.
-  - Update ZACWire to v1.3.2b6. (Thanks Adrian)
 - 2.7.1:
   - Added PR for automatic cleaning mode (Thanks to urbantrout/Harald).
     - Adaptions:
