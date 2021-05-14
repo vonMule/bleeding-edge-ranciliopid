@@ -125,6 +125,8 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
           u8g2.drawXBMP(5, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);
         } else if (MACHINE_TYPE == "ecm") {
           u8g2.drawXBMP(11, 0, ecm_logo_width, ecm_logo_height, ecm_logo_bits);
+        } else {
+          u8g2.drawXBMP(41, 0, general_logo_width, general_logo_height, general_logo_bits);
         }
     } else {
     #if (ICON_COLLECTION == 3)

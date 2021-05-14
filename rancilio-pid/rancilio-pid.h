@@ -5,7 +5,7 @@
 
 #include "userConfig.h"
 
-#if (DEBUG_FORCE_GPIO_CHECK==1)
+#if (ENABLE_CALIBRATION_MODE==1)
 #define DEBUGMODE
 #define BLYNK_ENABLE 0
 #define MQTT_ENABLE 0
@@ -22,9 +22,6 @@
 #ifndef CONTROLS_CONFIG
 #define CONTROLS_CONFIG ""
 #endif
-
-//#include "display.h"
-//#include "MQTT.h"
 
 #include "src/RemoteDebug/RemoteDebug.h" //https://github.com/JoaoLopesF/RemoteDebug
 //#include <RemoteDebug.h>  // uncomment this line AND delete src/RemoteDebug/ folder, if you want to use system lib
