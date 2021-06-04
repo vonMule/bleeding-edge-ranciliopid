@@ -1,6 +1,10 @@
 #ifndef _control_H
 #define _control_H
 
+#include "userConfig.h"
+#include "MQTT.h"
+#include "PIDBias.h"
+
 //supported actions
 #define UNDEFINED_ACTION  0  // can also be used as NOOP
 #define BREWING   1
@@ -48,9 +52,30 @@ void checkControls(controlMap*);
 void actionController(int, int);
 void actionController(int, int, bool);
 void actionController(int, int, bool, bool);
+void printMultiToggleConfig();
+void configureControlsHardware(controlMap* controlsConfig);
+int convertActionToDefine(char*);
+
+void mqtt_callback_1(char* topic, unsigned char* data, unsigned int length);
+void mqtt_callback_2(uint32_t *client, const char* topic, uint32_t topic_len, const char *data, uint32_t length);
 
 int simulatedBrewSwitch = 0;
 
 
+extern unsigned long userActivity;
+extern controlMap* controlsConfig;
+extern const int OnlyPID;
+extern const int brewDetection;
+extern int brewing;
+extern void setGpioAction(int action, bool mode);
+extern int relayON, relayOFF;
+extern int steaming;
+extern int cleaning;
+extern PIDBias bPID; 
+extern unsigned long userActivitySavedOnForcedSleeping;
+extern int sleeping;
+extern unsigned long lastBrewEnd;
+extern bool MaschineColdstartRunOnce;
+extern double steadyPowerOffsetModified;
 
 #endif

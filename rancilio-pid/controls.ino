@@ -2,6 +2,8 @@
  * BLEEDING EDGE RANCILIO-PID.
  * https://github.com/medlor/bleeding-edge-ranciliopid
  *****************************************************/
+#include "controls.h"
+#include "rancilio-pid.h"
 
 void splitStringBySeperator(char* source, char seperator, char** resultLeft, char** resultRight) {
     char* separator1 = strchr(source, seperator);
@@ -58,9 +60,6 @@ controlMap* parseControlsConfig() {
     strncpy(controlsConfigDefine, CONTROLS_CONFIG, strlen(CONTROLS_CONFIG));
     char* controlsConfigBlock;
     while ((controlsConfigBlock = strtok_r(controlsConfigDefine, "#", &controlsConfigDefine)) != NULL) {
-        int item = 0;
-        int lowerBoundary = 0;
-        int upperBoundary = 0;
         //snprintf(debugline, sizeof(debugline), "controlsConfigBlock=%s", controlsConfigBlock);
         //DEBUG_println(debugline);
 
@@ -85,7 +84,7 @@ controlMap* parseControlsConfig() {
 
         char* p = controlsConfigActionMappings;
         char* actionMap;
-        controlMap* nextControlMap;
+        controlMap* nextControlMap = NULL;
         while ((actionMap = strtok_r(p, ";", &p)) != NULL) {
           //snprintf(debugline, sizeof(debugline), "controlsConfigActionMap=%s", actionMap);
           //DEBUG_println(debugline);
@@ -103,12 +102,12 @@ controlMap* parseControlsConfig() {
           //DEBUG_println(debugline);
           if (convertActionToDefine(actionMapAction) >= MAX_NUM_ACTIONS) {
             ERROR_println("More actions defined as allowed in MAX_NUM_ACTIONS");
-            nextControlMap->action = UNDEFINED_ACTION;
+            if (!nextControlMap) nextControlMap->action = UNDEFINED_ACTION;
             continue;
           }
           if (controlsConfigGpio >= MAX_NUM_GPIO) {
             ERROR_println("More gpio used as allowed in MAX_NUM_GPIO");
-            nextControlMap->gpio = 0;
+            if (!nextControlMap) nextControlMap->gpio = 0;
             continue;
           }
           nextControlMap = (controlMap*) calloc(1, sizeof (struct controlMap));
@@ -295,15 +294,15 @@ int convertPortModeToDefine(char* portMode) {
 
 
 char* convertDefineToAction(int action) {
-  if (action == UNDEFINED_ACTION) { return "UNDEFINED_ACTION";}
-  else if (action == BREWING) { return "BREWING";}
-  else if (action == HOTWATER) { return "HOTWATER";}
-  else if (action == STEAMING) { return "STEAMING";}
-  else if (action == CLEANING) { return "CLEANING";}
-  else if (action == TEMP_INC) { return "TEMP_INC";}
-  else if (action == TEMP_DEC) { return "TEMP_DEC";}
-  else if (action == SLEEPING) { return "SLEEPING";}
-  return "UNDEFINED_ACTION";
+  if (action == UNDEFINED_ACTION) { return (char*)"UNDEFINED_ACTION";}
+  else if (action == BREWING) { return (char*)"BREWING";}
+  else if (action == HOTWATER) { return (char*)"HOTWATER";}
+  else if (action == STEAMING) { return (char*)"STEAMING";}
+  else if (action == CLEANING) { return (char*)"CLEANING";}
+  else if (action == TEMP_INC) { return (char*)"TEMP_INC";}
+  else if (action == TEMP_DEC) { return (char*)"TEMP_DEC";}
+  else if (action == SLEEPING) { return (char*)"SLEEPING";}
+  return (char*)"UNDEFINED_ACTION";
 }
 
 
@@ -348,11 +347,11 @@ void actionController(int action, int newState, bool publishAction, bool publish
   //actionState logic should remain in actionController() function and not the helper functions
   if (newState != oldState) {
     userActivity = millis();
-    if (action == HOTWATER) { actionController(BREWING, 0); actionController(SLEEPING, 0); actionState[action] = newState; hotwaterAction(newState); if (publishAction) mqtt_publish("actions/HOTWATER", int2string(newState));}
-    else if (action == BREWING) { actionController(STEAMING, 0); actionController(HOTWATER, 0); actionController(SLEEPING, 0); actionState[action] = newState; brewingAction(newState); actionPublish("actions/BREWING", V101, newState, publishAction, publishActionBlynk);}
-    else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(SLEEPING, 0); actionState[action] = newState; steamingAction(newState); actionPublish("actions/STEAMING", V103, newState, publishAction, publishActionBlynk);}
-    else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionController(SLEEPING, 0); actionState[action] = newState; cleaningAction(newState); actionPublish("actions/CLEANING", V107, newState, publishAction, publishActionBlynk);}
-    else if (action == SLEEPING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionState[action] = newState; sleepingAction(newState); actionPublish("actions/SLEEPING", V110, newState, publishAction, publishActionBlynk);}
+    if (action == HOTWATER) { actionController(BREWING, 0); actionController(SLEEPING, 0); actionState[action] = newState; hotwaterAction(newState); if (publishAction) mqtt_publish((char*)"actions/HOTWATER", int2string(newState));}
+    else if (action == BREWING) { actionController(STEAMING, 0); actionController(HOTWATER, 0); actionController(SLEEPING, 0); actionState[action] = newState; brewingAction(newState); actionPublish((char*)"actions/BREWING", 101, newState, publishAction, publishActionBlynk);}
+    else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(SLEEPING, 0); actionState[action] = newState; steamingAction(newState); actionPublish((char*)"actions/STEAMING", 103, newState, publishAction, publishActionBlynk);}
+    else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionController(SLEEPING, 0); actionState[action] = newState; cleaningAction(newState); actionPublish((char*)"actions/CLEANING", 107, newState, publishAction, publishActionBlynk);}
+    else if (action == SLEEPING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionState[action] = newState; sleepingAction(newState); actionPublish((char*)"actions/SLEEPING", 110, newState, publishAction, publishActionBlynk);}
     snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
     DEBUG_println(debugline);
   } else {
@@ -363,15 +362,17 @@ void actionController(int action, int newState, bool publishAction, bool publish
 
 void actionPublish(char* mqtt_topic, unsigned int blynk_vpin, int newState, bool publishActionMQTT, bool publishActionBlynk) {
   //TODO add mapping table of action/setting to mqtt-topic&blynk_vpin
-  if (publishActionMQTT) mqtt_publish(mqtt_topic, int2string(newState)); 
+  if (publishActionMQTT) mqtt_publish(mqtt_topic, int2string(newState));
+  #if (BLYNK_ENABLE == 1)
   if (publishActionBlynk) Blynk.virtualWrite(blynk_vpin, newState);
+  #endif
 }
 
-boolean checkArrayInArray(int a[], int sizeof_a, int b[], int sizeof_b) {
+bool checkArrayInArray(int a[], int sizeof_a, int b[], int sizeof_b) {
   //DEBUG_print("checkArrayInArray() a[]=%d,%d,%d\n", a[0], a[1], a[2]);
   //DEBUG_print("checkArrayInArray() b[]=%d,%d,%d\n", b[0], b[1], b[2]);
   if (sizeof_a == 0) return false;
-  boolean found = false;
+  bool found = false;
   for (int i1=0; i1 < sizeof_a; i1++) {
     //DEBUG_print("checkArrayInArray() i1: %d (sizeof=%d)\n", a[i1], sizeof_a);
     if (a[i1] == -1) break;
@@ -394,7 +395,6 @@ int checkMultiToggle() {
   int multi_toggle_2[] = MULTI_TOGGLE_2_GPIOS;
   int multi_toggle_3[] = MULTI_TOGGLE_3_GPIOS;
   controlMap* ptr = controlsConfig;
-  int currentAction = -1;
   int portRead = -1;
   const int max_toggles = 5; // limit to max 5 toggles
   int gpio_active[max_toggles] = {-1, -1, -1, -1, -1}; 
@@ -467,7 +467,7 @@ void checkControls(controlMap* controlsConfig) {
       if (strcmp(ptr->type, "trigger") == 0) {
         if (currentAction == UNDEFINED_ACTION) {  //no boundaries match -> button not pressed anymore
           if (gpioLastAction[portRead] != UNDEFINED_ACTION) {
-            //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=released", portRead, convertDefineToAction(gpio_16_lastAction));
+            //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=released", portRead, convertDefineToAction(gpioLastAction[portRead]));
             //DEBUG_println(debugline);
           }
           gpioLastAction[portRead] = UNDEFINED_ACTION;

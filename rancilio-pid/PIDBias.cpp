@@ -25,7 +25,7 @@
 
 int PIDBias::signnum_c(double x) {
   if (x >= 0.0) return 1;
-  if (x < 0.0) return -1;
+  else return -1;
 }
 
 PIDBias::PIDBias(double* Input, double* Output, double* steadyPower, double* steadyPowerOffset, unsigned long* steadyPowerOffset_Activated, int* steadyPowerOffsetTime, double** Setpoint,
@@ -344,7 +344,7 @@ void PIDBias::SetSteadyPowerDefault(double steadyPowerDefault_set)
 //    steadyPowerOffset = convertUtilisationToOutput(steadyPowerOffset_set);
 //}
 
-void PIDBias::SetAutoTune(boolean steadyPowerAutoTune_set)
+void PIDBias::SetAutoTune(bool steadyPowerAutoTune_set)
 {
     steadyPowerAutoTune = steadyPowerAutoTune_set;
 }
@@ -368,7 +368,7 @@ void PIDBias::UpdateSteadyPowerOffset(unsigned long steadyPowerOffset_Activated_
 double PIDBias::CalculateSteadyPowerOffset() {
   unsigned long diff = millis() - *mySteadyPowerOffset_Activated;
   if (*mySteadyPowerOffset_Activated == 0 || *mySteadyPowerOffset_Time <= 0 ||
-     (*mySteadyPowerOffset_Activated > 0) && (diff >= *mySteadyPowerOffset_Time*1000)) {
+     ((*mySteadyPowerOffset_Activated > 0) && (diff >= *mySteadyPowerOffset_Time*1000))) {
     return 0;
   }
   double steadyPowerOffsetPerMillisecond = *mySteadyPowerOffset / (*mySteadyPowerOffset_Time*1000);

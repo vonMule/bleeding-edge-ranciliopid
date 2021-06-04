@@ -1,6 +1,7 @@
 /***********************************
    DISPLAY
  ***********************************/
+#include "display.h"
 
  void u8g2_init(void) {
   #ifdef ESP32
@@ -36,23 +37,16 @@ bool screenSaverCheck() {
 
 char* outputSimpleState() {
   switch(activeState) {
-    case 6: { return "Steaming"; }
-    case 8: { return "Cleaning"; }
-    case 7: { return "Sleeping"; }
+    case 6: { return (char*)"Steaming"; }
+    case 8: { return (char*)"Cleaning"; }
+    case 7: { return (char*)"Sleeping"; }
   }
-  if (!pidON) { return "Turned off"; }
-  if (brewReady) { return "Ready"; }
-  return "Please wait";
+  if (!pidON) { return (char*)"Turned off"; }
+  if (brewReady) { return (char*)"Ready"; }
+  return (char*)"Please wait";
 }
-                            
-void displaymessage(int activeState, char* displaymessagetext, char* displaymessagetext2) {
-  if (Display > 0) {
-    static int only_once = 0;
-    #ifdef ESP32
-    //DEBUG_print("activeState=%d | %s | %s\n", activeState, displaymessagetext, displaymessagetext2);
-    if ((millis() >= previousMillisDisplay + intervalDisplay) || only_once == 0) {
-      previousMillisDisplay = millis();
-      activeStateBuffer = activeState;
+
+void setDisplayTextState(int activeState, char* displaymessagetext, char* displaymessagetext2) {
       #if (DISPLAY_TEXT_STATE==1)
       if (strlen(displaymessagetext) > 0 || screenSaverOn || activeState == 4) {  //dont show state in certain situations
         snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
@@ -65,6 +59,30 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
       snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
       snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);
       #endif
+}
+
+                            
+void displaymessage(int activeState, char* displaymessagetext, char* displaymessagetext2) {
+  if (Display > 0) {
+    static int only_once = 0;
+    #ifdef ESP32
+    //DEBUG_print("activeState=%d | %s | %s\n", activeState, displaymessagetext, displaymessagetext2);
+    if ((millis() >= previousMillisDisplay + intervalDisplay) || only_once == 0) {
+      previousMillisDisplay = millis();
+      activeStateBuffer = activeState;
+      setDisplayTextState(activeStateBuffer, displaymessagetext, displaymessagetext2);
+      /*       #if (DISPLAY_TEXT_STATE==1)
+      if (strlen(displaymessagetext) > 0 || screenSaverOn || activeState == 4) {  //dont show state in certain situations
+        snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
+        snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);  
+      } else {
+        snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
+        snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", outputSimpleState()); 
+      }
+      #else
+      snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
+      snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);
+      #endif */
     }
     if (only_once == 0) {
       only_once = 1;
@@ -85,7 +103,8 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
     }
     if ((millis() >= previousMillisDisplay + intervalDisplay) || previousMillisDisplay == 0) {
       previousMillisDisplay = millis();
-      displaymessage_helper(activeState, displaymessagetext, displaymessagetext2);
+      setDisplayTextState(activeState, displaymessagetext, displaymessagetext2);
+      displaymessage_helper(activeState, displaymessagetextBuffer, displaymessagetext2Buffer);
     }
     #endif
   }
@@ -106,7 +125,6 @@ void displaymessage_esp32_task(void* activeStateParam) {
 #endif
 
 void displaymessage_helper(int activeState, char* displaymessagetext, char* displaymessagetext2) {
-  static char line[10];
   u8g2.clearBuffer();
   u8g2.setBitmapMode(1);
 
@@ -119,11 +137,11 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
 
     //boot logo
     if (activeState == 0) {
-        if (MACHINE_TYPE == "rancilio") {
+        if (strcmp(MACHINE_TYPE, "rancilio")==0) {
           u8g2.drawXBMP(41, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
-        } else if (MACHINE_TYPE == "gaggia") {
+        } else if (strcmp(MACHINE_TYPE, "gaggia")==0) {
           u8g2.drawXBMP(5, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);
-        } else if (MACHINE_TYPE == "ecm") {
+        } else if (strcmp(MACHINE_TYPE, "ecm")==0) {
           u8g2.drawXBMP(11, 0, ecm_logo_width, ecm_logo_height, ecm_logo_bits);
         } else {
           u8g2.drawXBMP(41, 0, general_logo_width, general_logo_height, general_logo_bits);
@@ -272,10 +290,10 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     static bool screen_saver_direction_right = true;
     const int unsigned screen_saver_step = 4;
     unsigned int logo_width = icon_width;
-    if ( enableScreenSaver == 3 && MACHINE_TYPE == "gaggia") {
+    if ( enableScreenSaver == 3 && strcmp(MACHINE_TYPE, "gaggia")==0) {
       logo_width = 125;  //hack which will result in logo only moving left
       screen_saver_x_pos = 5;
-    } else if ( enableScreenSaver == 3 && MACHINE_TYPE == "ecm") {
+    } else if ( enableScreenSaver == 3 && strcmp(MACHINE_TYPE, "ecm")==0) {
       logo_width = 125;  //hack which will result in logo only moving left
       screen_saver_x_pos = 11;
     }
@@ -301,11 +319,11 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     } else if ( enableScreenSaver == 2 ) {
       u8g2.drawXBMP(screen_saver_x_pos, 0, icon_width, icon_height, brew_ready_bits);
     } else if ( enableScreenSaver == 3 ) {
-      if (MACHINE_TYPE == "rancilio") {
+      if (strcmp(MACHINE_TYPE, "rancilio")==0) {
         u8g2.drawXBMP(screen_saver_x_pos, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
-      } else if (MACHINE_TYPE == "gaggia") {
+      } else if (strcmp(MACHINE_TYPE, "gaggia")==0) {
         u8g2.drawXBMP(screen_saver_x_pos, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);  //TODO fix
-      } else if (MACHINE_TYPE == "ecm") {
+      } else if (strcmp(MACHINE_TYPE,"ecm")==0) {
         u8g2.drawXBMP(screen_saver_x_pos, 0, ecm_logo_width, ecm_logo_height, ecm_logo_bits);  //TODO fix
       }
     }
@@ -318,7 +336,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
   const unsigned int align_right_countdown_min = LCDWidth - 52 ;
   const unsigned int align_right_countdown_sec = LCDWidth - 52 + 20;
   power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ( (millis() - lastBrewEnd) / 1000);
-  if (power_off_timer <= powerOffCountDownStart && !brewing && displaymessagetext == "" && displaymessagetext2 == "" ) {
+  if (power_off_timer <= powerOffCountDownStart && !brewing && displaymessagetext == '\0' && displaymessagetext2 == '\0' ) {
     u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
     u8g2.drawGlyph(align_right_countdown_min - 15, 37 + 7, 0x004e);
     u8g2.setFont(u8g2_font_profont22_tf);
@@ -329,7 +347,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     u8g2.println("m");
     u8g2.setFont(u8g2_font_profont22_tf);
     u8g2.setCursor(align_right_countdown_sec, 37);
-    snprintf(line, sizeof(line), "%0.2d", int(power_off_timer % 60));
+    snprintf(line, sizeof(line), "%02d", int(power_off_timer % 60));
     u8g2.print(line);
     u8g2.setCursor(align_right_countdown_sec + 23, 37);
     u8g2.setFont(u8g2_font_profont10_tf);

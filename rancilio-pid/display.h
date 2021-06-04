@@ -1,7 +1,8 @@
 #ifndef _display_H
 #define _display_H
 
-const int Display = DISPLAY;
+#include "rancilio-pid.h"
+const int Display = DISPLAY_HARDWARE;
 
 #include "icon.h"
 #if (ICON_COLLECTION == 2)

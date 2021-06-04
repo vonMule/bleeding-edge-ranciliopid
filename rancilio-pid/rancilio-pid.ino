@@ -33,7 +33,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM  = "2.8.0";
+const char* sysVersion PROGMEM  = "2.9.0b1";
 
 /********************************************************
   definitions below must be changed in the userConfig.h file
@@ -72,11 +72,10 @@ WiFiClient espClient;
 
 // MQTT
 #if (MQTT_ENABLE==1)
-#include "src/PubSubClient/PubSubClient.h"
-//#include <PubSubClient.h>  // uncomment this line AND delete src/PubSubClient/ folder, if you want to use system lib
+#include <PubSubClient.h>
 PubSubClient mqtt_client(espClient);
 #elif (MQTT_ENABLE==2)
-#include "uMQTTBroker.h"
+#include "src/uMQTTBroker/src/uMQTTBroker.h"
 #endif
 const int MQTT_MAX_PUBLISH_SIZE = 120; //see https://github.com/knolleary/pubsubclient/blob/master/src/PubSubClient.cpp
 const char* mqtt_server_ip = MQTT_SERVER_IP;
@@ -294,7 +293,7 @@ float marginOfFluctuation = float(BREW_READY_DETECTION);
 const int enabledHardwareLed = 0;       // 0 = disable functionality
 float marginOfFluctuation = 0;          // 0 = disable functionality
 #endif
-char* blynkReadyLedColor = "#000000";
+char* blynkReadyLedColor = (char*)"#000000";
 unsigned long lastCheckBrewReady = 0;
 unsigned long lastBrewReady = 0;
 unsigned long lastBrewEnd = 0;    //used to determime the time it takes to reach brewReady==true
@@ -346,7 +345,7 @@ unsigned long previousMillis_water_level_check = 0;
 ******************************************************/
 #define USE_ZACWIRE_TSIC
 #ifdef USE_ZACWIRE_TSIC
-#include "src/ZACwire-Library-master/ZACwire.h"
+#include <ZACwire.h>
 #ifdef ESP32
 ZACwire<pinTemperature> TSIC(306,120,0);
 #else
@@ -440,7 +439,7 @@ BLYNK_WRITE(V12) {
   starttemp = param.asDouble();
 }
 BLYNK_WRITE(V13) {
-  pidON = param.asInt();
+  pidON = param.asInt() == 1 ? 1: 0;
 }
 BLYNK_WRITE(V30) {
   aggoKp = param.asDouble();
@@ -567,13 +566,13 @@ void testEmergencyStop(){
     if (emergencyStop != true) {
       snprintf(debugline, sizeof(debugline), "EmergencyStop because temperature>%u (temperature=%0.2f)", emergency_temperature, getCurrentTemperature());
       ERROR_println(debugline);
-      mqtt_publish("events", debugline);
+      mqtt_publish((char*)"events", debugline);
       emergencyStop = true;
     }
   } else if (emergencyStop == true && getCurrentTemperature() < emergency_temperature) {
-    snprintf(debugline, sizeof(debugline), "EmergencyStop ended because temperature<%0.2f (temperature=%0.2f)", emergency_temperature, getCurrentTemperature());
+    snprintf(debugline, sizeof(debugline), "EmergencyStop ended because temperature<%u (temperature=%0.2f)", emergency_temperature, getCurrentTemperature());
     ERROR_println(debugline);
-    mqtt_publish("events", debugline);
+    mqtt_publish((char*)"events", debugline);
     emergencyStop = false;
   }
 }
@@ -853,7 +852,7 @@ bool checkSensor(float tempInput, float temppreviousInput) {
       sensorError = true;
       snprintf(debugline, sizeof(debugline), "temperature sensor malfunction: temp_current=%0.2f, temp_prev=%0.2f", tempInput, previousInput);
       ERROR_println(debugline);
-      mqtt_publish("events", debugline);
+      mqtt_publish((char*)"events", debugline);
     }
   } else if (TempSensorRecovery == 1 &&
              (!(tempInput < 0 || tempInput > 150))) {
@@ -877,7 +876,7 @@ void refreshTemp() {
     if ( floor(millis_elapsed / refreshTempInterval) >= 2) {
         snprintf(debugline, sizeof(debugline), "Main loop() hang: refreshTemp() missed=%g, millis_elapsed=%lu, isrCounter=%u", floor(millis_elapsed / refreshTempInterval) -1, millis_elapsed, isrCounter);
         ERROR_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
     }
     if (currentMillistemp >= previousMillistemp + refreshTempInterval)
     {
@@ -1107,19 +1106,19 @@ void sendToBlynk() {
   if (currentMillisBlynk >= previousMillisBlynk + intervalBlynk) {
     previousMillisBlynk = currentMillisBlynk;
     if (brewReady) {
-      if (blynkReadyLedColor != BLYNK_GREEN) {
-        blynkReadyLedColor = BLYNK_GREEN;
+      if (blynkReadyLedColor != (char*)BLYNK_GREEN) {
+        blynkReadyLedColor = (char*)BLYNK_GREEN;
         brewReadyLed.setColor(blynkReadyLedColor);
       }
     } else if (marginOfFluctuation != 0 && checkBrewReady(setPoint, marginOfFluctuation * 2, 40)) {
-      if (blynkReadyLedColor != BLYNK_YELLOW) {
-        blynkReadyLedColor = BLYNK_YELLOW;
+      if (blynkReadyLedColor != (char*)BLYNK_YELLOW) {
+        blynkReadyLedColor = (char*)BLYNK_YELLOW;
         brewReadyLed.setColor(blynkReadyLedColor);
       }
     } else {
-      if (blynkReadyLedColor != BLYNK_RED) {
+      if (blynkReadyLedColor != (char*)BLYNK_RED) {
         brewReadyLed.on();
-        blynkReadyLedColor = BLYNK_RED;
+        blynkReadyLedColor = (char*)BLYNK_RED;
         brewReadyLed.setColor(blynkReadyLedColor);
       }
     }
@@ -1201,7 +1200,7 @@ void updateState() {
       if (Input >= starttemp + starttempOffset  || !pidMode || steaming || sleeping || cleaning) {  //80.5 if 44C. | 79,7 if 30C |
         snprintf(debugline, sizeof(debugline), "** End of Coldstart. Transition to state 2 (constant steadyPower)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         bPID.SetSumOutputI(0);
         activeState = 2;
       }
@@ -1247,8 +1246,8 @@ void updateState() {
             starttemp -= 0.1;
           }
           //persist starttemp auto-tuning setting
-          mqtt_publish("starttemp/set", number2string(starttemp));
-          mqtt_publish("starttemp", number2string(starttemp));
+          mqtt_publish((char*)"starttemp/set", number2string(starttemp));
+          mqtt_publish((char*)"starttemp", number2string(starttemp));
           Blynk.virtualWrite(V12, String(starttemp, 1));
           force_eeprom_sync = millis();
         } else {
@@ -1257,7 +1256,7 @@ void updateState() {
 
         snprintf(debugline, sizeof(debugline), "** End of stabilizing. Transition to state 3 (normal mode)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         bPID.SetSumOutputI(0);
         activeState = 3;
         bPID.SetAutoTune(true);
@@ -1280,9 +1279,9 @@ void updateState() {
         //DEBUG_print("t(0)=%0.2f | t(1)=%0.2f | t(2)=%0.2f | t(3)=%0.2f | t(5)=%0.2f | t(10)=%0.2f | t(13)=%0.2f\n", getTemperature(0), getTemperature(1), getTemperature(2), getTemperature(3), getTemperature(5), getTemperature(7), getTemperature(10), getTemperature(13));
         snprintf(debugline, sizeof(debugline), "** End of Brew. Transition to state 2 (constant steadyPower)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         bPID.SetAutoTune(true);  //dont change mode during cleaning
-        mqtt_publish("brewDetected", "0");
+        mqtt_publish((char*)"brewDetected", (char*)"0");
         bPID.SetSumOutputI(0);
         timerBrewDetection = 0;
         activeState = 2;
@@ -1301,7 +1300,7 @@ void updateState() {
       if ( fabs(Input - *activeSetPoint) < outerZoneTemperatureDifference || steaming || (OnlyPID && brewDetection == 1 && simulatedBrewSwitch) || !pidMode || sleeping || cleaning) {
         snprintf(debugline, sizeof(debugline), "** End of outerZone. Transition to state 3 (normal mode)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         if (pidMode == 1) bPID.SetMode(AUTOMATIC);
         bPID.SetSumOutputI(0);
         bPID.SetAutoTune(true);
@@ -1318,7 +1317,7 @@ void updateState() {
       if (!steaming) {
         snprintf(debugline, sizeof(debugline), "** End of Steaming phase. Now cooling down. Transition to state 3 (normal mode)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         if (*activeSetPoint != setPoint) {
           activeSetPoint = &setPoint;  //TOBIAS rename setPoint -> brewSetPoint
           DEBUG_print("set activeSetPoint: %0.2f\n", *activeSetPoint);
@@ -1337,7 +1336,7 @@ void updateState() {
       if (!sleeping) {
         snprintf(debugline, sizeof(debugline), "** End of Sleeping phase. Transition to state 3 (normal mode)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         bPID.SetAutoTune(true);
         bPID.SetMode(AUTOMATIC);
         activeState = 3;
@@ -1349,7 +1348,7 @@ void updateState() {
       if (!cleaning) {
         snprintf(debugline, sizeof(debugline), "** End of Cleaning phase. Transition to state 3 (normal mode)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         bPID.SetAutoTune(true);
         activeState = 3;
       }
@@ -1377,7 +1376,7 @@ void updateState() {
       if (sleeping) {
         snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to state 7 (sleeping)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         activeState = 7;
         bPID.SetAutoTune(false);
         bPID.SetMode(MANUAL);
@@ -1388,7 +1387,7 @@ void updateState() {
       if (cleaning) {
         snprintf(debugline, sizeof(debugline), "Cleaning Detected. Transition to state 8 (Clean)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         bPID.SetAutoTune(false);  //do not tune
         activeState = 8;
         break;
@@ -1399,7 +1398,7 @@ void updateState() {
         snprintf(debugline, sizeof(debugline), "Steaming Detected. Transition to state 6 (Steam)");
         //digitalWrite(pinRelayVentil, relayOFF);
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         if (*activeSetPoint != setPointSteam) {
           activeSetPoint = &setPointSteam;
           DEBUG_print("set activeSetPoint: %0.2f\n", *activeSetPoint);
@@ -1412,7 +1411,7 @@ void updateState() {
       if (Input <= starttemp - coldStartStep1ActivationOffset) {
         snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to state 1 (coldstart)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         steadyPowerOffset_Activated = millis();
         DEBUG_print("Enable steadyPowerOffset (%0.2f)\n", steadyPowerOffset);
         bPID.SetAutoTune(false);  //do not tune during coldstart + phase2
@@ -1442,10 +1441,10 @@ void updateState() {
           }
           userActivity = millis();
           timerBrewDetection = 1 ;
-          mqtt_publish("brewDetected", "1");
+          mqtt_publish((char*)"brewDetected", (char*)"1");
           snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to state 4 (brew)");
           DEBUG_println(debugline);
-          mqtt_publish("events", debugline);
+          mqtt_publish((char*)"events", debugline);
           bPID.SetSumOutputI(0);
           activeState = 4;
           break;
@@ -1460,7 +1459,7 @@ void updateState() {
         //DEBUG_print("Out Zone Detection: Avg(3)=%0.2f | Avg(5)=%0.2f Avg(20)=%0.2f Avg(2)=%0.2f\n", getAverageTemperature(3), getAverageTemperature(5), getAverageTemperature(20), getAverageTemperature(2));
         snprintf(debugline, sizeof(debugline), "** End of normal mode. Transition to state 5 (outerZone)");
         DEBUG_println(debugline);
-        mqtt_publish("events", debugline);
+        mqtt_publish((char*)"events", debugline);
         bPID.SetSumOutputI(0);
         activeState = 5;
         if (Input > setPoint) {  // if we are above setPoint always disable heating (primary useful after steaming)  YYY1
@@ -1480,14 +1479,14 @@ void updateState() {
       steadyPowerOffset_Activated = 0;
       snprintf(debugline, sizeof(debugline), "ATTENTION: Disabled steadyPowerOffset because its too large or starttemp too high");
       ERROR_println(debugline);
-      mqtt_publish("events", debugline);
+      mqtt_publish((char*)"events", debugline);
       bPID.SetAutoTune(true);
     } else if (Input - setPoint >= 0.4  && millis() >= steadyPowerOffsetDecreaseTimer + 90000) {
       steadyPowerOffsetDecreaseTimer = millis();
       steadyPowerOffsetModified /= 2;
       snprintf(debugline, sizeof(debugline), "ATTENTION: steadyPowerOffset halved because its too large or starttemp too high");
       ERROR_println(debugline);
-      mqtt_publish("events", debugline);
+      mqtt_publish((char*)"events", debugline);
     } else if (millis() >= steadyPowerOffset_Activated + steadyPowerOffsetTime*1000) {
       steadyPowerOffset_Activated = 0;
       DEBUG_print("Disable steadyPowerOffset\n");
@@ -1500,8 +1499,8 @@ void updateState() {
  * PID & HEATER ISR
  ***********************************/
 unsigned long pidComputeDelay = 0;
+float Output_save;
 void pidCompute() {
-  float Output_save;
   //certain activeState set Output to fixed values
   if (activeState == 1 || activeState == 2 || activeState == 4) {
     Output_save = Output;
@@ -1518,6 +1517,7 @@ void pidCompute() {
     }
     pidComputeLastRunTime = millis();
     if (activeState == 1 || activeState == 2 || activeState == 4) {
+      #pragma GCC diagnostic error "-Wuninitialized"
       Output = Output_save;
     }
     DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f = b:%5.2f + p:%5.2f + i:%5.2f(%5.2f) + d:%5.2f\n",
@@ -1598,7 +1598,7 @@ void loop() {
     if (!brewReady && brewReadyCurrent) {
       snprintf(debugline, sizeof(debugline), "brewReady (Tuning took %lu secs)", ((lastCheckBrewReady - lastBrewEnd) / 1000) - 60);
       DEBUG_println(debugline);
-      mqtt_publish("events", debugline);
+      mqtt_publish((char*)"events", debugline);
       lastBrewReady = millis() - 60000;
     }
     brewReady = brewReadyCurrent;
@@ -1690,14 +1690,14 @@ void loop() {
           unsigned long now = millis();
           if (now >= lastMQTTStatusReportTime + lastMQTTStatusReportInterval) {
             lastMQTTStatusReportTime = now;
-            mqtt_publish("temperature", number2string(Input));
-            mqtt_publish("temperatureAboveTarget", number2string((Input - *activeSetPoint)));
-            mqtt_publish("heaterUtilization", number2string(convertOutputToUtilisation(Output)));
-            mqtt_publish("pastTemperatureChange", number2string(pastTemperatureChange(10)));
-            mqtt_publish("brewReady", bool2string(brewReady));
+            mqtt_publish((char*)"temperature", number2string(Input));
+            mqtt_publish((char*)"temperatureAboveTarget", number2string((Input - *activeSetPoint)));
+            mqtt_publish((char*)"heaterUtilization", number2string(convertOutputToUtilisation(Output)));
+            mqtt_publish((char*)"pastTemperatureChange", number2string(pastTemperatureChange(10)));
+            mqtt_publish((char*)"brewReady", bool2string(brewReady));
             if (ENABLE_POWER_OFF_COUNTDOWN != 0 ) {
               power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
-              mqtt_publish("powerOffTimer", int2string(power_off_timer >=0 ? ((power_off_timer+59)/60):0));  //in minutes always rounded up
+              mqtt_publish((char*)"powerOffTimer", int2string(power_off_timer >=0 ? ((power_off_timer+59)/60):0));  //in minutes always rounded up
             }
             //mqtt_publish_settings();  //not needed because we update live on occurence
            }
@@ -1722,7 +1722,7 @@ void loop() {
     lastCheckGpio = millis();
     debugControlHardware(controlsConfig);
     debugWaterLevelSensor();
-    displaymessage(0, "Calibrating", "check logs");
+    displaymessage(0, (char*)"Calibrating", (char*)"check logs");
   }
   return;
   #endif
@@ -1879,11 +1879,11 @@ void loop() {
       bPID.SetBurst(burstPower);
       snprintf(debugline, sizeof(debugline), "BURST Output=%0.2f", convertOutputToUtilisation(Output));
       DEBUG_println(debugline);
-      mqtt_publish("events", debugline);
+      mqtt_publish((char*)"events", (char*)debugline);
     }
 
     maintenance();  //update display_message_line1 & line2
-    displaymessage(activeState, displaymessage_line1, displaymessage_line2);
+    displaymessage(activeState, (char*)displaymessage_line1, (char*)displaymessage_line2);
 
     sendToBlynk();
     #if (1==0)
@@ -1905,7 +1905,7 @@ void loop() {
     digitalWrite(pinRelayHeater, LOW); //Stop heating
     char line2[17];
     snprintf(line2, sizeof(line2), "Temp. %0.2f", getCurrentTemperature());
-    displaymessage(0, "Check Temp. Sensor!", line2);
+    displaymessage(0, (char*)"Check Temp. Sensor!", (char*)line2);
 
   } else if (emergencyStop) {
     //Deactivate PID
@@ -1921,7 +1921,7 @@ void loop() {
     digitalWrite(pinRelayHeater, LOW); //Stop heating
     char line2[17];
     snprintf(line2, sizeof(line2), "%0.0f\xB0""C", getCurrentTemperature());
-    displaymessage(0, "Emergency Stop!", line2);
+    displaymessage(0, (char*)"Emergency Stop!", (char*)line2);
 
   } else {
     if ( millis() - output_timestamp > 15000) {
@@ -1935,8 +1935,8 @@ void loop() {
     steadyPowerSaved = steadyPower;
     steadyPowerMQTTDisableUpdateUntilProcessed = steadyPower;
     steadyPowerMQTTDisableUpdateUntilProcessedTime = millis();
-    mqtt_publish("steadyPower/set", number2string(steadyPower)); //persist value over shutdown
-    mqtt_publish("steadyPower", number2string(steadyPower));
+    mqtt_publish((char*)"steadyPower/set", number2string(steadyPower)); //persist value over shutdown
+    mqtt_publish((char*)"steadyPower", number2string(steadyPower));
     if (force_eeprom_sync == 0) {
       force_eeprom_sync = millis() + 600000; // reduce writes on eeprom
     }
@@ -2030,7 +2030,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
     steadyPowerOffsetTime = preferences.getInt("stePowOT", 0);
     burstPower = preferences.getDouble("burstPower", 0.0);
     brewDetectionPower = preferences.getDouble("bDetPow", 0.0);
-    pidON = preferences.getInt("pidON", 0);
+    pidON = preferences.getInt("pidON", 0) == 0 ? 0 : 1;
     setPointSteam = preferences.getDouble("sPointSte", 0.0);
     //cleaningCycles = preferences.getInt("clCycles", 0);
     //cleaningInterval = preferences.getInt("clInt", 0);
@@ -2108,7 +2108,6 @@ void sync_eeprom(bool startup_read, bool force_read) {
   double stePow_cfg;
   double stePowOff_cfg;
   int stePowOT_cfg;
-  double burstPower_cfg;
   double bDetPow_cfg;
   double sPointSte_cfg;
   //int clCycles_cfg;
@@ -2498,7 +2497,7 @@ void setup() {
         blynk_disabled_temporary = true;
         lastWifiConnectionAttempt = millis();
       }
-      displaymessage(0, "Cant connect to Wifi", "");
+      displaymessage(0, (char*)"Cant connect to Wifi", (char*)"");
       delay(1000);
     } else {
       DEBUG_print("IP address: %s\n", WiFi.localIP().toString().c_str());
@@ -2509,7 +2508,7 @@ void setup() {
         snprintf(topic_set, sizeof(topic_set), "%s%s/+/%s", mqtt_topic_prefix, hostname, "set");
         snprintf(topic_actions, sizeof(topic_actions), "%s%s/actions/+", mqtt_topic_prefix, hostname);
         mqtt_client.setServer(mqtt_server_ip, mqtt_server_port);
-        mqtt_client.setCallback(mqtt_callback);
+        mqtt_client.setCallback(mqtt_callback_1);
         if (!mqtt_reconnect(true)) {
           if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqtt_disabled_temporary = true;
           ERROR_print("Cannot connect to MQTT. Disabling...\n");
@@ -2535,7 +2534,7 @@ void setup() {
         const unsigned int mqtt_service_port = 1883;
         snprintf(topic_set, sizeof(topic_set), "%s%s/+/%s", mqtt_topic_prefix, hostname, "set");
         snprintf(topic_actions, sizeof(topic_actions), "%s%s/actions/+", mqtt_topic_prefix, hostname);
-        MQTT_server_onData(mqtt_callback);
+        MQTT_server_onData(mqtt_callback_2);
         if (MQTT_server_start(mqtt_service_port, max_subscriptions, max_retained_topics)) {
           if (!MQTT_local_subscribe((unsigned char *)topic_set, 0) || !MQTT_local_subscribe((unsigned char *)topic_actions, 0)) {
             ERROR_print("Cannot subscribe to local MQTT service\n");
@@ -2637,7 +2636,7 @@ void setup() {
         updateTemperatureHistory(Input);
         break;
       }
-      displaymessage(0, "Temp. sensor defect", "");
+      displaymessage(0, (char*)"Temp. sensor defect", (char*)"");
       ERROR_print("Temp. sensor defect. Cannot read consistant values. Retrying\n");
       delay(400);
     }
@@ -2660,7 +2659,7 @@ void setup() {
         updateTemperatureHistory(Input);
         break;
       }
-      displaymessage(0, "Temp. sensor defect", "");
+      displaymessage(0, (char*)"Temp. sensor defect", (char*)"");
       ERROR_print("Temp. sensor defect. Cannot read consistant values. Retrying\n");
       delay(1000);
     }
@@ -2675,7 +2674,7 @@ void setup() {
         updateTemperatureHistory(Input);
         break;
       }
-      displaymessage(0, "Temp. sensor defect", "");
+      displaymessage(0, (char*)"Temp. sensor defect", (char*)"");
       ERROR_print("Temp. sensor defect. Cannot read consistant values. Retrying\n");
       delay(1000);
     }
@@ -2698,7 +2697,7 @@ void setup() {
   if (!water_sensor.init())
   {
     ERROR_println("Water level sensor cannot be initialized");
-    displaymessage(0, "Water sensor defect", "");
+    displaymessage(0, (char*)"Water sensor defect", (char*)"");
   }
   // increased accuracy by increase timing budget to 200 ms
   water_sensor.setMeasurementTimingBudget(200000);

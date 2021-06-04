@@ -2,7 +2,7 @@
 
 BLEEDING EDGE MASTER VERSION 
 
-Version 2.8.0
+Version 2.9.0b
 
 forked of [Rancilio-Silvia PID](http://rancilio-pid.de).
 
@@ -107,6 +107,16 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.9.0b1:
+  - Not yet tested on live machine!
+  - Add full support for platformio and fix compile warnings.
+    - Force espressif8266 to Version 2 (until external libs are adapted)
+  - Arduino IDE: Remove some libaries which from now on have to be installed manually. see [wiki](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-Platformio)
+  - Fix: 
+    - DISPLAY_TEXT_STATE is working on exp8266.
+  - userConfig:
+    - breaking change:
+      - renamed DISPLAY to DISPLAY_HARDWARE
 - 2.8.0:
   - Feature: Add support to detect low water using a VL53L0X Time of Flight distance sensor. see [Howto](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Water-level-measurement-using-VL53L0X-(Time-of-Flight-distance-sensor))
   - Helge supplied a 3d printing model for rancilio silvia's water tank lid which can be used with the VL53L0X sensor. (thanks Helge!)

@@ -98,7 +98,7 @@ class PIDBias
   unsigned long* mySteadyPowerOffset_Activated;
   int* mySteadyPowerOffset_Time;
   double steadyPowerOffsetCalculated;
-  boolean steadyPowerAutoTune;
+  bool steadyPowerAutoTune;
 
   double *myInput;              // * Pointers to the Input, Output, and Setpoint variables
   double *myOutput;             //   This creates a hard link between the variables and the

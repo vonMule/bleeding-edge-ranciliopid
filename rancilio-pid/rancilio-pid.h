@@ -13,6 +13,7 @@
 
 #ifdef ESP32
 // ESP32 sometimes (after crash) is not able to connect to wifi. Workaround: set DISABLE_SERVICES_ON_STARTUP_ERRORS to 0
+#undef DISABLE_SERVICES_ON_STARTUP_ERRORS
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 0
 #if (MQTT_ENABLE == 2)
 #error ERROR Not supported to set MQTT_ENABLE=2 on ESP32
@@ -23,7 +24,7 @@
 #define CONTROLS_CONFIG ""
 #endif
 
-#include "src/RemoteDebug/RemoteDebug.h" //https://github.com/JoaoLopesF/RemoteDebug
+#include <RemoteDebug.h> //https://github.com/JoaoLopesF/RemoteDebug
 //#include <RemoteDebug.h>  // uncomment this line AND delete src/RemoteDebug/ folder, if you want to use system lib
 extern RemoteDebug Debug;
 
@@ -34,14 +35,12 @@ extern RemoteDebug Debug;
 #define ERROR_println(a)
 #define DEBUGSTART(a)
 #else
-#define DEBUG_print(fmt, ...) if (Debug.isActive(Debug.DEBUG)) Debug.printf("%0u " fmt, millis()/1000, ##__VA_ARGS__)
-#define DEBUG_println(a) if (Debug.isActive(Debug.DEBUG)) Debug.printf("%0u %s\n", millis()/1000, a)
-#define ERROR_print(fmt, ...) if (Debug.isActive(Debug.ERROR)) Debug.printf("%0u " fmt, millis()/1000, ##__VA_ARGS__)
-#define ERROR_println(a) if (Debug.isActive(Debug.ERROR)) Debug.printf("%0u %s\n", millis()/1000, a)
+#define DEBUG_print(fmt, ...) if (Debug.isActive(Debug.DEBUG)) Debug.printf("%0lu " fmt, millis()/1000, ##__VA_ARGS__)
+#define DEBUG_println(a) if (Debug.isActive(Debug.DEBUG)) Debug.printf("%0lu %s\n", millis()/1000, a)
+#define ERROR_print(fmt, ...) if (Debug.isActive(Debug.ERROR)) Debug.printf("%0lu " fmt, millis()/1000, ##__VA_ARGS__)
+#define ERROR_println(a) if (Debug.isActive(Debug.ERROR)) Debug.printf("%0lu %s\n", millis()/1000, a)
 #define DEBUGSTART(a) Serial.begin(a);
 #endif
-
-
 
 #define LCDWidth                        u8g2.getDisplayWidth()
 #define LCDHeight                       u8g2.getDisplayHeight()
@@ -49,6 +48,7 @@ extern RemoteDebug Debug;
 #define ALIGN_RIGHT(t)                  (LCDWidth - u8g2.getUTF8Width(t))
 #define ALIGN_RIGHT_2(t1,t2)            (LCDWidth - u8g2.getUTF8Width(t1) - u8g2.getUTF8Width(t2))
 #define ALIGN_LEFT                      0
+
 
 //returns heater utilization in percent
 double convertOutputToUtilisation(double);
@@ -65,5 +65,7 @@ void print_settings();
 void checkWifi();
 
 void checkWifi(bool, unsigned long);
+
+extern char debugline[200];
 
 #endif
