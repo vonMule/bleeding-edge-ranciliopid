@@ -346,13 +346,15 @@ void actionController(int action, int newState, bool publishAction, bool publish
   //call special helper functions when state changes
   //actionState logic should remain in actionController() function and not the helper functions
   if (newState != oldState) {
+    snprintf(debugline, sizeof(debugline), "START action=%s state=%d (old=%d)", convertDefineToAction(action), newState, oldState);
+    DEBUG_println(debugline);
     userActivity = millis();
     if (action == HOTWATER) { actionController(BREWING, 0); actionController(SLEEPING, 0); actionState[action] = newState; hotwaterAction(newState); if (publishAction) mqtt_publish((char*)"actions/HOTWATER", int2string(newState));}
     else if (action == BREWING) { actionController(STEAMING, 0); actionController(HOTWATER, 0); actionController(SLEEPING, 0); actionState[action] = newState; brewingAction(newState); actionPublish((char*)"actions/BREWING", 101, newState, publishAction, publishActionBlynk);}
     else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(SLEEPING, 0); actionState[action] = newState; steamingAction(newState); actionPublish((char*)"actions/STEAMING", 103, newState, publishAction, publishActionBlynk);}
     else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionController(SLEEPING, 0); actionState[action] = newState; cleaningAction(newState); actionPublish((char*)"actions/CLEANING", 107, newState, publishAction, publishActionBlynk);}
     else if (action == SLEEPING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionState[action] = newState; sleepingAction(newState); actionPublish((char*)"actions/SLEEPING", 110, newState, publishAction, publishActionBlynk);}
-    snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
+    snprintf(debugline, sizeof(debugline), "END action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
     DEBUG_println(debugline);
   } else {
     //snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d) NOCHANGE", convertDefineToAction(action), actionState[action], oldState);
@@ -443,25 +445,40 @@ void checkControls(controlMap* controlsConfig) {
       if (ptr->gpio == portRead) {continue;}
       portRead = ptr->gpio;
 
-      if ( strcmp(ptr->portType, "analog") == 0) {
+      if (strcmp(ptr->portType, "analog") == 0) {
         valueRead = analogRead(portRead);  //analog pin
         //process button press
         currentAction = getActionOfControl(controlsConfig, portRead, valueRead);
-        //multisample read to ignore outlier (ESP32 ADC seems not to be stable)
-        if (currentAction != UNDEFINED_ACTION) {
+        //(ESP32 ADC seems not to be stable) multisample read to ignore outlier / flappings / debouncing
+        if ( (currentAction != UNDEFINED_ACTION && strcmp(ptr->type, "trigger")) || (strcmp(ptr->type, "toggle") && currentAction != gpioLastAction[portRead]) ) {
+          //need sleep?
+          //delay(1);
           valueReadMultiSample = analogRead(portRead);
-          
-          if (fabs(valueRead - valueReadMultiSample) >= 300) {
+          if (fabs(valueRead - valueReadMultiSample) >= 300 || currentAction != getActionOfControl(controlsConfig, portRead, valueReadMultiSample)) {
             snprintf(debugline, sizeof(debugline), "GPIO %d: IGNORED action=%s valueRead=%d valueReadMultiSample=%d", portRead, convertDefineToAction(currentAction), valueRead, valueReadMultiSample);
             ERROR_println(debugline);
             valueRead = -1;
             currentAction = UNDEFINED_ACTION;
+            continue;  //ignore samples this time. ok?
           }
         }
       } else {
         valueRead = digitalRead(portRead); //digital pin
         //process button press
         currentAction = getActionOfControl(controlsConfig, portRead, valueRead);
+        //multisample read to surpress flapping/debouncing
+        if ( (currentAction != UNDEFINED_ACTION && strcmp(ptr->type, "trigger")) || (strcmp(ptr->type, "toggle") && currentAction != gpioLastAction[portRead]) ) {
+          //need sleep?
+          //delay(1);
+          valueReadMultiSample = digitalRead(portRead);
+          if (valueRead != valueReadMultiSample) {
+            snprintf(debugline, sizeof(debugline), "GPIO %d: IGNORED action=%s valueRead=%d valueReadMultiSample=%d", portRead, convertDefineToAction(currentAction), valueRead, valueReadMultiSample);
+            ERROR_println(debugline);
+            valueRead = -1;
+            currentAction = UNDEFINED_ACTION;
+            continue;  //ignore samples this time. ok?
+          }
+        }
       }
 
       if (strcmp(ptr->type, "trigger") == 0) {
@@ -482,7 +499,9 @@ void checkControls(controlMap* controlsConfig) {
         }
 
       } else if (strcmp(ptr->type, "toggle") == 0) {
-        //DEBUG_print("GPIO %d: new_action=%s cur_action=%s\n", portRead, convertDefineToAction(currentAction), convertDefineToAction(gpioLastAction[portRead]) );
+        if (currentAction != gpioLastAction[portRead]) {
+          DEBUG_print("GPIO %d: new_action=%s cur_action=%s\n", portRead, convertDefineToAction(currentAction), convertDefineToAction(gpioLastAction[portRead]) ); //XXX3 comment
+        }
         if (currentAction == UNDEFINED_ACTION) {  //no boundaries match -> toggle is in "off" position
           if (gpioLastAction[portRead] != currentAction) {  //disable old action
             //check multi actions (makes sense only for toggle)
