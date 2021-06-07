@@ -17,14 +17,13 @@ float Temperatur_C = 0;
 volatile uint16_t temp_value[2] = {0};
 double previousInput = 0;
 double Input = 0;
-unsigned long previousMillistemp;
+unsigned long previousTimerRefreshTemp;
 unsigned long previousEeprom;
 
 // eeprom
-const int expected_eeprom_version = 6;
+const int expectedEepromVersion = 6;
 int pidON = 1 ;
 double setPointSteam = 1;
-unsigned int estimated_cycle_refreshTemp = 25;  // for my TSIC the hardware refresh happens every 76ms
 int burstShot      = 1;   // this is 1, when the user wants to immediatly set the heater power to the value specified in burstPower
 double burstPower  = 20;  // in percent
 double steadyPowerOffset     = 1;  // heater power (in percent) which should be added to steadyPower during steadyPowerOffsetTime
@@ -107,9 +106,9 @@ void setup() {
 
 void loop() {
   unsigned long currentMillistemp = millis();
-  if (currentMillistemp >= previousMillistemp + 200)
+  if (currentMillistemp >= previousTimerRefreshTemp + 200)
   {
-    previousMillistemp = currentMillistemp;
+    previousTimerRefreshTemp = currentMillistemp;
     Input = TSIC.getTemp();
 
     if (Input >= 150 || Input <= 0) {
@@ -131,14 +130,14 @@ void sync_eeprom(bool startup_read, bool force_read) {
   Serial.println("EEPROM: sync_eeprom");
   preferences.begin("config");
   int current_version = preferences.getInt("current_version", 0);
-  if (current_version != expected_eeprom_version) {
+  if (current_version != expectedEepromVersion) {
     Serial.println("EEPROM: Version has changed or settings are corrupt or not previously set. Ignoring..");
     preferences.clear();
-    preferences.putInt("current_version", expected_eeprom_version);
+    preferences.putInt("current_version", expectedEepromVersion);
   }
 
   //if variables are not read from blynk previously, always get latest values from EEPROM
-  if (force_read && (current_version == expected_eeprom_version)) {
+  if (force_read && (current_version == expectedEepromVersion)) {
     aggKp = preferences.getDouble("aggKp", 0.0);
     aggTn = preferences.getDouble("aggTn", 0.0);
     aggTv = preferences.getDouble("aggTv", 0.0);
@@ -158,10 +157,6 @@ void sync_eeprom(bool startup_read, bool force_read) {
     brewDetectionPower = preferences.getDouble("brewDetectionPower", 0.0f);
     pidON = preferences.getInt("pidON");
     setPointSteam = preferences.getDouble("setPointSteam", 0.0f);
-  }
-  //always read the following values during setup() (which are not saved in blynk)
-  if (startup_read && (current_version == expected_eeprom_version)) {
-    estimated_cycle_refreshTemp = preferences.getUInt("estimated_cycle_refreshTemp");
   }
 
   //if blynk vars are not read previously, get latest values from EEPROM
@@ -186,7 +181,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
   int pidON_latest_saved = 0;
   double setPointSteam_latest_saved = 0;
 
-  if (current_version == expected_eeprom_version) {
+  if (current_version == expectedEepromVersion) {
     aggKp_latest_saved = preferences.getDouble("aggKp_latest_saved", 0.0f);
     aggTn_latest_saved = preferences.getDouble("aggTn_latest_saved", 0.0f);
     aggTv_latest_saved = preferences.getDouble("aggTv_latest_saved",0.0f);

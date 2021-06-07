@@ -1,6 +1,7 @@
 /***********************************
    DISPLAY
  ***********************************/
+#include <float.h>
 #include "display.h"
 
  void u8g2_init(void) {
@@ -264,21 +265,21 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.drawGlyph(align_right - 11 , 20 + 7, 0x047);
       }
     } else if (activeState == 4) {
-      totalbrewtime = (OnlyPID ? brewtime : preinfusion + preinfusionpause + brewtime) * 1000;
+      totalBrewTime = (OnlyPID ? brewtime : preinfusion + preinfusionpause + brewtime) * 1000;
       align_right = align_right_2digits_decimal;
       u8g2.setFont(u8g2_font_profont22_tf);
       u8g2.setCursor(align_right, 3);
-      if (bezugsZeit < 10000) u8g2.print("0");
+      if (brewTimer < 10000) u8g2.print("0");
       // TODO: Use print(u8x8_u8toa(value, digits)) or print(u8x8_u16toa(value, digits)) to print numbers with constant width (numbers are prefixed with 0 if required).
-      u8g2.print(bezugsZeit / 1000);
+      u8g2.print(brewTimer / 1000);
       u8g2.setFont(u8g2_font_profont10_tf);
       u8g2.println("s");
-      if (totalbrewtime > 0) {
+      if (totalBrewTime > 0) {
         u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
         u8g2.drawGlyph(align_right - 11, 3 + 7, 0x0046);
         u8g2.setFont(u8g2_font_profont22_tf);
         u8g2.setCursor(align_right, 20);
-        u8g2.print(totalbrewtime / 1000);
+        u8g2.print(totalBrewTime / 1000);
         u8g2.setFont(u8g2_font_profont10_tf);
         u8g2.println("s");
         u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
@@ -335,19 +336,19 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
   const unsigned int powerOffCountDownStart = 300;
   const unsigned int align_right_countdown_min = LCDWidth - 52 ;
   const unsigned int align_right_countdown_sec = LCDWidth - 52 + 20;
-  power_off_timer = ENABLE_POWER_OFF_COUNTDOWN - ( (millis() - lastBrewEnd) / 1000);
-  if (power_off_timer <= powerOffCountDownStart && !brewing && displaymessagetext == '\0' && displaymessagetext2 == '\0' ) {
+  powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ( (millis() - lastBrewEnd) / 1000);
+  if (powerOffTimer <= powerOffCountDownStart && !brewing && displaymessagetext == '\0' && displaymessagetext2 == '\0' ) {
     u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
     u8g2.drawGlyph(align_right_countdown_min - 15, 37 + 7, 0x004e);
     u8g2.setFont(u8g2_font_profont22_tf);
     u8g2.setCursor(align_right_countdown_min, 37);
-    snprintf(line, sizeof(line), "%d", int(power_off_timer / 60));
+    snprintf(line, sizeof(line), "%d", int(powerOffTimer / 60));
     u8g2.print(line);
     u8g2.setFont(u8g2_font_profont10_tf);
     u8g2.println("m");
     u8g2.setFont(u8g2_font_profont22_tf);
     u8g2.setCursor(align_right_countdown_sec, 37);
-    snprintf(line, sizeof(line), "%02d", int(power_off_timer % 60));
+    snprintf(line, sizeof(line), "%02d", int(powerOffTimer % 60));
     u8g2.print(line);
     u8g2.setCursor(align_right_countdown_sec + 23, 37);
     u8g2.setFont(u8g2_font_profont10_tf);
@@ -367,16 +368,16 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
   if (image_flip) {
     byte icon_y = 64 - (status_icon_height - 1);
     byte icon_counter = 0;
-    if ((!force_offline && !wifi_working()) || (force_offline && !FORCE_OFFLINE)) {
+    if ((!forceOffline && !isWifiWorking()) || (forceOffline && !FORCE_OFFLINE)) {
       u8g2.drawXBMP(0, 64 - status_icon_height + 1, status_icon_width, status_icon_height, wifi_not_ok_bits);
       u8g2.drawXBMP(icon_counter * (status_icon_width - 1) , icon_y, status_icon_width, status_icon_height, wifi_not_ok_bits);
       icon_counter++;
     }
-    if (BLYNK_ENABLE && !blynk_working() && !FORCE_OFFLINE) {
+    if (BLYNK_ENABLE && !isBlynkWorking() && !FORCE_OFFLINE) {
       u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, blynk_not_ok_bits);
       icon_counter++;
     }
-    if (MQTT_ENABLE && !mqtt_working() && !FORCE_OFFLINE) {
+    if (MQTT_ENABLE && !isMqttWorking() && !FORCE_OFFLINE) {
       u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, mqtt_not_ok_bits);
       icon_counter++;
     }

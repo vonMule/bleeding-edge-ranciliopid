@@ -14,8 +14,8 @@ void splitStringBySeperator(char* source, char seperator, char** resultLeft, cha
         ++separator1;
         *resultRight = separator1;
     } else {
-      snprintf(debugline, sizeof(debugline), "Cannot split line=%s by seperator=%c", source, seperator);
-      ERROR_println(debugline);
+      snprintf(debugLine, sizeof(debugLine), "Cannot split line=%s by seperator=%c", source, seperator);
+      ERROR_println(debugLine);
       resultLeft = NULL;
       resultRight = NULL;
     }
@@ -30,8 +30,8 @@ void splitStringBySeperator(char* source, char seperator, int* resultLeft, int* 
         ++separator1;
         *resultRight = atoi(separator1);
     } else {
-      snprintf(debugline, sizeof(debugline), "Cannot split line=%s by seperator=%c", source, seperator);
-      ERROR_println(debugline);
+      snprintf(debugLine, sizeof(debugLine), "Cannot split line=%s by seperator=%c", source, seperator);
+      ERROR_println(debugLine);
     }
 }
 void splitStringBySeperator(char* source, char seperator, int* resultLeft, char** resultRight) {
@@ -43,8 +43,8 @@ void splitStringBySeperator(char* source, char seperator, int* resultLeft, char*
         ++separator1;
         *resultRight = separator1;
     } else {
-      snprintf(debugline, sizeof(debugline), "Cannot split line=%s by seperator=%c", source, seperator);
-      ERROR_println(debugline);
+      snprintf(debugLine, sizeof(debugLine), "Cannot split line=%s by seperator=%c", source, seperator);
+      ERROR_println(debugLine);
     }
 }
 
@@ -52,7 +52,7 @@ controlMap* parseControlsConfig() {
     controlMap* controlsConfig = NULL;
     controlMap* lastControlMap = NULL;
 
-    DEBUG_println(debugline);
+    DEBUG_println(debugLine);
 
     // Read each controlsConfigPin pair
     // eg. CONTROLS_CONFIG "17:analog:toggle|90-130:BREWING;270-320:STEAMING;390-420:HOTWATER#16:digital:trigger|0-0:BREWING;#"
@@ -60,8 +60,8 @@ controlMap* parseControlsConfig() {
     strncpy(controlsConfigDefine, CONTROLS_CONFIG, strlen(CONTROLS_CONFIG));
     char* controlsConfigBlock;
     while ((controlsConfigBlock = strtok_r(controlsConfigDefine, "#", &controlsConfigDefine)) != NULL) {
-        //snprintf(debugline, sizeof(debugline), "controlsConfigBlock=%s", controlsConfigBlock);
-        //DEBUG_println(debugline);
+        //snprintf(debugLine, sizeof(debugLine), "controlsConfigBlock=%s", controlsConfigBlock);
+        //DEBUG_println(debugLine);
 
         // Split the controlsConfigBlock in controlsConfigPinDefinition + actionMappings
         char* controlsConfigBlockDefinition = NULL;
@@ -69,8 +69,8 @@ controlMap* parseControlsConfig() {
         splitStringBySeperator(controlsConfigBlock, '|', &controlsConfigBlockDefinition, &controlsConfigActionMappings);
         if (!controlsConfigBlockDefinition || !controlsConfigActionMappings) { break; }
 
-        //snprintf(debugline, sizeof(debugline), "controlsConfigBlockDefinition=%s controlsConfigActionMappings=%s", controlsConfigBlockDefinition, controlsConfigActionMappings);
-        //DEBUG_println(debugline);
+        //snprintf(debugLine, sizeof(debugLine), "controlsConfigBlockDefinition=%s controlsConfigActionMappings=%s", controlsConfigBlockDefinition, controlsConfigActionMappings);
+        //DEBUG_println(debugLine);
 
         int controlsConfigGpio = -1;
         char* controlsConfigPortMode = NULL;
@@ -79,27 +79,27 @@ controlMap* parseControlsConfig() {
         splitStringBySeperator(controlsConfigBlock, ':', &controlsConfigGpio, &controlsConfigPortMode);
         splitStringBySeperator(controlsConfigPortMode, ':', &controlsConfigPortMode, &controlsConfigPortType);
         splitStringBySeperator(controlsConfigPortType, ':', &controlsConfigPortType, &controlsConfigType);
-        //snprintf(debugline, sizeof(debugline), "Gpio=%i PortMode=%s PortType=%s Type=%s", controlsConfigGpio, controlsConfigPortMode, controlsConfigPortType, controlsConfigType);
-        //DEBUG_println(debugline);
+        //snprintf(debugLine, sizeof(debugLine), "Gpio=%i PortMode=%s PortType=%s Type=%s", controlsConfigGpio, controlsConfigPortMode, controlsConfigPortType, controlsConfigType);
+        //DEBUG_println(debugLine);
 
         char* p = controlsConfigActionMappings;
         char* actionMap;
         controlMap* nextControlMap = NULL;
         while ((actionMap = strtok_r(p, ";", &p)) != NULL) {
-          //snprintf(debugline, sizeof(debugline), "controlsConfigActionMap=%s", actionMap);
-          //DEBUG_println(debugline);
+          //snprintf(debugLine, sizeof(debugLine), "controlsConfigActionMap=%s", actionMap);
+          //DEBUG_println(debugLine);
 
           char* actionMapRange = NULL;
           char* actionMapAction = NULL;
           splitStringBySeperator(actionMap, ':', &actionMapRange, &actionMapAction);
-          //snprintf(debugline, sizeof(debugline), "actionMapRange=%s actionMapAction=%s", actionMapRange, actionMapAction);
-          //DEBUG_println(debugline);
+          //snprintf(debugLine, sizeof(debugLine), "actionMapRange=%s actionMapAction=%s", actionMapRange, actionMapAction);
+          //DEBUG_println(debugLine);
 
           int lowerBoundary = -1;
           int upperBoundary = -1;
           splitStringBySeperator(actionMapRange, '-', &lowerBoundary, &upperBoundary);
-          //snprintf(debugline, sizeof(debugline), "lowerBoundary=%u upperBoundary=%u", lowerBoundary, upperBoundary);
-          //DEBUG_println(debugline);
+          //snprintf(debugLine, sizeof(debugLine), "lowerBoundary=%u upperBoundary=%u", lowerBoundary, upperBoundary);
+          //DEBUG_println(debugLine);
           if (convertActionToDefine(actionMapAction) >= MAX_NUM_ACTIONS) {
             ERROR_println("More actions defined as allowed in MAX_NUM_ACTIONS");
             if (!nextControlMap) nextControlMap->action = UNDEFINED_ACTION;
@@ -140,8 +140,8 @@ void printControlsConfig(controlMap* controlsConfig) {
   DEBUG_println("ControlsConfig:");
   controlMap* ptr = controlsConfig;
   do {
-    snprintf(debugline, sizeof(debugline), "%2i(%15s,%7s,%7s): %4u-%-4u -> %s", ptr->gpio, ptr->portMode, ptr->portType, ptr->type, ptr->lowerBoundary, ptr->upperBoundary, convertDefineToAction(ptr->action));
-    DEBUG_println(debugline);
+    snprintf(debugLine, sizeof(debugLine), "%2i(%15s,%7s,%7s): %4u-%-4u -> %s", ptr->gpio, ptr->portMode, ptr->portType, ptr->type, ptr->lowerBoundary, ptr->upperBoundary, convertDefineToAction(ptr->action));
+    DEBUG_println(debugLine);
   } while ((ptr = ptr->nextControlMap) != NULL);
 }
 
@@ -220,7 +220,7 @@ void publishActions() {
     char *action = convertDefineToAction(i);
     if ( strcmp(action, "UNDEFINED_ACTION") != 0) {
       sprintf(topicAction, "actions/%s", action);
-      mqtt_publish(topicAction, int2string(actionState[i]));
+      mqttPublish(topicAction, int2string(actionState[i]));
     }
   }
 }
@@ -236,8 +236,8 @@ void configureControlsHardware(controlMap* controlsConfig) {
   do {
     if (ptr->gpio == port) {continue;}
     port = ptr->gpio;
-    snprintf(debugline, sizeof(debugline), "Set Hardware GPIO %2i to %s", ptr->gpio, ptr->portMode);
-    DEBUG_println(debugline);
+    snprintf(debugLine, sizeof(debugLine), "Set Hardware GPIO %2i to %s", ptr->gpio, ptr->portMode);
+    DEBUG_println(debugLine);
     if ( strcmp(ptr->portType, "analog") == 0) {
       pinMode(ptr->gpio, convertPortModeToDefine(ptr->portMode));
     } else {;
@@ -265,8 +265,8 @@ void debugControlHardware(controlMap* controlsConfig) {
     } else {
       valueRead = digitalRead(ptr->gpio);
     }
-    snprintf(debugline, sizeof(debugline), "GPIO %2i: %d", ptr->gpio, valueRead);
-    DEBUG_println(debugline);
+    snprintf(debugLine, sizeof(debugLine), "GPIO %2i: %d", ptr->gpio, valueRead);
+    DEBUG_println(debugLine);
   } while ((ptr = ptr->nextControlMap) != NULL);
 }
 
@@ -338,33 +338,33 @@ void actionController(int action, int newState, bool publishAction, bool publish
     if (oldState <=1) {
       newState = oldState == 0 ? 1 : 0;
     } else {
-      snprintf(debugline, sizeof(debugline), "Error: actionController(action=%s state=%d) wants to trigger a not triggerable stored value=%d", convertDefineToAction(action), newState, oldState);
-      DEBUG_println(debugline);
+      snprintf(debugLine, sizeof(debugLine), "Error: actionController(%s, %d) tries to inverse an illegal value %d", convertDefineToAction(action), newState, oldState);
+      ERROR_println(debugLine);
       newState = 0; //fallback/safe-guard
     }
   }
   //call special helper functions when state changes
   //actionState logic should remain in actionController() function and not the helper functions
   if (newState != oldState) {
-    snprintf(debugline, sizeof(debugline), "START action=%s state=%d (old=%d)", convertDefineToAction(action), newState, oldState);
-    DEBUG_println(debugline);
+    snprintf(debugLine, sizeof(debugLine), "actionController: Setting %s %d->%d", convertDefineToAction(action), oldState, newState);
+    DEBUG_println(debugLine);
     userActivity = millis();
-    if (action == HOTWATER) { actionController(BREWING, 0); actionController(SLEEPING, 0); actionState[action] = newState; hotwaterAction(newState); if (publishAction) mqtt_publish((char*)"actions/HOTWATER", int2string(newState));}
+    if (action == HOTWATER) { actionController(BREWING, 0); actionController(SLEEPING, 0); actionState[action] = newState; hotwaterAction(newState); if (publishAction) mqttPublish((char*)"actions/HOTWATER", int2string(newState));}
     else if (action == BREWING) { actionController(STEAMING, 0); actionController(HOTWATER, 0); actionController(SLEEPING, 0); actionState[action] = newState; brewingAction(newState); actionPublish((char*)"actions/BREWING", 101, newState, publishAction, publishActionBlynk);}
     else if (action == STEAMING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(SLEEPING, 0); actionState[action] = newState; steamingAction(newState); actionPublish((char*)"actions/STEAMING", 103, newState, publishAction, publishActionBlynk);}
     else if (action == CLEANING) { actionController(BREWING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionController(SLEEPING, 0); actionState[action] = newState; cleaningAction(newState); actionPublish((char*)"actions/CLEANING", 107, newState, publishAction, publishActionBlynk);}
     else if (action == SLEEPING) { actionController(BREWING, 0); actionController(CLEANING, 0); actionController(HOTWATER, 0); actionController(STEAMING, 0); actionState[action] = newState; sleepingAction(newState); actionPublish((char*)"actions/SLEEPING", 110, newState, publishAction, publishActionBlynk);}
-    snprintf(debugline, sizeof(debugline), "END action=%s state=%d (old=%d)", convertDefineToAction(action), actionState[action], oldState);
-    DEBUG_println(debugline);
+    snprintf(debugLine, sizeof(debugLine), "actionController: Completed %s %d->%d", convertDefineToAction(action), oldState, actionState[action]);
+    DEBUG_println(debugLine);
   } else {
-    //snprintf(debugline, sizeof(debugline), "action=%s state=%d (old=%d) NOCHANGE", convertDefineToAction(action), actionState[action], oldState);
-    //DEBUG_println(debugline);
+    //snprintf(debugLine, sizeof(debugLine), "action=%s state=%d (old=%d) NOCHANGE", convertDefineToAction(action), actionState[action], oldState);
+    //DEBUG_println(debugLine);
   }
 }
 
 void actionPublish(char* mqtt_topic, unsigned int blynk_vpin, int newState, bool publishActionMQTT, bool publishActionBlynk) {
   //TODO add mapping table of action/setting to mqtt-topic&blynk_vpin
-  if (publishActionMQTT) mqtt_publish(mqtt_topic, int2string(newState));
+  if (publishActionMQTT) mqttPublish(mqtt_topic, int2string(newState));
   #if (BLYNK_ENABLE == 1)
   if (publishActionBlynk) Blynk.virtualWrite(blynk_vpin, newState);
   #endif
@@ -413,10 +413,10 @@ int checkMultiToggle() {
         pos++;
       }
   } while ((ptr = ptr->nextControlMap) != NULL);
-  //snprintf(debugline, sizeof(debugline), "gpio_active=%d,%d,%d,%d,%d", gpio_active[0], gpio_active[1], gpio_active[2], gpio_active[3], gpio_active[4]);
-  //DEBUG_println(debugline);
-  //snprintf(debugline, sizeof(debugline), "multi_toggle_1=%d,%d,%d", multi_toggle_1[0], multi_toggle_1[1], multi_toggle_1[2]);
-  //DEBUG_println(debugline);
+  //snprintf(debugLine, sizeof(debugLine), "gpio_active=%d,%d,%d,%d,%d", gpio_active[0], gpio_active[1], gpio_active[2], gpio_active[3], gpio_active[4]);
+  //DEBUG_println(debugLine);
+  //snprintf(debugLine, sizeof(debugLine), "multi_toggle_1=%d,%d,%d", multi_toggle_1[0], multi_toggle_1[1], multi_toggle_1[2]);
+  //DEBUG_println(debugLine);
   if (checkArrayInArray(multi_toggle_1, (int)(sizeof(multi_toggle_1)/sizeof(multi_toggle_1[0])), gpio_active, max_toggles)) {
     return convertActionToDefine((char*) MULTI_TOGGLE_1_ACTION);
   }
@@ -452,11 +452,11 @@ void checkControls(controlMap* controlsConfig) {
         //(ESP32 ADC seems not to be stable) multisample read to ignore outlier / flappings / debouncing
         if ( (currentAction != UNDEFINED_ACTION && strcmp(ptr->type, "trigger")) || (strcmp(ptr->type, "toggle") && currentAction != gpioLastAction[portRead]) ) {
           //need sleep?
-          //delay(1);
+          delay(30);
           valueReadMultiSample = analogRead(portRead);
           if (fabs(valueRead - valueReadMultiSample) >= 300 || currentAction != getActionOfControl(controlsConfig, portRead, valueReadMultiSample)) {
-            snprintf(debugline, sizeof(debugline), "GPIO %d: IGNORED action=%s valueRead=%d valueReadMultiSample=%d", portRead, convertDefineToAction(currentAction), valueRead, valueReadMultiSample);
-            ERROR_println(debugline);
+            snprintf(debugLine, sizeof(debugLine), "GPIO %d: IGNORED %s (%d, %d)", portRead, convertDefineToAction(currentAction), valueRead, valueReadMultiSample);
+            ERROR_println(debugLine);
             valueRead = -1;
             currentAction = UNDEFINED_ACTION;
             continue;  //ignore samples this time. ok?
@@ -467,13 +467,14 @@ void checkControls(controlMap* controlsConfig) {
         //process button press
         currentAction = getActionOfControl(controlsConfig, portRead, valueRead);
         //multisample read to surpress flapping/debouncing
-        if ( (currentAction != UNDEFINED_ACTION && strcmp(ptr->type, "trigger")) || (strcmp(ptr->type, "toggle") && currentAction != gpioLastAction[portRead]) ) {
+        if ( ((strcmp(ptr->type, "trigger") == 0) && currentAction != UNDEFINED_ACTION) || 
+             ((strcmp(ptr->type, "toggle") == 0) && currentAction != gpioLastAction[portRead]) ) {
           //need sleep?
-          //delay(1);
+          delay(30);
           valueReadMultiSample = digitalRead(portRead);
           if (valueRead != valueReadMultiSample) {
-            snprintf(debugline, sizeof(debugline), "GPIO %d: IGNORED action=%s valueRead=%d valueReadMultiSample=%d", portRead, convertDefineToAction(currentAction), valueRead, valueReadMultiSample);
-            ERROR_println(debugline);
+            snprintf(debugLine, sizeof(debugLine), "GPIO %d: IGNORED %s (%d, %d)", portRead, convertDefineToAction(currentAction), valueRead, valueReadMultiSample);
+            ERROR_println(debugLine);
             valueRead = -1;
             currentAction = UNDEFINED_ACTION;
             continue;  //ignore samples this time. ok?
@@ -484,23 +485,23 @@ void checkControls(controlMap* controlsConfig) {
       if (strcmp(ptr->type, "trigger") == 0) {
         if (currentAction == UNDEFINED_ACTION) {  //no boundaries match -> button not pressed anymore
           if (gpioLastAction[portRead] != UNDEFINED_ACTION) {
-            //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=released", portRead, convertDefineToAction(gpioLastAction[portRead]));
-            //DEBUG_println(debugline);
+            //snprintf(debugLine, sizeof(debugLine), "GPIO %d: action=%s state=released", portRead, convertDefineToAction(gpioLastAction[portRead]));
+            //DEBUG_println(debugLine);
           }
           gpioLastAction[portRead] = UNDEFINED_ACTION;
         } else if ((gpioLastAction[portRead] == UNDEFINED_ACTION) && (currentAction != gpioLastAction[portRead])) {
-          //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s valueRead=%d", portRead, convertDefineToAction(currentAction), valueRead);
-          //DEBUG_println(debugline);
+          //snprintf(debugLine, sizeof(debugLine), "GPIO %d: action=%s valueRead=%d", portRead, convertDefineToAction(currentAction), valueRead);
+          //DEBUG_println(debugLine);
           gpioLastAction[portRead] = currentAction;
           actionController(currentAction, -1);
         } else {  //if button is still pressed
-          //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=unchanged", ptr->gpio, convertDefineToAction(currentAction));
-          //DEBUG_println(debugline);
+          //snprintf(debugLine, sizeof(debugLine), "GPIO %d: action=%s state=unchanged", ptr->gpio, convertDefineToAction(currentAction));
+          //DEBUG_println(debugLine);
         }
 
       } else if (strcmp(ptr->type, "toggle") == 0) {
         if (currentAction != gpioLastAction[portRead]) {
-          DEBUG_print("GPIO %d: new_action=%s cur_action=%s\n", portRead, convertDefineToAction(currentAction), convertDefineToAction(gpioLastAction[portRead]) ); //XXX3 comment
+          DEBUG_print("GPIO %d: %s -> %s\n", portRead, convertDefineToAction(gpioLastAction[portRead]), convertDefineToAction(currentAction) ); //XXX3 comment
         }
         if (currentAction == UNDEFINED_ACTION) {  //no boundaries match -> toggle is in "off" position
           if (gpioLastAction[portRead] != currentAction) {  //disable old action
@@ -557,13 +558,13 @@ void checkControls(controlMap* controlsConfig) {
           }          
           //actionController(currentAction, 1);
         } else if (currentAction == gpioLastAction[portRead]) {
-          //snprintf(debugline, sizeof(debugline), "GPIO %d: action=%s state=unchanged", portRead, convertDefineToAction(currentAction));
-          //DEBUG_println(debugline);
+          //snprintf(debugLine, sizeof(debugLine), "GPIO %d: action=%s state=unchanged", portRead, convertDefineToAction(currentAction));
+          //DEBUG_println(debugLine);
         }
         
       } else {
-        snprintf(debugline, sizeof(debugline), "type (%s) unknown?", ptr->type);
-        DEBUG_println(debugline);
+        snprintf(debugLine, sizeof(debugLine), "type (%s) unknown?", ptr->type);
+        DEBUG_println(debugLine);
       }
     } while ((ptr = ptr->nextControlMap) != NULL);
   }
@@ -582,7 +583,7 @@ void brewingAction(int state) {
    return;
   }
   simulatedBrewSwitch = state;
-  DEBUG_print("brewingAction(): simulatedBrewSwitch: %d\n", simulatedBrewSwitch);
+  DEBUG_print("running brewingAction(%d)\n", state);
   setGpioAction(BREWING, state);
 }
 
@@ -594,13 +595,13 @@ void hotwaterAction(int state) {
   } else if (state == 0) {
     digitalWrite(pinRelayPumpe, relayOFF);
   }
-  DEBUG_print("hotwaterAction(): %d\n", state);
+  DEBUG_print("running hotwaterAction(%d)\n", state);
   setGpioAction(HOTWATER, state);
 }
 
 void steamingAction(int state) {
   steaming = state;
-  DEBUG_print("steamingAction(): %d\n", state);
+  DEBUG_print("running steamingAction(%d)\n", state);
   setGpioAction(STEAMING, state);
 }
 
@@ -608,7 +609,7 @@ void cleaningAction(int state) {
   if (OnlyPID) return;
   //CLEANING is a special state which is not reflected in activeState because it is overarching to all activeStates.
   cleaning = state;
-  DEBUG_print("cleaningAction(): %d\n", state);
+  DEBUG_print("running cleaningAction(%d)\n", state);
   setGpioAction(CLEANING, state);
   bPID.SetAutoTune(state);
   bPID.SetMode(!state);
@@ -617,7 +618,7 @@ void cleaningAction(int state) {
 void sleepingAction(int state) {
   userActivitySavedOnForcedSleeping = userActivity;
   sleeping = state;
-  DEBUG_print("sleepingAction(): %d\n", state);
+  DEBUG_print("running sleepingAction(%d)\n", state);
   if (!state) {
     lastBrewEnd = millis();
     //reset some special auto-tuning variables

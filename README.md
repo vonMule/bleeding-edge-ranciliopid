@@ -109,6 +109,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 ## Changelog
 - 2.9.0b2:
   - Fix: controllerActions: Improve debouncing of analog(ADC) and digital buttons/switches.
+  - Code cleanup and compiler warning fixes.
 - 2.9.0b1:
   - Not yet tested on live machine!
   - Add full support for platformio and fix compile warnings.

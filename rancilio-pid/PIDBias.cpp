@@ -14,13 +14,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
-
-#if ARDUINO >= 100
-  #include "Arduino.h"
-#else
-  #include "WProgram.h"
-#endif
-
+#include <Arduino.h>
 #include "PIDBias.h"
 
 int PIDBias::signnum_c(double x) {
@@ -28,7 +22,7 @@ int PIDBias::signnum_c(double x) {
   else return -1;
 }
 
-PIDBias::PIDBias(double* Input, double* Output, double* steadyPower, double* steadyPowerOffset, unsigned long* steadyPowerOffset_Activated, int* steadyPowerOffsetTime, double** Setpoint,
+PIDBias::PIDBias(double* Input, double* Output, double* steadyPower, double* steadyPowerOffset, unsigned long* steadyPowerOffsetActivateTime, unsigned int* steadyPowerOffsetTime, double** Setpoint,
         double Kp, double Ki, double Kd)
 {
     myOutput = Output;
@@ -36,7 +30,7 @@ PIDBias::PIDBias(double* Input, double* Output, double* steadyPower, double* ste
     mySetpoint = Setpoint;
     mySteadyPower = steadyPower;
     mySteadyPowerOffset = steadyPowerOffset;
-    mySteadyPowerOffset_Activated = steadyPowerOffset_Activated;
+    mySteadyPowerOffset_Activated = steadyPowerOffsetActivateTime;
     mySteadyPowerOffset_Time = steadyPowerOffsetTime;
     inAuto = MANUAL;
     lastOutput = *myOutput;
@@ -368,7 +362,7 @@ void PIDBias::UpdateSteadyPowerOffset(unsigned long steadyPowerOffset_Activated_
 double PIDBias::CalculateSteadyPowerOffset() {
   unsigned long diff = millis() - *mySteadyPowerOffset_Activated;
   if (*mySteadyPowerOffset_Activated == 0 || *mySteadyPowerOffset_Time <= 0 ||
-     ((*mySteadyPowerOffset_Activated > 0) && (diff >= *mySteadyPowerOffset_Time*1000))) {
+     ((*mySteadyPowerOffset_Activated > 0) && diff >= *mySteadyPowerOffset_Time *1000)) {
     return 0;
   }
   double steadyPowerOffsetPerMillisecond = *mySteadyPowerOffset / (*mySteadyPowerOffset_Time*1000);

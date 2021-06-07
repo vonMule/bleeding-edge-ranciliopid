@@ -2,7 +2,14 @@
 #define _mqtt_H
 
 #include <stdio.h>
+
+#if (MQTT_ENABLE==1)
 #include <PubSubClient.h>
+extern PubSubClient mqttClient;
+#elif (MQTT_ENABLE==2)
+#include <uMQTTBroker.h>
+extern bool MQTT_local_publish(char* topic, char* data, size_t data_length, uint8_t qos, uint8_t retain);
+#endif
 
 #ifdef ESP32
 #include <os.h>
@@ -17,40 +24,40 @@
 extern BlynkWifi Blynk;
 #endif
 
-bool mqtt_reconnect(bool);
-bool mqtt_publish(char*, char*);
-bool mqtt_working();
-void mqtt_publish_settings();
+bool mqttReconnect(bool);
+bool mqttPublish(char*, char*);
+bool isMqttWorking();
+void mqttPublishSettings();
 
 char* bool2string(bool in);
 char* int2string(int state);
 char* number2string(double in);
 char* number2string(float in);
 
-extern const char* mqtt_topic_prefix;
+extern const char* mqttTopicPrefix;
 extern const char* hostname;
-extern bool wifi_working();
-extern PubSubClient mqtt_client;
-extern bool force_offline;
-extern bool mqtt_disabled_temporary;
-extern unsigned long mqtt_dontPublishUntilTime;
+extern bool isWifiWorking();
+
+extern bool forceOffline;
+extern bool mqttDisabledTemporary;
+extern unsigned long mqttDontPublishUntilTime;
 extern const int MQTT_MAX_PUBLISH_SIZE;
-extern const bool mqtt_flag_retained;
-extern unsigned long mqtt_dontPublishBackoffTime;
-extern bool in_sensitive_phase();
+extern const bool mqttFlagRetained;
+extern unsigned long mqttDontPublishBackoffTime;
+extern bool inSensitivePhase();
 extern WiFiClient espClient;
-extern unsigned long mqtt_lastReconnectAttemptTime;
-extern unsigned long mqtt_reconnect_incremental_backoff;
-extern unsigned int mqtt_reconnectAttempts;
-extern unsigned long all_services_lastReconnectAttemptTime;
-extern unsigned long all_services_min_reconnect_interval;
-extern const char* mqtt_username;
-extern const char* mqtt_password;
-extern char topic_will[256];
-extern char topic_set[256];
-extern char topic_actions[256];
-extern unsigned long mqtt_connectTime;
-extern unsigned int mqtt_max_incremental_backoff;
+extern unsigned long mqttLastReconnectAttemptTime;
+extern unsigned long mqttReconnectIncrementalBackoff;
+extern unsigned int mqttReconnectAttempts;
+extern unsigned long allServicesLastReconnectAttemptTime;
+extern unsigned long allservicesMinReconnectInterval;
+extern const char* mqttUsername;
+extern const char* mqttPassword;
+extern char topicWill[256];
+extern char topicSet[256];
+extern char topicActions[256];
+extern unsigned long mqttConnectTime;
+extern unsigned int mqttMaxIncrementalBackoff;
 extern double brewtime;
 extern double preinfusion;
 extern double preinfusionpause;
@@ -68,10 +75,10 @@ extern double aggTn;
 extern double aggTv;
 extern double steadyPower;
 extern double steadyPowerOffset;
-extern int steadyPowerOffsetTime;
+extern unsigned int steadyPowerOffsetTime;
 extern double steadyPowerMQTTDisableUpdateUntilProcessed;
 extern unsigned long steadyPowerMQTTDisableUpdateUntilProcessedTime;
 extern double steadyPowerSaved;
-extern unsigned long force_eeprom_sync;
+extern unsigned long eepromForceSync;
 
 #endif

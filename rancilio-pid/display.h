@@ -15,7 +15,9 @@ const int Display = DISPLAY_HARDWARE;
 #include <U8g2lib.h>
 #include <Wire.h>
 
+#ifdef ESP32
 static int activeStateBuffer;
+#endif
 static char displaymessagetextBuffer[30];
 static char displaymessagetext2Buffer[30];
 
@@ -39,5 +41,27 @@ const int userActivityWaitPeriod = 180000;
 void u8g2_prepare(void);
 bool screenSaverRunning();
 void displaymessage(int, char*, char*);
-
 #endif
+
+extern bool brewReady;
+extern unsigned long lastBrewReady;
+extern int sleeping;
+extern unsigned long userActivity;
+extern int activeState;
+extern double* activeSetPoint;
+extern double steamReadyTemp;
+extern double Input;
+extern int pidON;
+extern int steaming;
+extern unsigned long totalBrewTime;
+extern const int OnlyPID;
+extern double brewtime;
+extern double preinfusion;
+extern double preinfusionpause;
+extern unsigned long brewTimer;
+extern bool forceOffline;
+extern bool isWifiWorking();
+extern bool isBlynkWorking();
+extern bool isMqttWorking();
+
+

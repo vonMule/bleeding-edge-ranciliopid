@@ -56,7 +56,7 @@ void printMultiToggleConfig();
 void configureControlsHardware(controlMap* controlsConfig);
 int convertActionToDefine(char*);
 
-void mqtt_callback_1(char* topic, unsigned char* data, unsigned int length);
+void mqttCallback1(char* topic, unsigned char* data, unsigned int length);
 void mqtt_callback_2(uint32_t *client, const char* topic, uint32_t topic_len, const char *data, uint32_t length);
 
 int simulatedBrewSwitch = 0;

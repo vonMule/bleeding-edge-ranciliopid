@@ -23,7 +23,7 @@ class PIDBias
   #define MANUAL	0
 
   //commonly used functions **************************************************************************
-    PIDBias(double*, double*, double*, double*, unsigned long*, int*, double**, double, double, double);
+    PIDBias(double*, double*, double*, double*, unsigned long*, unsigned int*, double**, double, double, double);
 
     void SetMode(int Mode);               // * sets PIDBias to either Manual (0) or Auto (non-0)
 
@@ -96,7 +96,7 @@ class PIDBias
   double steadyPowerDefault;
   double *mySteadyPowerOffset;
   unsigned long* mySteadyPowerOffset_Activated;
-  int* mySteadyPowerOffset_Time;
+  unsigned int* mySteadyPowerOffset_Time;
   double steadyPowerOffsetCalculated;
   bool steadyPowerAutoTune;
 

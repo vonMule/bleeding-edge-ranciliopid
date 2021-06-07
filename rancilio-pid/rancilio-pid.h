@@ -7,7 +7,9 @@
 
 #if (ENABLE_CALIBRATION_MODE==1)
 #define DEBUGMODE
+#undef BLYNK_ENABLE
 #define BLYNK_ENABLE 0
+#undef MQTT_ENABLE
 #define MQTT_ENABLE 0
 #endif
 
@@ -25,7 +27,6 @@
 #endif
 
 #include <RemoteDebug.h> //https://github.com/JoaoLopesF/RemoteDebug
-//#include <RemoteDebug.h>  // uncomment this line AND delete src/RemoteDebug/ folder, if you want to use system lib
 extern RemoteDebug Debug;
 
 #ifndef DEBUGMODE
@@ -66,6 +67,6 @@ void checkWifi();
 
 void checkWifi(bool, unsigned long);
 
-extern char debugline[200];
+extern char debugLine[200];
 
 #endif

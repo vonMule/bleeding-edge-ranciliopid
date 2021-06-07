@@ -7,7 +7,7 @@ float Temperatur_C = 0;
 float Input = 0;
 
 int enable_tic_interrupt = 1;
-unsigned long previousMillistemp;       // initialisation at the end of init()
+unsigned long previousTimerRefreshTemp;       // initialisation at the end of init()
 const long refreshTempInterval = 100;  //How often to read the temperature sensor
 unsigned long best_time_to_call_refreshTemp = refreshTempInterval;
 unsigned int estimated_cycle_refreshTemp = 25;  // for my TSIC the hardware refresh happens every 76ms
@@ -18,7 +18,7 @@ unsigned int estimated_cycle_refreshTemp_stable_next_save = 1;
 
 char debugline[120];
 unsigned long loops = 0;
-unsigned long max_micros = 0;
+unsigned long maxMicros = 0;
 unsigned long last_report_micros = 0;
 unsigned long cur_micros_previous_loop = 0;
 const unsigned long loop_report_count = 100;
@@ -29,18 +29,18 @@ volatile uint16_t disable_tsic_isr = 0 ;
 void loop() {
   loops += 1 ;
   unsigned long cur_micros = micros();
-  if (max_micros < cur_micros-cur_micros_previous_loop) {
-      max_micros = cur_micros-cur_micros_previous_loop;
+  if (maxMicros < cur_micros-cur_micros_previous_loop) {
+      maxMicros = cur_micros-cur_micros_previous_loop;
   }
 
   if ( cur_micros >= last_report_micros + 10000 ) {
-    snprintf(debugline, sizeof(debugline), "%lu loop() temp=%0.2f | loops/ms=%lu |cur_micros=%lu | max_micros=%lu | avg_micros=%lu\n", 
-        cur_micros/1000, Input, loops/10, (cur_micros-cur_micros_previous_loop), max_micros, (cur_micros - last_report_micros)/loops );
+    snprintf(debugline, sizeof(debugline), "%lu loop() temp=%0.2f | loops/ms=%lu |cur_micros=%lu | maxMicros=%lu | avg_micros=%lu\n", 
+        cur_micros/1000, Input, loops/10, (cur_micros-cur_micros_previous_loop), maxMicros, (cur_micros - last_report_micros)/loops );
     Serial.print(debugline);
-    //Serial.println(max_micros);
+    //Serial.println(maxMicros);
     //Serial.println(loops/10);
     last_report_micros = cur_micros;
-    max_micros = 0;
+    maxMicros = 0;
     loops=0;
     
   }
@@ -49,9 +49,9 @@ void loop() {
   unsigned long currentMillistemp = millis();
   if (enable_tic_interrupt == 1) {
       //interrupt way
-      if (currentMillistemp >= previousMillistemp + refreshTempInterval)
+      if (currentMillistemp >= previousTimerRefreshTemp + refreshTempInterval)
       {
-        previousMillistemp = currentMillistemp;
+        previousTimerRefreshTemp = currentMillistemp;
         //unsigned long start = millis();
         Temperatur_C = getTSICvalue();
         //unsigned long stop = millis();
@@ -79,7 +79,7 @@ void loop() {
       //auto-tune way
       if (currentMillistemp >= best_time_to_call_refreshTemp)
       {
-        previousMillistemp = currentMillistemp;
+        previousTimerRefreshTemp = currentMillistemp;
         temperature = 0;
         unsigned long start = millis();
         Sensor1.getTemperature(&temperature);
@@ -97,7 +97,7 @@ void loop() {
           tsicAutoTune(start, stop);
         } else {
           //enable old way
-          best_time_to_call_refreshTemp = previousMillistemp + refreshTempInterval;
+          best_time_to_call_refreshTemp = previousTimerRefreshTemp + refreshTempInterval;
         }
 
       }
