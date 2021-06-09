@@ -107,11 +107,12 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.9.0b3:
+  - code indentation
 - 2.9.0b2:
   - Fix: controllerActions: Improve debouncing of analog(ADC) and digital buttons/switches.
   - Code cleanup and compiler warning fixes.
 - 2.9.0b1:
-  - Not yet tested on live machine!
   - Add full support for platformio and fix compile warnings.
     - Force espressif8266 to Version 2 (until external libs are adapted)
   - Arduino IDE: Remove some libaries which from now on have to be installed manually. see [wiki](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-Platformio)

@@ -3,10 +3,10 @@
 
 #include <stdio.h>
 
-#if (MQTT_ENABLE==1)
+#if (MQTT_ENABLE == 1)
 #include <PubSubClient.h>
 extern PubSubClient mqttClient;
-#elif (MQTT_ENABLE==2)
+#elif (MQTT_ENABLE == 2)
 #include <uMQTTBroker.h>
 extern bool MQTT_local_publish(char* topic, char* data, size_t data_length, uint8_t qos, uint8_t retain);
 #endif

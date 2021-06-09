@@ -1,13 +1,13 @@
 /***********************************
-   DISPLAY
+ *  DISPLAY
  ***********************************/
-#include <float.h>
 #include "display.h"
+#include <float.h>
 
- void u8g2_init(void) {
-  #ifdef ESP32
+void u8g2_init(void) {
+#ifdef ESP32
   u8g2.setBusClock(2000000);
-  #endif
+#endif
   u8g2.begin();
   u8g2_prepare();
   u8g2.setFlipMode(ROTATE_DISPLAY);
@@ -24,8 +24,7 @@ void u8g2_prepare(void) {
 }
 
 bool screenSaverCheck() {
-  if ( (enableScreenSaver && brewReady && (millis() >= lastBrewReady + brewReadyWaitPeriod) && (millis() >= userActivity + userActivityWaitPeriod)) ||
-       sleeping) {
+  if ((enableScreenSaver && brewReady && (millis() >= lastBrewReady + brewReadyWaitPeriod) && (millis() >= userActivity + userActivityWaitPeriod)) || sleeping) {
     return true;
   } else {
     if (screenSaverOn) {
@@ -37,10 +36,16 @@ bool screenSaverCheck() {
 }
 
 char* outputSimpleState() {
-  switch(activeState) {
-    case 6: { return (char*)"Steaming"; }
-    case 8: { return (char*)"Cleaning"; }
-    case 7: { return (char*)"Sleeping"; }
+  switch (activeState) {
+    case 6: {
+      return (char*)"Steaming";
+    }
+    case 8: {
+      return (char*)"Cleaning";
+    }
+    case 7: {
+      return (char*)"Sleeping";
+    }
   }
   if (!pidON) { return (char*)"Turned off"; }
   if (brewReady) { return (char*)"Ready"; }
@@ -48,56 +53,41 @@ char* outputSimpleState() {
 }
 
 void setDisplayTextState(int activeState, char* displaymessagetext, char* displaymessagetext2) {
-      #if (DISPLAY_TEXT_STATE==1)
-      if (strlen(displaymessagetext) > 0 || screenSaverOn || activeState == 4) {  //dont show state in certain situations
-        snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
-        snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);  
-      } else {
-        snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
-        snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", outputSimpleState()); 
-      }
-      #else
-      snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
-      snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);
-      #endif
+#if (DISPLAY_TEXT_STATE == 1)
+  if (strlen(displaymessagetext) > 0 || screenSaverOn || activeState == 4) { // dont show state in certain situations
+    snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
+    snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);
+  } else {
+    snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
+    snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", outputSimpleState());
+  }
+#else
+  snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
+  snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);
+#endif
 }
 
-                            
 void displaymessage(int activeState, char* displaymessagetext, char* displaymessagetext2) {
   if (Display > 0) {
     static int only_once = 0;
-    #ifdef ESP32
-    //DEBUG_print("activeState=%d | %s | %s\n", activeState, displaymessagetext, displaymessagetext2);
+#ifdef ESP32
+    // DEBUG_print("activeState=%d | %s | %s\n", activeState, displaymessagetext, displaymessagetext2);
     if ((millis() >= previousMillisDisplay + intervalDisplay) || only_once == 0) {
       previousMillisDisplay = millis();
       activeStateBuffer = activeState;
       setDisplayTextState(activeStateBuffer, displaymessagetext, displaymessagetext2);
-      /*       #if (DISPLAY_TEXT_STATE==1)
-      if (strlen(displaymessagetext) > 0 || screenSaverOn || activeState == 4) {  //dont show state in certain situations
-        snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
-        snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);  
-      } else {
-        snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
-        snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", outputSimpleState()); 
-      }
-      #else
-      snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
-      snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);
-      #endif */
     }
     if (only_once == 0) {
       only_once = 1;
-      xTaskCreatePinnedToCore(
-                  displaymessage_esp32_task,   /* Task function. */
-                  "displaymessage",     /* name of task. */
-                  2000,       /* Stack size of task */
-                  (void*)&activeState,        /* parameter of the task */
-                  6,           /* priority of the task */
-                  NULL,      /* Task handle to keep track of created task */
-                  0);          /* pin task to core 1 */
-      
+      xTaskCreatePinnedToCore(displaymessage_esp32_task, /* Task function. */
+          "displaymessage", /* name of task. */
+          2000, /* Stack size of task */
+          (void*)&activeState, /* parameter of the task */
+          6, /* priority of the task */
+          NULL, /* Task handle to keep track of created task */
+          0); /* pin task to core 1 */
     }
-    #else
+#else
     if (only_once == 0) {
       only_once = 1;
       u8g2_init();
@@ -107,7 +97,7 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
       setDisplayTextState(activeState, displaymessagetext, displaymessagetext2);
       displaymessage_helper(activeState, displaymessagetextBuffer, displaymessagetext2Buffer);
     }
-    #endif
+#endif
   }
 }
 
@@ -115,11 +105,11 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
 void displaymessage_esp32_task(void* activeStateParam) {
   u8g2_init();
   delay(100);
-  for(;;) {
-    //unsigned long cur_micros_display = micros();
+  for (;;) {
+    // unsigned long cur_micros_display = micros();
     displaymessage_helper(activeStateBuffer, displaymessagetextBuffer, displaymessagetext2Buffer);
-    //DEBUG_print("inside displaymessage_esp32_task() done =%lu\n", micros()-cur_micros_display);
-    vTaskDelay( intervalDisplay / portTICK_PERIOD_MS);
+    // DEBUG_print("inside displaymessage_esp32_task() done =%lu\n", micros()-cur_micros_display);
+    vTaskDelay(intervalDisplay / portTICK_PERIOD_MS);
   }
   vTaskDelete(NULL);
 }
@@ -136,27 +126,27 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     const unsigned int align_right_3digits = LCDWidth - 56 - 12;
     const unsigned int align_right_2digits_decimal = LCDWidth - 56 + 28;
 
-    //boot logo
+    // boot logo
     if (activeState == 0) {
-        if (strcmp(MACHINE_TYPE, "rancilio")==0) {
-          u8g2.drawXBMP(41, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
-        } else if (strcmp(MACHINE_TYPE, "gaggia")==0) {
-          u8g2.drawXBMP(5, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);
-        } else if (strcmp(MACHINE_TYPE, "ecm")==0) {
-          u8g2.drawXBMP(11, 0, ecm_logo_width, ecm_logo_height, ecm_logo_bits);
-        } else {
-          u8g2.drawXBMP(41, 0, general_logo_width, general_logo_height, general_logo_bits);
-        }
+      if (strcmp(MACHINE_TYPE, "rancilio") == 0) {
+        u8g2.drawXBMP(41, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
+      } else if (strcmp(MACHINE_TYPE, "gaggia") == 0) {
+        u8g2.drawXBMP(5, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);
+      } else if (strcmp(MACHINE_TYPE, "ecm") == 0) {
+        u8g2.drawXBMP(11, 0, ecm_logo_width, ecm_logo_height, ecm_logo_bits);
+      } else {
+        u8g2.drawXBMP(41, 0, general_logo_width, general_logo_height, general_logo_bits);
+      }
     } else {
-    #if (ICON_COLLECTION == 3)
+#if (ICON_COLLECTION == 3)
       // text only mode
       if (MACHINE_TYPE == "rancilio") {
         u8g2.drawXBMP(0, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
       } else {
         u8g2.drawXBMP(0, 0, general_logo_width, general_logo_height, general_logo_bits);
       }
-    #else 
-      //display icons
+#else
+      // display icons
       switch (activeState) {
         case 1:
         case 2:
@@ -166,7 +156,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_bits);
           }
           break;
-        case 4: //brew
+        case 4: // brew
           if (image_flip) {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, brewing_bits);
           } else {
@@ -180,7 +170,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             } else {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, brew_ready_rotate_bits);
             }
-          } else {  //inner zone
+          } else { // inner zone
             if (image_flip) {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, brew_acceptable_bits);
             } else {
@@ -189,7 +179,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
           }
           break;
         case 5:
-          if (Input >= steamReadyTemp) {  //fallback: if hardware steaming button is used still show steaming icon
+          if (Input >= steamReadyTemp) { // fallback: if hardware steaming button is used still show steaming icon
             if (image_flip) {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, steam_bits);
             } else {
@@ -203,7 +193,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             }
           }
           break;
-        case 6:  //steaming state (detected via controlAction STEAMING)
+        case 6: // steaming state (detected via controlAction STEAMING)
           if (Input >= steamReadyTemp) {
             if (image_flip) {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, steam_bits);
@@ -211,7 +201,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
               u8g2.drawXBMP(0, 0, icon_width, icon_height, steam_rotate_bits);
             }
           } else {
-            //TODO create new icons for steam phase
+            // TODO create new icons for steam phase
             if (image_flip) {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, outer_zone_bits);
             } else {
@@ -219,7 +209,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             }
           }
           break;
-        case 7:  //sleeping state
+        case 7: // sleeping state
           break;
         case 8: // cleaning state
           if (image_flip) {
@@ -229,10 +219,10 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
           }
           break;
       }
-    #endif
+#endif
     }
 
-    //display current and target temperature
+    // display current and target temperature
     if (activeState > 0 && activeState != 4) {
       if (Input - 100 > -FLT_EPSILON) {
         align_right = align_right_3digits;
@@ -248,9 +238,9 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
       u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
       u8g2.drawGlyph(align_right - 11, 3 + 7, 0x0046);
 
-      //if (Input <= *activeSetPoint + 5 || activeState == 6) { //only show setpoint if we are not steaming
+      // if (Input <= *activeSetPoint + 5 || activeState == 6) { //only show setpoint if we are not steaming
       if (!steaming) {
-        if (*activeSetPoint >= 100 ) {
+        if (*activeSetPoint >= 100) {
           align_right = align_right_3digits;
         } else {
           align_right = align_right_2digits;
@@ -262,7 +252,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.print((char)176);
         u8g2.println("C");
         u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
-        u8g2.drawGlyph(align_right - 11 , 20 + 7, 0x047);
+        u8g2.drawGlyph(align_right - 11, 20 + 7, 0x047);
       }
     } else if (activeState == 4) {
       totalBrewTime = (OnlyPID ? brewtime : preinfusion + preinfusionpause + brewtime) * 1000;
@@ -283,7 +273,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.setFont(u8g2_font_profont10_tf);
         u8g2.println("s");
         u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
-        u8g2.drawGlyph(align_right - 11 , 20 + 7, 0x047);
+        u8g2.drawGlyph(align_right - 11, 20 + 7, 0x047);
       }
     }
   } else {
@@ -291,53 +281,51 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     static bool screen_saver_direction_right = true;
     const int unsigned screen_saver_step = 4;
     unsigned int logo_width = icon_width;
-    if ( enableScreenSaver == 3 && strcmp(MACHINE_TYPE, "gaggia")==0) {
-      logo_width = 125;  //hack which will result in logo only moving left
+    if (enableScreenSaver == 3 && strcmp(MACHINE_TYPE, "gaggia") == 0) {
+      logo_width = 125; // hack which will result in logo only moving left
       screen_saver_x_pos = 5;
-    } else if ( enableScreenSaver == 3 && strcmp(MACHINE_TYPE, "ecm")==0) {
-      logo_width = 125;  //hack which will result in logo only moving left
+    } else if (enableScreenSaver == 3 && strcmp(MACHINE_TYPE, "ecm") == 0) {
+      logo_width = 125; // hack which will result in logo only moving left
       screen_saver_x_pos = 11;
     }
     if (screen_saver_direction_right) {
-      if (screen_saver_x_pos + screen_saver_step <= LCDWidth - logo_width ) {
+      if (screen_saver_x_pos + screen_saver_step <= LCDWidth - logo_width) {
         screen_saver_x_pos += screen_saver_step;
       } else {
         screen_saver_x_pos -= screen_saver_step;
         screen_saver_direction_right = false;
       }
     } else {
-      if (screen_saver_x_pos >= screen_saver_step ) {
+      if (screen_saver_x_pos >= screen_saver_step) {
         screen_saver_x_pos -= screen_saver_step;
       } else {
         screen_saver_x_pos += screen_saver_step;
         screen_saver_direction_right = true;
       }
     }
-    if ( enableScreenSaver == 1 || sleeping) {
-      if (!screenSaverOn) {
-        u8g2.setPowerSave(1);
-      }
-    } else if ( enableScreenSaver == 2 ) {
+    if (enableScreenSaver == 1 || sleeping) {
+      if (!screenSaverOn) { u8g2.setPowerSave(1); }
+    } else if (enableScreenSaver == 2) {
       u8g2.drawXBMP(screen_saver_x_pos, 0, icon_width, icon_height, brew_ready_bits);
-    } else if ( enableScreenSaver == 3 ) {
-      if (strcmp(MACHINE_TYPE, "rancilio")==0) {
+    } else if (enableScreenSaver == 3) {
+      if (strcmp(MACHINE_TYPE, "rancilio") == 0) {
         u8g2.drawXBMP(screen_saver_x_pos, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
-      } else if (strcmp(MACHINE_TYPE, "gaggia")==0) {
-        u8g2.drawXBMP(screen_saver_x_pos, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits);  //TODO fix
-      } else if (strcmp(MACHINE_TYPE,"ecm")==0) {
-        u8g2.drawXBMP(screen_saver_x_pos, 0, ecm_logo_width, ecm_logo_height, ecm_logo_bits);  //TODO fix
+      } else if (strcmp(MACHINE_TYPE, "gaggia") == 0) {
+        u8g2.drawXBMP(screen_saver_x_pos, 0, gaggia_logo_width, gaggia_logo_height, gaggia_logo_bits); // TODO fix
+      } else if (strcmp(MACHINE_TYPE, "ecm") == 0) {
+        u8g2.drawXBMP(screen_saver_x_pos, 0, ecm_logo_width, ecm_logo_height, ecm_logo_bits); // TODO fix
       }
     }
     screenSaverOn = true;
   }
 
-  //power-off timer
+  // power-off timer
 #if (ENABLE_POWER_OFF_COUNTDOWN > 0)
   const unsigned int powerOffCountDownStart = 300;
-  const unsigned int align_right_countdown_min = LCDWidth - 52 ;
+  const unsigned int align_right_countdown_min = LCDWidth - 52;
   const unsigned int align_right_countdown_sec = LCDWidth - 52 + 20;
-  powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ( (millis() - lastBrewEnd) / 1000);
-  if (powerOffTimer <= powerOffCountDownStart && !brewing && displaymessagetext == '\0' && displaymessagetext2 == '\0' ) {
+  powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
+  if (powerOffTimer <= powerOffCountDownStart && !brewing && displaymessagetext == '\0' && displaymessagetext2 == '\0') {
     u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
     u8g2.drawGlyph(align_right_countdown_min - 15, 37 + 7, 0x004e);
     u8g2.setFont(u8g2_font_profont22_tf);
@@ -358,19 +346,19 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
 
   //(optional) add 2 text lines
   u8g2.setFont(u8g2_font_profont11_tf);
-  u8g2.setCursor(ALIGN_CENTER(displaymessagetext), 44);  // 9 pixel space between lines
+  u8g2.setCursor(ALIGN_CENTER(displaymessagetext), 44); // 9 pixel space between lines
   u8g2.print(displaymessagetext);
   u8g2.setCursor(ALIGN_CENTER(displaymessagetext2), 53);
   u8g2.print(displaymessagetext2);
 
-  //add status icons
+  // add status icons
 #if (ENABLE_FAILURE_STATUS_ICONS == 1)
   if (image_flip) {
     byte icon_y = 64 - (status_icon_height - 1);
     byte icon_counter = 0;
     if ((!forceOffline && !isWifiWorking()) || (forceOffline && !FORCE_OFFLINE)) {
       u8g2.drawXBMP(0, 64 - status_icon_height + 1, status_icon_width, status_icon_height, wifi_not_ok_bits);
-      u8g2.drawXBMP(icon_counter * (status_icon_width - 1) , icon_y, status_icon_width, status_icon_height, wifi_not_ok_bits);
+      u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, wifi_not_ok_bits);
       icon_counter++;
     }
     if (BLYNK_ENABLE && !isBlynkWorking() && !FORCE_OFFLINE) {
