@@ -86,7 +86,11 @@ bool mqttPublish(char* reading, char* payload) {
 
 bool mqttReconnect(bool force_connect = false) {
   if (!MQTT_ENABLE || forceOffline || mqttDisabledTemporary || isMqttWorking() || inSensitivePhase()) return true;
+  #ifdef ESP32
+  espClient.setTimeout(2); // set timeout for mqtt connect()/write() to 2 seconds (default 5 seconds).
+  #else
   espClient.setTimeout(2000); // set timeout for mqtt connect()/write() to 2 seconds (default 5 seconds).
+  #endif
   unsigned long now = millis();
   if (force_connect
       || ((now > mqttLastReconnectAttemptTime + (mqttReconnectIncrementalBackoff * (mqttReconnectAttempts)))

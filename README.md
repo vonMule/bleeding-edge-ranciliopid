@@ -107,8 +107,12 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.9.0b4:
+  - Performance improvement: controlActions is now using interrupts with an optional debounce feature (instead of polling each gpio)
+    - I am grateful for any c++ volunteer who can improve the GpioCheck.ino code.
+  - Fix: Debug timeout set to 5hours also when plattformio is used.
 - 2.9.0b3:
-  - code indentation
+  - Code indentation
 - 2.9.0b2:
   - Fix: controllerActions: Improve debouncing of analog(ADC) and digital buttons/switches.
   - Code cleanup and compiler warning fixes.

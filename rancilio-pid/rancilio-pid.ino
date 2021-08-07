@@ -32,7 +32,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "2.9.0b3";
+const char* sysVersion PROGMEM = "2.9.0b4";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -970,7 +970,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       WiFi.setAutoReconnect(false); // disable auto-reconnect
 #ifdef ESP32
       WiFi.begin(ssid, pass);
-      WiFi.setHostname(hostname); // XXX1 Reihenfolge wirklich richtig?
+      WiFi.setHostname(hostname); // TODO Reihenfolge wirklich richtig?
 #else
     WiFi.hostname(hostname);
     WiFi.begin(ssid, pass);
@@ -1473,8 +1473,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     } else if (isrCounter >= Output) { // max(Output) = windowSize
       digitalWrite(pinRelayHeater, LOW);
     } else {
-      digitalWrite(pinRelayHeater, HIGH); // XXX3 TOBIAS READD
-      // digitalWrite(pinRelayHeater, LOW);  //XXX3 TOBIAS REMOVE
+      digitalWrite(pinRelayHeater, HIGH);
     }
     if (isrCounter <= (heaterOverextendingIsrCounter + 100)) {
       isrCounter += 10; // += 10 because one tick = 10ms
@@ -2580,12 +2579,10 @@ void sync_eeprom(bool startup_read, bool force_read) {
      ******************************************************/
     if (triggerType) {
       relayON = HIGH;
-      // relayON = LOW; //REMOVE XXX3 TOBIAS
       relayOFF = LOW;
     } else {
       relayON = LOW;
       relayOFF = HIGH;
-      // relayOFF = LOW; //REMOVE XXX3 TOBIAS
     }
 
     /********************************************************
@@ -2672,6 +2669,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
         snprintf(topicWill, sizeof(topicWill), "%s%s/%s", mqttTopicPrefix, hostname, "will");
         snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
         snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
+        mqttClient.setSocketTimeout(2);
         mqttClient.setServer(mqttServerIP, mqttServerPort);
         mqttClient.setCallback(mqttCallback1);
         if (!mqttReconnect(true)) {

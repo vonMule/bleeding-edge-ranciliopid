@@ -4,6 +4,7 @@
 #include "userConfig.h"
 #include "MQTT.h"
 #include "PIDBias.h"
+#include "GpioCheck.h"
 
 
 // supported actions
@@ -32,6 +33,7 @@ typedef struct controlMap {
   int upperBoundary;
   int value;
   int action;
+  char* gpioCheck;
   struct controlMap* nextControlMap;
 } controlMap;
 
@@ -55,6 +57,7 @@ void actionController(int, int, bool, bool);
 void printMultiToggleConfig();
 void configureControlsHardware(controlMap* controlsConfig);
 int convertActionToDefine(char*);
+int convertPortModeToDefine(char* portMode);
 
 void mqttCallback1(char* topic, unsigned char* data, unsigned int length);
 void mqtt_callback_2(uint32_t* client, const char* topic, uint32_t topic_len, const char* data, uint32_t length);
@@ -76,5 +79,7 @@ extern int sleeping;
 extern unsigned long lastBrewEnd;
 extern bool MaschineColdstartRunOnce;
 extern double steadyPowerOffsetModified;
+
+
 
 #endif

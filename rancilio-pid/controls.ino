@@ -122,6 +122,7 @@ controlMap* parseControlsConfig() {
       nextControlMap->upperBoundary = upperBoundary;
       nextControlMap->action = convertActionToDefine(actionMapAction);
       nextControlMap->value = -1;
+      nextControlMap->gpioCheck = NULL;
       if (controlsConfig == NULL && lastControlMap == NULL) {
         controlsConfig = nextControlMap;
         lastControlMap = controlsConfig;
@@ -217,6 +218,7 @@ void publishActions() {
   }
 }
 
+
 void configureControlsHardware(controlMap* controlsConfig) {
   if (!controlsConfig) {
     DEBUG_println("controlsConfig is empty");
@@ -232,8 +234,14 @@ void configureControlsHardware(controlMap* controlsConfig) {
     if (strcmp(ptr->portType, "analog") == 0) {
       pinMode(ptr->gpio, convertPortModeToDefine(ptr->portMode));
     } else {
-      ;
-      pinMode(ptr->gpio, convertPortModeToDefine(ptr->portMode));
+      //pinMode(ptr->gpio, convertPortModeToDefine(ptr->portMode));
+      if (ptr->gpioCheck == NULL) ptr->gpioCheck = createGpioCheck(ptr->gpio, ptr->portMode);
+      if (ptr->gpioCheck != NULL) {
+        beginGpioCheck(ptr->gpio, ptr->gpioCheck);
+        DEBUG_print("configureControlsHardware(): gpio=%d finished\n", ptr->gpio);
+      } else {
+        ERROR_print("configureControlsHardware(): gpio=%d error\n", ptr->gpio);
+      }
     }
   } while ((ptr = ptr->nextControlMap) != NULL);
 }
@@ -504,26 +512,26 @@ void checkControls(controlMap* controlsConfig) {
         }
 #endif
       } else {
+        if (ptr->gpioCheck != NULL) {
+          unsigned char counter = counterGpioCheck(ptr->gpio, ptr->gpioCheck);  //counter >0 when gpio interrupt had fired
+          //if (counter >0) { DEBUG_print("GPIO=%d: COUNTER=%u\n", ptr->gpio, counter); }
+          if (counter==0) { continue; }
+        }
         valueRead = digitalRead(portRead); // digital pin
+
         // process button press
         currentAction = getActionOfControl(controlsConfig, portRead, valueRead);
 #if (DEBOUNCE_DIGITAL_GPIO != 0)
         // multisample read to surpress flapping/debouncing
         if (((strcmp(ptr->type, "trigger") == 0) && currentAction != UNDEFINED_ACTION) || ((strcmp(ptr->type, "toggle") == 0) && currentAction != gpioLastAction[portRead])) {
-          // XXX3 TOBIAS better use interrupts
-          //idee: 
-          // 1. interrupts auf CHANGE, der dann volatile-GPIO incrementiert. (wie dynamisch instanzieren? -> template class?)
-          // 2. diese funktion hier liest aus und falls volatile-GPIO >0 ist, dann setzt er gpio_millis=millis() und den volatile-GPIO zurück auf 0
-          // 3. diese funktion prüft dann auch ob gpio_millis-millis() >= DEBOUNCE_DIGITAL_PRESS: wenn ja, dann setz gpio-millis=0, digitalRead() und akzeptiere den button-press
-          //--
-          delay(DEBOUNCE_DIGITAL_GPIO);
+          delay(DEBOUNCE_DIGITAL_GPIO);  //despite the internal debounce functionality in GpioCheck.h, we still debounce on a higher level yet again
           valueReadMultiSample = digitalRead(portRead);
           if (valueRead != valueReadMultiSample) {
             snprintf(debugLine, sizeof(debugLine), "GPIO %d: IGNORED %s (%d, %d)", portRead, convertDefineToAction(currentAction), valueRead, valueReadMultiSample);
             ERROR_println(debugLine);
             valueRead = -1;
             currentAction = UNDEFINED_ACTION;
-            continue; // ignore samples this time. ok?
+            continue; // ignore samples this time.
           }
         }
 #endif
@@ -553,7 +561,7 @@ void checkControls(controlMap* controlsConfig) {
       } else if (strcmp(ptr->type, "toggle") == 0) {
         if (currentAction != gpioLastAction[portRead]) {
           DEBUG_print("GPIO %d: %s -> %s\n", portRead, convertDefineToAction(gpioLastAction[portRead]),
-              convertDefineToAction(currentAction)); // XXX3 comment
+              convertDefineToAction(currentAction)); // TODO comment this line
         }
         if (currentAction == UNDEFINED_ACTION) { // no boundaries match ->
           // toggle is in "off" position
@@ -569,7 +577,6 @@ void checkControls(controlMap* controlsConfig) {
             // convertDefineToAction(lastMultiAction),
             // convertDefineToAction(currentMultiAction) );
             if (currentMultiAction != UNDEFINED_ACTION) {
-              // DEBUG_print("INSIDE XXX1\n");
               if (currentMultiAction == lastMultiAction) {
                 // if currentMultiAction already is active, then execute regular
                 // single-toggle action
@@ -581,7 +588,6 @@ void checkControls(controlMap* controlsConfig) {
             } else {
               if (lastMultiAction == UNDEFINED_ACTION) {
                 // if no multiAction then just turn gpio action off
-                // DEBUG_print("INSIDE XXX2\n");
                 actionController(lastGpioLastAction, 0);
               } else {
                 actionController(lastMultiAction, 0);
