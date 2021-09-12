@@ -5,3 +5,4 @@ userConfig.h*
 .vscode
 .pio/*
 .DS_Store
+com.dropbox.attrs

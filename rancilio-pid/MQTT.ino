@@ -86,11 +86,7 @@ bool mqttPublish(char* reading, char* payload) {
 
 bool mqttReconnect(bool force_connect = false) {
   if (!MQTT_ENABLE || forceOffline || mqttDisabledTemporary || isMqttWorking() || inSensitivePhase()) return true;
-  #ifdef ESP32
-  espClient.setTimeout(2); // set timeout for mqtt connect()/write() to 2 seconds (default 5 seconds).
-  #else
-  espClient.setTimeout(2000); // set timeout for mqtt connect()/write() to 2 seconds (default 5 seconds).
-  #endif
+
   unsigned long now = millis();
   if (force_connect
       || ((now > mqttLastReconnectAttemptTime + (mqttReconnectIncrementalBackoff * (mqttReconnectAttempts)))
@@ -100,6 +96,11 @@ bool mqttReconnect(bool force_connect = false) {
     DEBUG_print("Connecting to mqtt ...\n");
     if (mqttClient.connect(hostname, mqttUsername, mqttPassword, topicWill, 0, 0, "unexpected exit") == true) {
       DEBUG_print("Connected to mqtt server\n");
+#ifdef ESP32
+      espClient.setTimeout(2); // set timeout for socket connect()/write() to 2 seconds (default 5 seconds).  XXX1
+#else
+      espClient.setTimeout(2000); // set timeout for mqtt connect()/write() to 2 seconds (default 5 seconds).
+#endif
       mqttPublish((char*)"events", (char*)"Connected to mqtt server");
       if (!mqttClient.subscribe(topicSet) || !mqttClient.subscribe(topicActions)) { ERROR_print("Cannot subscribe to topic\n"); }
       mqttLastReconnectAttemptTime = 0;

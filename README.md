@@ -107,10 +107,23 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.9.0b6:
+  - Update ESP32 schematic to reflect recommendation to use 5v (instead of 3.3v) for the TSIC.
+  - Fix: Temporary using custom "Zacwire for TSIC" due to a bug inducting partly wrong temperature readings. ([Howto](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-and--Platformio))
+  - Feature: TEMPSENSOR_BITWINDOW: When your temperature readings are not working every couple of minutes, you can try out values in the range of 110-135.
+  - Feature: Detect and warn about bitwindow issues (temperature reading flapping) (only DEBUGMODE)
+  - Improvements on network timeouts.
+  - Remove support for DS19B20 temperature sensors.
+  - userConfig Changes:
+    - Added TEMPSENSOR_BITWINDOW (default 125microseconds)
+    - Removed TEMPSENSOR
+  - Fix nodemcu compile error using platformio
+- 2.9.0b5:
+  - Fix: Remove a false-positive error in debug log 
 - 2.9.0b4:
   - Performance improvement: controlActions is now using interrupts with an optional debounce feature (instead of polling each gpio)
     - I am grateful for any c++ volunteer who can improve the GpioCheck.ino code.
-  - Fix: Debug timeout set to 5hours also when plattformio is used.
+  - Fix: Debug timeout set to 5 hours also when plattformio is used.
 - 2.9.0b3:
   - Code indentation
 - 2.9.0b2:

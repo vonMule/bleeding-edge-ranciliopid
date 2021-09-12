@@ -41,6 +41,7 @@ const int userActivityWaitPeriod = 180000;
 void u8g2_prepare(void);
 bool screenSaverRunning();
 void displaymessage(int, char*, char*);
+void displaymessage_helper(int, char*, char*);
 #endif
 
 extern bool brewReady;

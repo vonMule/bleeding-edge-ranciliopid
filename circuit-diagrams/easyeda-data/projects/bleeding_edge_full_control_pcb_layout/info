@@ -4,7 +4,7 @@
   "name": "bleeding_edge_full_control_pcb_layout",
   "content": "",
   "created_at": "2021-03-18 21:35:27",
-  "updated_at": "2021-03-28 21:06:11",
+  "updated_at": "2021-09-04 16:38:47",
   "stick": "",
   "documents": [
     {
@@ -112,7 +112,7 @@
           "POWER_3V",
           1,
           "P2024A-PCB",
-          "3V/GROUND/TEMP",
+          "5V/GROUND/TEMP",
           {
             "BOM_Manufacturer Part": "Terminal Block, PCB Mount, 5mm, 3 Way",
             "BOM_Supplier Part": "P2024A",
@@ -135,16 +135,16 @@
           }
         ]
       ],
-      "updateTime": 1616958371,
+      "updateTime": 1630766327,
       "createTime": 1616099908,
       "histories": [],
       "created_at": "2021-03-18 21:38:28",
-      "updated_at": "2021-03-28 21:06:11"
+      "updated_at": "2021-09-04 16:38:47"
     }
   ],
   "sort": [],
   "title": "bleeding_edge_full_control_pcb_layout",
   "foldername": "bleeding_edge_full_control_pcb_layout",
   "schfilename": "bleeding_edge_full_control_pcb_layout.json",
-  "schfilemtime": 1616958368450
+  "schfilemtime": 1630766327892
 }

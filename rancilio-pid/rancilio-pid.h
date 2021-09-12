@@ -33,6 +33,10 @@
 #define CONTROLS_CONFIG ""
 #endif
 
+#ifndef TEMPSENSOR_BITWINDOW
+#define TEMPSENSOR_BITWINDOW 125
+#endif
+
 #include <RemoteDebug.h> //https://github.com/JoaoLopesF/RemoteDebug
 extern RemoteDebug Debug;
 
@@ -69,6 +73,8 @@ double convertUtilisationToOutput(double);
 
 double pastTemperatureChange(int);
 
+double getCurrentTemperature();
+
 bool almostEqual(float, float);
 
 void print_settings();
@@ -81,5 +87,6 @@ extern char debugLine[200];
 
 void maintenance();
 void sync_eeprom();
+void sync_eeprom(bool, bool);
 
 #endif

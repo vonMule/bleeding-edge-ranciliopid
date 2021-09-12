@@ -28,6 +28,11 @@ bool mqttReconnect(bool);
 bool mqttPublish(char*, char*);
 bool isMqttWorking();
 void mqttPublishSettings();
+bool persistSetting(char*, double*, char*);
+bool persistSetting(char*, int*, char*);
+bool persistSetting(char*, unsigned int*, char*);
+void mqttParse(char*, char*);
+void mqttParseActions(char* topic_str, char* data_str);
 
 char* bool2string(bool in);
 char* int2string(int state);

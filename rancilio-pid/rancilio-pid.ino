@@ -32,13 +32,12 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "2.9.0b4";
+const char* sysVersion PROGMEM = "2.9.0b6";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
  ******************************************************/
 const int OnlyPID = ONLYPID;
-const int TempSensor = TEMPSENSOR;
 const int TempSensorRecovery = TEMPSENSORRECOVERY;
 const int brewDetection = BREWDETECTION;
 const int triggerType = TRIGGERTYPE;
@@ -110,10 +109,12 @@ int relayON, relayOFF; // used for relay trigger type. Do not change!
 int activeState = 3; // (0:= undefined / EMERGENCY_TEMP reached)
                      // 1:= Coldstart required (machine is cold)
                      // 2:= Stabilize temperature after coldstart
-                     // 3:= (default) Inner Zone detected (temperature near
-                     // setPoint) 4:= Brew detected 5:= Outer Zone detected
-                     // (temperature outside of "inner zone") 6:= steam mode
-                     // activated 7:= sleep mode activated 8:= clean mode
+                     // 3:= (default) Inner Zone detected (temperature near setPoint)
+                     // 4:= Brew detected 
+                     // 5:= Outer Zone detected (temperature outside of "inner zone")
+                     // 6:= steam mode activated
+                     // 7:= sleep mode activated 
+                     // 8:= clean mode
 bool emergencyStop = false; // Notstop bei zu hoher Temperatur
 
 /********************************************************
@@ -328,19 +329,6 @@ unsigned long curMicrosPreviousLoop = 0;
 const unsigned long loopReportCount = 100;
 
 /********************************************************
- * DALLAS TEMP
- ******************************************************/
-#include <OneWire.h>
-#if (TEMPSENSOR == 1)
-#include <DallasTemperature.h>
-#define ONE_WIRE_BUS pinTemperature // Data wire
-OneWire oneWire(ONE_WIRE_BUS); // Setup a oneWire instance to communicate with any OneWire
-                               // devices (not just Maxim/Dallas temperature ICs)
-DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature.
-DeviceAddress sensorDeviceAddress; // arrays to hold device address
-#endif
-
-/********************************************************
  * Water level sensor  30x TEMP
  ******************************************************/
 #if (WATER_LEVEL_SENSOR_ENABLE)
@@ -355,13 +343,11 @@ unsigned long previousTimerWaterLevelCheck = 0;
 /********************************************************
  * TSIC 30x TEMP
  ******************************************************/
-#if (TEMPSENSOR == 2)
 #include <ZACwire.h>
 #ifdef ESP32
-ZACwire<pinTemperature> TSIC(306, 120, 0);
+ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0);
 #else
 ZACwire<pinTemperature> TSIC;
-#endif
 #endif
 
 uint16_t temperature = 0;
@@ -503,6 +489,23 @@ BLYNK_WRITE(V110) {
 WidgetLED brewReadyLed(V14);
 
 /******************************************************
+ * WiFi helper scripts
+ ******************************************************/
+#ifdef ESP32
+void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info){
+  DEBUG_print("Connected to AP successfully\n");
+}
+
+void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info){
+  DEBUG_print("WiFi connected. IP=%s\n", WiFi.localIP().toString().c_str());
+}
+
+void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
+  ERROR_print("WiFi lost connection. (IP=%s) Reason: %u\n", WiFi.localIP().toString().c_str(), info.disconnected.reason);
+}
+#endif
+
+/******************************************************
  * HELPER
  ******************************************************/
 bool isWifiWorking() {
@@ -517,7 +520,7 @@ bool isWifiWorking() {
 
 bool isBlynkWorking() { return ((BLYNK_ENABLE == 1) && (isWifiWorking()) && (Blynk.connected())); }
 
-bool inSensitivePhase() { return (Input >= (setPointSteam - 5) || brewing || activeState == 4 || isrCounter > 1000); }
+bool inSensitivePhase() { return (brewing || activeState == 4 || isrCounter > 1000); }
 
 /********************************************************
  * Emergency Stop when temp too high
@@ -542,10 +545,9 @@ void testEmergencyStop() {
  * history temperature data
  *****************************************************/
 void updateTemperatureHistory(double myInput) {
-  if (readIndex >= numReadings - 1) {
+  readIndex++;
+  if (readIndex >= numReadings) {
     readIndex = 0;
-  } else {
-    readIndex++;
   }
   readingsTime[readIndex] = millis();
   readingsTemp[readIndex] = myInput;
@@ -578,7 +580,7 @@ double getAverageTemperature(int lookback) {
   if (count > 0) {
     return averageInput / count;
   } else {
-    DEBUG_print("getAverageTemperature() returned 0\n");
+    ERROR_print("getAverageTemperature() returned 0\n");
     return 0;
   }
 }
@@ -591,7 +593,7 @@ double getTemperature(int lookback) {
   int historicIndex = (readIndex - offset);
   if (historicIndex < 0) { historicIndex += numReadings; }
   // ignore not yet initialized values
-  if (readingsTime[historicIndex] == 0) return 0;
+  if (readingsTime[historicIndex] == 0) { return 0; }
   return readingsTemp[historicIndex];
 }
 
@@ -715,29 +717,6 @@ double temperature_simulate_normal() {
   return setPoint;
 }
 
-double getTSICvalue() {
-  byte parity1 = 0;
-  byte parity2 = 0;
-  noInterrupts(); // no ISRs because temp_value might change during reading
-  uint16_t temperature1 = temp_value[0]; // get high significant bits from ISR
-  uint16_t temperature2 = temp_value[1]; // get low significant bits from ISR
-  interrupts();
-  for (uint8_t i = 0; i < 9; ++i) {
-    if (temperature1 & (1 << i)) ++parity1;
-    if (temperature2 & (1 << i)) ++parity2;
-  }
-  if (!(parity1 % 2) && !(parity2 % 2)) { // check parities
-    temperature1 >>= 1; // delete parity bits
-    temperature2 >>= 1;
-    temperature = (temperature1 << 8) + temperature2; // joints high and low significant figures
-    // TSIC 20x,30x
-    return (float((temperature * 250L) >> 8) - 500) / 10;
-    // TSIC 50x
-    // return (float((temperature * 175L) >> 9) - 100) / 10;
-  } else
-    return -50; // set to -50 if reading failed
-}
-
 /********************************************************
  * check sensor value. If < 0 or difference between old and new >10, then
  * increase error. If error is equal to maxErrorCounter, then set sensorError
@@ -756,6 +735,19 @@ bool checkSensor(float tempInput, float temppreviousInput) {
                   "temp_prev=%0.2f\n",
           error, tempInput, temppreviousInput);
     } else {
+
+#ifdef DEBUGMODE
+      //DEBUG_print("readIndex=%d: t=%0.2f, t-1=%0.2f, t-2=%0.2f, t-3=%0.2f, t-4=%0.2f, t-5=%0.2f,\n",
+          //readIndex, tempInput, temppreviousInput, getTemperature(1), getTemperature(2), getTemperature(3), getTemperature(4));  //XXX1 remove
+#ifdef DEV_ESP  
+      if ((fabs(getTemperature(0) - getTemperature(1)) >= 0.2) && (fabs(getTemperature(1) - getTemperature(2)) >= 0.2) && (fabs(getTemperature(0) - getTemperature(2)) < 0.2)) {  //TODO remove   
+#else
+      if (fabs(tempInput - setPoint) <= 0.3 && ((fabs(getTemperature(0) - getTemperature(1)) >= 0.2) && (fabs(getTemperature(1) - getTemperature(2)) >= 0.2) && (fabs(getTemperature(0) - getTemperature(2)) < 0.2))) {
+#endif
+        ERROR_print("temperature sensor anomaly (tune TEMPSENSOR_BITWINDOW?): before=%0.2f, err=%0.2f, after=%0.2f\n",
+          getTemperature(0), getTemperature(1),  getTemperature(2));  
+      }
+#endif
       error = 0;
       sensorOK = true;
     }
@@ -778,40 +770,24 @@ bool checkSensor(float tempInput, float temppreviousInput) {
  * Each time checkSensor() is called to verify the value.
  * If the value is not valid, new data is not stored.
  *****************************************************/
-void refreshTemp() {
-  unsigned long currentMillistemp = millis();
-#if (TEMPSENSOR == 1)
-  long millis_elapsed = currentMillistemp - previousTimerRefreshTemp;
-  if (floor(millis_elapsed / refreshTempInterval) >= 2) {
-    snprintf(debugLine, sizeof(debugLine),
-        "Main loop() hang: refreshTemp() missed=%g, millis_elapsed=%lu, "
-        "isrCounter=%u",
-        floor(millis_elapsed / refreshTempInterval) - 1, millis_elapsed, isrCounter);
-    ERROR_println(debugLine);
-    mqttPublish((char*)"events", debugLine);
-  }
-  if (currentMillistemp >= previousTimerRefreshTemp + refreshTempInterval) {
-    previousInput = getCurrentTemperature();
-    previousTimerRefreshTemp = currentMillistemp;
-    sensors.requestTemperatures();
-    if (!checkSensor(sensors.getTempCByIndex(0), previousInput)) return; // if sensor data is not valid, abort function
-    updateTemperatureHistory(sensors.getTempCByIndex(0));
-    Input = getAverageTemperature(5);
-#elif (TEMPSENSOR == 2)
-  if (currentMillistemp >= previousTimerRefreshTemp + refreshTempInterval) {
-    previousInput = getCurrentTemperature();
-    previousTimerRefreshTemp = currentMillistemp;
-    Temperatur_C = TSIC.getTemp();
-    // Temperatur_C = temperature_simulate_steam();
-    // Temperatur_C = temperature_simulate_normal();
-    if (checkSensor(Temperatur_C, previousInput)) {
-      updateTemperatureHistory(Temperatur_C);
-      Input = getAverageTemperature(5);
+  void refreshTemp() {
+    unsigned long currentMillistemp = millis();
+    if (currentMillistemp >= previousTimerRefreshTemp + refreshTempInterval) {
+        previousInput = getCurrentTemperature();
+        previousTimerRefreshTemp = currentMillistemp;
+        Temperatur_C = TSIC.getTemp();
+        // Temperatur_C = temperature_simulate_steam();
+        // Temperatur_C = temperature_simulate_normal();
+        if (checkSensor(Temperatur_C, previousInput)) {
+          updateTemperatureHistory(Temperatur_C);
+          Input = getAverageTemperature(5);
+        }
+      }
     }
-  }
-#endif
-  }
 
+  /********************************************************
+   * Cleaning mode
+   ******************************************************/
   void clean() {
     if (OnlyPID) { return; }
     unsigned long aktuelleZeit = millis();
@@ -949,10 +925,11 @@ void refreshTemp() {
       DEBUG_print("Connecting to WIFI with SID %s ...\n", ssid);
       WiFi.persistent(false); // Don't save WiFi configuration in flash
       WiFi.disconnect(true); // Delete SDK WiFi config
-#ifndef ESP32
+#ifdef ESP32
+      WiFi.setSleep(false);
+#else
       WiFi.setSleepMode(WIFI_NONE_SLEEP); // needed for some disconnection bugs?
 #endif
-// WiFi.setSleep(false);              // needed?
 // displaymessage(0, "Connecting Wifi", "");
 #ifdef STATIC_IP
       IPAddress STATIC_IP;
@@ -1850,6 +1827,7 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
     }
 
     // persist steadyPower auto-tuning setting
+    #if (MQTT_ENABLE == 1)
     if (!almostEqual(steadyPower, steadyPowerSaved) && steadyPowerMQTTDisableUpdateUntilProcessed == 0) { // prevent race conditions by semaphore
       steadyPowerSaved = steadyPower;
       steadyPowerMQTTDisableUpdateUntilProcessed = steadyPower;
@@ -1868,6 +1846,7 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
       steadyPowerMQTTDisableUpdateUntilProcessedTime = 0;
       steadyPowerMQTTDisableUpdateUntilProcessed = 0;
     }
+    #endif
 
     // persist settings to eeprom on interval or when required
     if (!inSensitivePhase() && (millis() >= eepromSaveTime + eepromSaveTimer || (eepromForceSync > 0 && (millis() >= eepromForceSync + eepromForceSyncWaitTimer)))) {
@@ -2664,12 +2643,19 @@ void sync_eeprom(bool startup_read, bool force_read) {
       } else {
         DEBUG_print("IP address: %s\n", WiFi.localIP().toString().c_str());
 
+#if (defined(ESP32) and defined(DEBUGMODE))
+        WiFi.onEvent(WiFiStationConnected, SYSTEM_EVENT_STA_CONNECTED);
+        //WiFi.onEvent(WiFiGotIP, SYSTEM_EVENT_STA_GOT_IP);
+        WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
+#endif
+
 // MQTT
 #if (MQTT_ENABLE == 1)
         snprintf(topicWill, sizeof(topicWill), "%s%s/%s", mqttTopicPrefix, hostname, "will");
         snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
         snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
-        mqttClient.setSocketTimeout(2);
+        mqttClient.setKeepAlive(3);      //activates mqttping keepalives (this is probably only needed to have better DEBUG logs)
+        mqttClient.setSocketTimeout(2);  //sets application level timeout
         mqttClient.setServer(mqttServerIP, mqttServerPort);
         mqttClient.setCallback(mqttCallback1);
         if (!mqttReconnect(true)) {
@@ -2785,45 +2771,25 @@ void sync_eeprom(bool startup_read, bool force_read) {
      * TEMP SENSOR
      ******************************************************/
     // displaymessage(0, "Init. vars", "");
-#if (TEMPSENSOR == 1)
-    sensors.begin();
-    sensors.getAddress(sensorDeviceAddress, 0);
-    sensors.setResolution(sensorDeviceAddress, 10);
+    isrCounter = 950; // required
+    if (TSIC.begin() != true) { ERROR_println("TSIC Tempsensor cannot be initialized"); }
+    delay(120);
     while (true) {
-      sensors.requestTemperatures();
-      previousInput = sensors.getTempCByIndex(0);
-      delay(400);
-      sensors.requestTemperatures();
-      Input = sensors.getTempCByIndex(0);
+      previousInput = TSIC.getTemp();
+      // previousInput = temperature_simulate_steam();
+      // previousInput = temperature_simulate_normal();
+      delay(200);
+      Input = TSIC.getTemp();
+      // Input = temperature_simulate_steam();
+      // Input = temperature_simulate_normal();
       if (checkSensor(Input, previousInput)) {
         updateTemperatureHistory(Input);
         break;
       }
       displaymessage(0, (char*)"Temp. sensor defect", (char*)"");
       ERROR_print("Temp. sensor defect. Cannot read consistant values. Retrying\n");
-      delay(400);
+      delay(1000);
     }
-#elif (TEMPSENSOR == 2)
-  isrCounter = 950; // required
-  if (TSIC.begin() != true) { ERROR_println("TSIC Tempsensor cannot be initialized"); }
-  delay(120);
-  while (true) {
-    previousInput = TSIC.getTemp();
-    // previousInput = temperature_simulate_steam();
-    // previousInput = temperature_simulate_normal();
-    delay(200);
-    Input = TSIC.getTemp();
-    // Input = temperature_simulate_steam();
-    // Input = temperature_simulate_normal();
-    if (checkSensor(Input, previousInput)) {
-      updateTemperatureHistory(Input);
-      break;
-    }
-    displaymessage(0, (char*)"Temp. sensor defect", (char*)"");
-    ERROR_print("Temp. sensor defect. Cannot read consistant values. Retrying\n");
-    delay(1000);
-  }
-#endif
 
     /********************************************************
      * WATER LEVEL SENSOR

@@ -58,7 +58,13 @@ void printMultiToggleConfig();
 void configureControlsHardware(controlMap* controlsConfig);
 int convertActionToDefine(char*);
 int convertPortModeToDefine(char* portMode);
-
+char* convertDefineToAction(int action);
+void actionPublish(char*, unsigned int, int, bool, bool);
+void sleepingAction(int);
+void cleaningAction(int state);
+void steamingAction(int state);
+void hotwaterAction(int state);
+void brewingAction(int state);
 void mqttCallback1(char* topic, unsigned char* data, unsigned int length);
 void mqtt_callback_2(uint32_t* client, const char* topic, uint32_t topic_len, const char* data, uint32_t length);
 

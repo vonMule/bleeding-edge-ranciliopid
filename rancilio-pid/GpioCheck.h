@@ -64,7 +64,7 @@ class GpioCheck {
 		}
 
 		void end() {
-			detachInterrupt(isrPin);  //pin?
+			detachInterrupt(digitalPinToInterrupt(pin));
 		}
 
 	private:
