@@ -92,8 +92,8 @@
  *******/
 #define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"  //when a simple switch is connected on port A0 and this switch is used to trigger BREWING.
 
-#define DEBOUNCE_ANALOG_GPIO  10  // 0=off (default, no debounce check) | button press debounce time (in ms) to wait before acknowledgment of press (huge impact on performance. set as low as possible, eg 1ms).
-#define DEBOUNCE_DIGITAL_GPIO 30  // 30=default, 0=off (no debounce check) | button press debounce time (in ms) to wait before acknowledgment of press (set to any value, example 50ms).
+#define DEBOUNCE_ANALOG_GPIO  0 //10  // 0=off (default, no debounce check) | button press debounce time (in ms) to wait before acknowledgment of press (huge impact on performance. set as low as possible, eg 1-10ms).
+#define DEBOUNCE_DIGITAL_GPIO 0 //30  // 30=default, 0=off (no debounce check) | button press debounce time (in ms) to wait before acknowledgment of press (set to any value, example 20-50ms).
 
 
 /*
