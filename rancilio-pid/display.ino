@@ -67,6 +67,20 @@ void setDisplayTextState(int activeState, char* displaymessagetext, char* displa
 #endif
 }
 
+#ifdef ESP32
+void displaymessage_esp32_task(void* activeStateParam) {
+  u8g2_init();
+  delay(100);
+  for (;;) {
+    // unsigned long cur_micros_display = micros();
+    displaymessage_helper(activeStateBuffer, displaymessagetextBuffer, displaymessagetext2Buffer);
+    // DEBUG_print("inside displaymessage_esp32_task() done =%lu\n", micros()-cur_micros_display);
+    vTaskDelay(intervalDisplay / portTICK_PERIOD_MS);
+  }
+  vTaskDelete(NULL);
+}
+#endif
+
 void displaymessage(int activeState, char* displaymessagetext, char* displaymessagetext2) {
   if (Display > 0) {
     static int only_once = 0;
@@ -100,20 +114,6 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
 #endif
   }
 }
-
-#ifdef ESP32
-void displaymessage_esp32_task(void* activeStateParam) {
-  u8g2_init();
-  delay(100);
-  for (;;) {
-    // unsigned long cur_micros_display = micros();
-    displaymessage_helper(activeStateBuffer, displaymessagetextBuffer, displaymessagetext2Buffer);
-    // DEBUG_print("inside displaymessage_esp32_task() done =%lu\n", micros()-cur_micros_display);
-    vTaskDelay(intervalDisplay / portTICK_PERIOD_MS);
-  }
-  vTaskDelete(NULL);
-}
-#endif
 
 void displaymessage_helper(int activeState, char* displaymessagetext, char* displaymessagetext2) {
   u8g2.clearBuffer();

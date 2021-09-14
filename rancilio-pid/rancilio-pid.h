@@ -72,6 +72,7 @@ double convertOutputToUtilisation(double);
 double convertUtilisationToOutput(double);
 
 double pastTemperatureChange(int);
+double pastTemperatureChange(int, bool);
 
 double getCurrentTemperature();
 
@@ -88,5 +89,7 @@ extern char debugLine[200];
 void maintenance();
 void sync_eeprom();
 void sync_eeprom(bool, bool);
+
+void performance_check();
 
 #endif

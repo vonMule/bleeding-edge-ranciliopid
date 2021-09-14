@@ -32,7 +32,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "2.9.0b6";
+const char* sysVersion PROGMEM = "2.9.0b7";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -115,12 +115,12 @@ int activeState = 3; // (0:= undefined / EMERGENCY_TEMP reached)
                      // 6:= steam mode activated
                      // 7:= sleep mode activated 
                      // 8:= clean mode
-bool emergencyStop = false; // Notstop bei zu hoher Temperatur
+bool emergencyStop = false; // protect system when temperature is too high or sensor defect
 
 /********************************************************
  * history of temperatures
  *****************************************************/
-const int numReadings = 75; // number of values per Array
+const int numReadings = 75 * 10; // number of values per Array
 double readingsTemp[numReadings]; // the readings from Temp
 float readingsTime[numReadings]; // the readings from time
 int readIndex = 0; // the index of the current reading
@@ -141,7 +141,7 @@ const float heaterOverextendingFactor = 1.2;
 unsigned int heaterOverextendingIsrCounter = windowSize * heaterOverextendingFactor;
 unsigned long pidComputeLastRunTime = 0;
 double Input = 0, Output = 0;
-double previousInput = 0;
+double previousTemperature = 0;
 double previousOutput = 0;
 int pidMode = 1; // 1 = Automatic, 0 = Manual
 
@@ -259,10 +259,10 @@ unsigned long previousTimerSleepCheck = 0;
 /********************************************************
  * Sensor check
  ******************************************************/
-bool sensorError = false;
+bool sensorMalfunction = false;
 int error = 0;
-int maxErrorCounter = 10; // define maximum number of consecutive polls (of
-                          // intervaltempmes* duration) to have errors
+const int maxErrorCounter = 10*10; // define maximum number of consecutive polls (of
+                          // refreshTempInterval) to have errors
 
 /********************************************************
  * Rest
@@ -277,7 +277,7 @@ unsigned long previousTimerMqttHandle = 0;
 unsigned long previousTimerBlynkHandle = 0;
 unsigned long previousTimerDebugHandle = 0;
 unsigned long previousTimerPidCheck = 0;
-const long refreshTempInterval = 1000; // How often to read the temperature sensor
+const long refreshTempInterval = 100; // How often to read the temperature sensor
 #ifdef EMERGENCY_TEMP
 const unsigned int emergencyTemperature = EMERGENCY_TEMP; // temperature at which the emergency shutdown should take
                                                           // place. DONT SET IT ABOVE 120 DEGREE!!
@@ -351,7 +351,6 @@ ZACwire<pinTemperature> TSIC;
 #endif
 
 uint16_t temperature = 0;
-float Temperatur_C = 0;
 volatile uint16_t temp_value[2] = { 0 };
 volatile byte tsicDataAvailable = 0;
 unsigned int isrCounterStripped = 0;
@@ -553,26 +552,16 @@ void updateTemperatureHistory(double myInput) {
   readingsTemp[readIndex] = myInput;
 }
 
-// calculate the temperature difference between NOW and a datapoint in history
-double pastTemperatureChange(int lookback) {
-  if (lookback >= numReadings) lookback = numReadings - 1;
-  int offset = lookback % numReadings;
-  int historicIndex = (readIndex - offset);
-  if (historicIndex < 0) { historicIndex += numReadings; }
-  // ignore not yet initialized values
-  if (readingsTime[readIndex] == 0 || readingsTime[historicIndex] == 0) return 0;
-  return readingsTemp[readIndex] - readingsTemp[historicIndex];
-}
-
 // calculate the average temperature over the last (lookback) temperatures
 // samples
-double getAverageTemperature(int lookback) {
+double getAverageTemperature(int lookback, int offsetReading = 0) {
   double averageInput = 0;
   int count = 0;
   if (lookback >= numReadings) lookback = numReadings - 1;
   for (int offset = 0; offset < lookback; offset++) {
-    int thisReading = readIndex - offset;
-    if (thisReading < 0) thisReading = numReadings + thisReading;
+    int thisReading = (readIndex - offset - offsetReading) % numReadings;
+    if (thisReading < 0) thisReading += numReadings;
+    //DEBUG_print("getAverageTemperature(%d, %d): %d/%d = %0.2f\n", lookback, offsetReading, thisReading, readIndex, readingsTemp[thisReading]);
     if (readingsTime[thisReading] == 0) break;
     averageInput += readingsTemp[thisReading];
     count += 1;
@@ -580,8 +569,34 @@ double getAverageTemperature(int lookback) {
   if (count > 0) {
     return averageInput / count;
   } else {
-    ERROR_print("getAverageTemperature() returned 0\n");
+    if (millis() > 30000) ERROR_print("getAverageTemperature(): no samples found\n");
     return 0;
+  }
+}
+
+// calculate the temperature difference between NOW and a datapoint in history
+double pastTemperatureChange(int lookback) {
+   return pastTemperatureChange(lookback, true);
+}
+double pastTemperatureChange(int lookback, bool enable_avg) {
+  // take 10samples (10*100ms = 1sec) for average calculations
+  // thus lookback must be > avg_timeframe
+  const int avg_timeframe = 10;  
+  if (lookback >= numReadings) lookback = numReadings - 1;
+  if (enable_avg) {
+    int historicOffset = lookback - avg_timeframe;
+    if (historicOffset < 0) return 0; //pastTemperatureChange will be 0 nevertheless
+    double cur = getAverageTemperature(avg_timeframe);
+    double past = getAverageTemperature(avg_timeframe, historicOffset);
+    // ignore not yet initialized values
+    if (cur == 0 || past == 0) return 0;
+    return cur - past;
+  } else {
+    int historicIndex = (readIndex - lookback) % numReadings;
+    if (historicIndex < 0) { historicIndex += numReadings; }
+    // ignore not yet initialized values
+    if (readingsTime[readIndex] == 0 || readingsTime[historicIndex] == 0) return 0;
+    return readingsTemp[readIndex] - readingsTemp[historicIndex];
   }
 }
 
@@ -606,11 +621,13 @@ double convertUtilisationToOutput(double utilization) { return (utilization / 10
 bool checkBrewReady(double setPoint, float marginOfFluctuation, int lookback) {
   if (almostEqual(marginOfFluctuation, 0)) return false;
   if (lookback >= numReadings) lookback = numReadings - 1;
-  for (int offset = 0; offset < lookback; offset++) {
-    int thisReading = readIndex - offset;
-    if (thisReading < 0) thisReading = numReadings + thisReading;
-    if (readingsTime[thisReading] == 0) return false;
-    if (fabs(setPoint - readingsTemp[thisReading]) > (marginOfFluctuation + FLT_EPSILON)) return false;
+  for (int offset = 0; offset <= floor(lookback / 5); offset++) {
+    int offsetReading = offset * 5;
+    float temp_avg = getAverageTemperature(5, offsetReading);
+    if (temp_avg == 0) return false;
+    if (fabs(setPoint - temp_avg) > (marginOfFluctuation + FLT_EPSILON)) {
+      return false;
+    }
   }
   return true;
 }
@@ -718,51 +735,65 @@ double temperature_simulate_normal() {
 }
 
 /********************************************************
- * check sensor value. If < 0 or difference between old and new >10, then
- * increase error. If error is equal to maxErrorCounter, then set sensorError
+ * check sensor value. If there is an issue, increase error value. 
+ * If error is equal to maxErrorCounter, then set sensorMalfunction.
+ * validationTemperature(=latest read sample) is read one sample (100ms) after actualTemperature.
+ * Returns: 0 := OK, 1 := Hardware issue, 2:= Software issue / outlier detected
  *****************************************************/
-bool checkSensor(float tempInput, float temppreviousInput) {
-  bool sensorOK = false;
-  if (!sensorError) {
-    if (tempInput == 221) {
-      error++;
-      DEBUG_print("temperature sensor connection broken: consec_errors=%d, "
-                  "temp_current=%0.2f, temp_prev=%0.2f\n",
-          error, tempInput, temppreviousInput);
-    } else if ((tempInput < 0 || tempInput > 150 || fabs(tempInput - temppreviousInput) > 5)) {
-      error++;
-      DEBUG_print("temperature sensor reading: consec_errors=%d, temp_current=%0.2f, "
-                  "temp_prev=%0.2f\n",
-          error, tempInput, temppreviousInput);
-    } else {
-
-#ifdef DEBUGMODE
-      //DEBUG_print("readIndex=%d: t=%0.2f, t-1=%0.2f, t-2=%0.2f, t-3=%0.2f, t-4=%0.2f, t-5=%0.2f,\n",
-          //readIndex, tempInput, temppreviousInput, getTemperature(1), getTemperature(2), getTemperature(3), getTemperature(4));  //XXX1 remove
-#ifdef DEV_ESP  
-      if ((fabs(getTemperature(0) - getTemperature(1)) >= 0.2) && (fabs(getTemperature(1) - getTemperature(2)) >= 0.2) && (fabs(getTemperature(0) - getTemperature(2)) < 0.2)) {  //TODO remove   
-#else
-      if (fabs(tempInput - setPoint) <= 0.3 && ((fabs(getTemperature(0) - getTemperature(1)) >= 0.2) && (fabs(getTemperature(1) - getTemperature(2)) >= 0.2) && (fabs(getTemperature(0) - getTemperature(2)) < 0.2))) {
-#endif
-        ERROR_print("temperature sensor anomaly (tune TEMPSENSOR_BITWINDOW?): before=%0.2f, err=%0.2f, after=%0.2f\n",
-          getTemperature(0), getTemperature(1),  getTemperature(2));  
-      }
-#endif
+int checkSensor(float validationTemperature, float actualTemperature) {
+  int sensorStatus = 1;
+  if (sensorMalfunction) {
+    if (TempSensorRecovery == 1 && validationTemperature >= 0 && validationTemperature <= 150) {
+      sensorMalfunction = false;
       error = 0;
-      sensorOK = true;
+      sensorStatus = 0;
+      DEBUG_print("temp sensor recovered.\n");
     }
-    if (error >= maxErrorCounter) {
-      sensorError = true;
-      snprintf(debugLine, sizeof(debugLine), "temperature sensor malfunction: temp_current=%0.2f, temp_prev=%0.2f", tempInput, previousInput);
-      ERROR_println(debugLine);
-      mqttPublish((char*)"events", debugLine);
-    }
-  } else if (TempSensorRecovery == 1 && (!(tempInput < 0 || tempInput > 150))) {
-    sensorError = false;
-    error = 0;
-    sensorOK = true;
+    return sensorStatus;
   }
-  return sensorOK;
+  
+  if (validationTemperature == 221) {
+    error+=10;
+    ERROR_print("temp sensor connection broken: consecErrors=%d, "
+                "validation=%0.2f, actual=%0.2f\n",
+        error, validationTemperature, actualTemperature);
+  } else if (validationTemperature == 222) {
+    error++;
+    DEBUG_print("temp sensor read failed: consecErrors=%d, "
+                "validation=%0.2f, actual=%0.2f\n",
+        error, validationTemperature, actualTemperature);
+  } else if ((validationTemperature < 0 || validationTemperature > 150 || fabs(validationTemperature - actualTemperature) > 5)) {
+    error++;
+    DEBUG_print("temp sensor read unrealistic: consecErrors=%d, validation=%0.2f, "
+                "actual=%0.2f\n",
+        error, validationTemperature, actualTemperature); 
+#ifdef DEV_ESP
+  } else if ((activeState==3 || activeState==1)  &&
+     fabs(validationTemperature - actualTemperature) >= 0.2 &&
+     fabs(actualTemperature - getTemperature(0)) >= 0.2 && 
+     fabs(validationTemperature - getTemperature(0)) < 0.2) {
+#else
+  } else if (activeState==3 && 
+     fabs(actualTemperature - setPoint) <= 0.3 && 
+     fabs(validationTemperature - actualTemperature) >= 0.2 && 
+     fabs(actualTemperature - getTemperature(0)) >= 0.2 &&
+     fabs(validationTemperature - getTemperature(0)) < 0.2) {
+#endif
+      ERROR_print("temp sensor inaccuracy (TEMPSENSOR_BITWINDOW?): prev=%0.2f, actual=%0.2f, validation=%0.2f\n",
+        getTemperature(0), actualTemperature, validationTemperature);
+      sensorStatus = 2;
+  } else {
+    error = 0;
+    sensorStatus = 0;
+  }
+  if (error >= maxErrorCounter) {
+    sensorMalfunction = true;
+    snprintf(debugLine, sizeof(debugLine), "temp sensor malfunction: validation=%0.2f, actual=%0.2f", validationTemperature, actualTemperature);  //XXX1 fix, also above
+    ERROR_println(debugLine);
+    mqttPublish((char*)"events", debugLine);
+  }
+
+  return sensorStatus;
 }
 
 /********************************************************
@@ -773,15 +804,21 @@ bool checkSensor(float tempInput, float temppreviousInput) {
   void refreshTemp() {
     unsigned long currentMillistemp = millis();
     if (currentMillistemp >= previousTimerRefreshTemp + refreshTempInterval) {
-        previousInput = getCurrentTemperature();
+        //previousTemperature = getCurrentTemperature();
         previousTimerRefreshTemp = currentMillistemp;
-        Temperatur_C = TSIC.getTemp();
+        float currentTemperature = TSIC.getTemp();  ///XXX1 TODO test plain temp ino to see if there are also +100degree off samples!!!
         // Temperatur_C = temperature_simulate_steam();
         // Temperatur_C = temperature_simulate_normal();
-        if (checkSensor(Temperatur_C, previousInput)) {
-          updateTemperatureHistory(Temperatur_C);
-          Input = getAverageTemperature(5);
-        }
+        int sensorStatus = checkSensor(currentTemperature, previousTemperature);
+        if (sensorStatus == 1) {  //hardware issue
+          return;
+        } else if (sensorStatus == 2) {  //software issue, outlier detected
+          updateTemperatureHistory(currentTemperature);  //use currentTemp as replacement
+        } else {
+          updateTemperatureHistory(previousTemperature);
+        } 
+        Input = getAverageTemperature(5*10);
+        previousTemperature = currentTemperature;
       }
     }
 
@@ -979,7 +1016,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           blynkReadyLedColor = (char*)BLYNK_GREEN;
           brewReadyLed.setColor(blynkReadyLedColor);
         }
-      } else if (marginOfFluctuation != 0 && checkBrewReady(setPoint, marginOfFluctuation * 2, 40)) {
+      } else if (marginOfFluctuation != 0 && checkBrewReady(setPoint, marginOfFluctuation * 2, 40*10)) {
         if (blynkReadyLedColor != (char*)BLYNK_YELLOW) {
           blynkReadyLedColor = (char*)BLYNK_YELLOW;
           brewReadyLed.setColor(blynkReadyLedColor);
@@ -1004,9 +1041,9 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
       }
       if (blynkSendCounter == 2) {
-        if (String(pastTemperatureChange(10) / 2, 2) != PreviousPastTemperatureChange) {
-          Blynk.virtualWrite(V35, String(pastTemperatureChange(10) / 2, 2));
-          PreviousPastTemperatureChange = String(pastTemperatureChange(10) / 2, 2);
+        if (String(pastTemperatureChange(10*10) / 2, 2) != PreviousPastTemperatureChange) {
+          Blynk.virtualWrite(V35, String(pastTemperatureChange(10*10) / 2, 2));
+          PreviousPastTemperatureChange = String(pastTemperatureChange(10*10) / 2, 2);
         } else {
           blynkSendCounter++;
         }
@@ -1084,13 +1121,13 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       {
         bPID.SetFilterSumOutputI(30);
 
-        if ((Input - setPoint >= 0) || (Input - setPoint <= -20) || (Input - setPoint <= 0 && pastTemperatureChange(20) <= 0.3)
-            || (Input - setPoint >= -1.0 && pastTemperatureChange(10) > 0.2) || (Input - setPoint >= -1.5 && pastTemperatureChange(10) >= 0.45) || !pidMode || sleeping
+        if ((Input - setPoint >= 0) || (Input - setPoint <= -20) || (Input - setPoint <= 0 && pastTemperatureChange(20*10) <= 0.3)
+            || (Input - setPoint >= -1.0 && pastTemperatureChange(10*10) > 0.2) || (Input - setPoint >= -1.5 && pastTemperatureChange(10*10) >= 0.45) || !pidMode || sleeping
             || cleaning) {
           // auto-tune starttemp
           if (millis() < 400000 && steadyPowerOffsetActivateTime > 0 && pidMode && MachineColdOnStart && !steaming && !sleeping
               && !cleaning) { // ugly hack to only adapt setPoint after power-on
-            double tempChange = pastTemperatureChange(10);
+            double tempChange = pastTemperatureChange(10*10);
             if (Input - setPoint >= 0) {
               if (tempChange > 0.05 && tempChange <= 0.15) {
                 DEBUG_print("Auto-Tune starttemp(%0.2f -= %0.2f) | "
@@ -1158,15 +1195,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         bPID.SetAutoTune(false);
         if (!brewing || (OnlyPID && brewDetection == 2 && brewTimer >= lastBrewTimeOffset + 3 && (brewTimer >= brewtime * 1000 || setPoint - Input < 0))) {
           if (OnlyPID && brewDetection == 2) brewing = 0;
-          // DEBUG_print("Out Zone Detection: past(2)=%0.2f, past(3)=%0.2f |
-          // past(5)=%0.2f | past(10)=%0.2f | brewTimer=%lu\n",
-          // pastTemperatureChange(2), pastTemperatureChange(3),
-          // pastTemperatureChange(5), pastTemperatureChange(10), brewTimer /
-          // 1000); DEBUG_print("t(0)=%0.2f | t(1)=%0.2f | t(2)=%0.2f |
-          // t(3)=%0.2f | t(5)=%0.2f | t(10)=%0.2f | t(13)=%0.2f\n",
-          // getTemperature(0), getTemperature(1), getTemperature(2),
-          // getTemperature(3), getTemperature(5), getTemperature(7),
-          // getTemperature(10), getTemperature(13));
           snprintf(debugLine, sizeof(debugLine), "** End of Brew. Transition to state 2 (constant steadyPower)");
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
@@ -1316,15 +1344,8 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           // enable brew-detection if not already running and diff temp is >
           // brewDetectionSensitivity
           if (brewing
-              || (OnlyPID && brewDetection == 2 && (pastTemperatureChange(3) <= -brewDetectionSensitivity) && fabs(getTemperature(5) - setPoint) <= outerZoneTemperatureDifference
+              || (OnlyPID && brewDetection == 2 && (pastTemperatureChange(3*10) <= -brewDetectionSensitivity) && fabs(getTemperature(5*10) - setPoint) <= outerZoneTemperatureDifference
                   && millis() - lastBrewTime >= BREWDETECTION_WAIT * 1000)) {
-            // DEBUG_print("Brew Detect: prev(5)=%0.2f past(3)=%0.2f
-            // past(5)=%0.2f | Avg(3)=%0.2f | Avg(10)=%0.2f Avg(2)=%0.2f\n",
-            // getTemperature(5), pastTemperatureChange(3),
-            // pastTemperatureChange(5), getAverageTemperature(3),
-            // getAverageTemperature(10), getAverageTemperature(2)); Sample:
-            // Brew Detection: past(3)=-1.70 past(5)=-2.10 | Avg(3)=91.50 |
-            // Avg(10)=92.52 Avg(20)=92.81
             if (OnlyPID) {
               brewTimer = 0;
               if (brewDetection == 2) {
@@ -1348,10 +1369,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
 
         /* STATE 5 (OUTER ZONE) DETECTION */
         if (Input > starttemp - coldStartStep1ActivationOffset && (fabs(Input - *activeSetPoint) > outerZoneTemperatureDifference) && !cleaning) {
-          // DEBUG_print("Out Zone Detection: Avg(3)=%0.2f | Avg(5)=%0.2f
-          // Avg(20)=%0.2f Avg(2)=%0.2f\n", getAverageTemperature(3),
-          // getAverageTemperature(5), getAverageTemperature(20),
-          // getAverageTemperature(2));
           snprintf(debugLine, sizeof(debugLine), "** End of normal mode. Transition to state 5 (outerZone)");
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
@@ -1421,7 +1438,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       }
       DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f = b:%5.2f + "
                   "p:%5.2f + i:%5.2f(%5.2f) + d:%5.2f\n",
-          Input, (*activeSetPoint - Input), pastTemperatureChange(10) / 2, convertOutputToUtilisation(Output), steadyPower + bPID.GetSteadyPowerOffsetCalculated(),
+          Input, (*activeSetPoint - Input), pastTemperatureChange(10*10) / 2, convertOutputToUtilisation(Output), steadyPower + bPID.GetSteadyPowerOffsetCalculated(),
           convertOutputToUtilisation(bPID.GetOutputP()), convertOutputToUtilisation(bPID.GetSumOutputI()), convertOutputToUtilisation(bPID.GetOutputI()),
           convertOutputToUtilisation(bPID.GetOutputD()));
     } else if (ret == 2) { // PID is disabled but compute() should have run
@@ -1429,7 +1446,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       pidComputeLastRunTime = millis();
       DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f (PID "
                   "disabled)\n",
-          Input, (*activeSetPoint - Input), pastTemperatureChange(10) / 2, convertOutputToUtilisation(Output));
+          Input, (*activeSetPoint - Input), pastTemperatureChange(10*10) / 2, convertOutputToUtilisation(Output));
     }
   }
 
@@ -1488,9 +1505,9 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
     testEmergencyStop(); // test if Temp is to high
 
     // brewReady
-    if (millis() > lastCheckBrewReady + refreshTempInterval) {
+    if (millis() > lastCheckBrewReady + 1000) {
       lastCheckBrewReady = millis();
-      bool brewReadyCurrent = checkBrewReady(setPoint, marginOfFluctuation, 60);
+      bool brewReadyCurrent = checkBrewReady(setPoint, marginOfFluctuation, 60*10);
       if (!brewReady && brewReadyCurrent) {
         snprintf(debugLine, sizeof(debugLine), "brewReady (Tuning took %lu secs)", ((lastCheckBrewReady - lastBrewEnd) / 1000) - 60);
         DEBUG_println(debugLine);
@@ -1587,7 +1604,7 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
               mqttPublish((char*)"temperature", number2string(Input));
               mqttPublish((char*)"temperatureAboveTarget", number2string((Input - *activeSetPoint)));
               mqttPublish((char*)"heaterUtilization", number2string(convertOutputToUtilisation(Output)));
-              mqttPublish((char*)"pastTemperatureChange", number2string(pastTemperatureChange(10)));
+              mqttPublish((char*)"pastTemperatureChange", number2string(pastTemperatureChange(10*10)));
               mqttPublish((char*)"brewReady", bool2string(brewReady));
               if (ENABLE_POWER_OFF_COUNTDOWN != 0) {
                 powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
@@ -1665,7 +1682,7 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
     }
 
     // Sicherheitsabfrage
-    if (!sensorError && !emergencyStop && Input > 0) {
+    if (!sensorMalfunction && !emergencyStop && Input > 0) {
       updateState();
 
       /* state 1: Water is very cold, set heater to full power */
@@ -1714,7 +1731,7 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
           if (Input <= setPointSteam) {
             // full heat when temp below steam-temp
             Output = windowSize;
-          } else if (Input > setPointSteam && (pastTemperatureChange(2) < 0)) {
+          } else if (Input > setPointSteam && (pastTemperatureChange(2*10) < 0)) {
             // full heat when >setPointSteam BUT temp goes down!
             Output = windowSize;
           } else {
@@ -1784,14 +1801,14 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
       return;
 #endif
 
-    } else if (sensorError) {
+    } else if (sensorMalfunction) {
       // Deactivate PID
       if (pidMode == 1) {
         pidMode = 0;
         bPID.SetMode(pidMode);
         Output = 0;
         if (millis() - recurringOutput > 15000) {
-          ERROR_print("sensorError detected. Shutdown PID and heater\n");
+          ERROR_print("sensorMalfunction detected. Shutdown PID and heater\n");
           recurringOutput = millis();
         }
       }
@@ -2775,19 +2792,20 @@ void sync_eeprom(bool startup_read, bool force_read) {
     if (TSIC.begin() != true) { ERROR_println("TSIC Tempsensor cannot be initialized"); }
     delay(120);
     while (true) {
-      previousInput = TSIC.getTemp();
-      // previousInput = temperature_simulate_steam();
-      // previousInput = temperature_simulate_normal();
+      previousTemperature = TSIC.getTemp();
+      // previousTemperature = temperature_simulate_steam();
+      // previousTemperature = temperature_simulate_normal();
       delay(200);
       Input = TSIC.getTemp();
       // Input = temperature_simulate_steam();
       // Input = temperature_simulate_normal();
-      if (checkSensor(Input, previousInput)) {
-        updateTemperatureHistory(Input);
+      if (checkSensor(Input, previousTemperature) == 0) {
+        updateTemperatureHistory(previousTemperature);
+        previousTemperature = Input;
         break;
       }
-      displaymessage(0, (char*)"Temp. sensor defect", (char*)"");
-      ERROR_print("Temp. sensor defect. Cannot read consistant values. Retrying\n");
+      displaymessage(0, (char*)"Temp sensor defect", (char*)"");
+      ERROR_print("Temp sensor defect. Cannot read consistant values. Retrying\n");
       delay(1000);
     }
 

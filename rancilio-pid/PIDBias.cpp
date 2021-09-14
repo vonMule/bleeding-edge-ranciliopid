@@ -57,7 +57,8 @@ int PIDBias::Compute() {
     lastOutput = *myOutput;
     double input = *myInput;
     double error = **mySetpoint - input;
-    double pastChange = pastTemperatureChange(10) / 2; // difference of the last 10 seconds scaled down to one compute() cycle (=5 seconds).
+    double pastChange = pastTemperatureChange(10*10) / 2; // difference of the last 10 seconds scaled down to one compute() cycle (=5 seconds).
+    double pastChangeOverLongTime = pastTemperatureChange(20*10);  //20sec
 
     outputP = kp * error;
     outputI = ki * error;
@@ -82,11 +83,11 @@ int PIDBias::Compute() {
             DEBUG_print("Attention: steadyPowerOffset is probably too high (%0.2f -= %0.2f) (moving up at setPoint)\n", steadyPowerOffsetCalculated, 0.2);
             *mySteadyPowerOffset -= 0.2;
             // TODO: perhaps we need to reduce steadyPowerOffset in eeprom (permanently)
-          } else if (convertOutputToUtilisation(sumOutputI) >= 0.5 && pastTemperatureChange(20) >= 0 && pastTemperatureChange(20) <= 0.1) {
+          } else if (convertOutputToUtilisation(sumOutputI) >= 0.5 && pastChangeOverLongTime >= 0 && pastChangeOverLongTime <= 0.1) {
             DEBUG_print("Auto-Tune steadyPower(%0.2f += %0.2f) (moving up with too much outputI)\n", *mySteadyPower, 0.15); // convertOutputToUtilisation(sumOutputI / 2));
             *mySteadyPower += 0.15; // convertOutputToUtilisation(sumOutputI / 2);
             // TODO: remember sumOutputI and restore it back to 1/2 when moving down later. only when we are moving up <0.2
-          } else if (convertOutputToUtilisation(sumOutputI) >= 0.3 && pastTemperatureChange(20) >= 0 && pastTemperatureChange(20) <= 0.1) {
+          } else if (convertOutputToUtilisation(sumOutputI) >= 0.3 && pastChangeOverLongTime >= 0 && pastChangeOverLongTime <= 0.1) {
             DEBUG_print("Auto-Tune steadyPower(%0.2f += %0.2f) (moving up with too much outputI)\n", *mySteadyPower, 0.1); // convertOutputToUtilisation(sumOutputI / 2));
             *mySteadyPower += 0.1; // convertOutputToUtilisation(sumOutputI / 2);
             // TODO: remember sumOutputI and restore it back to 1/2 when moving down later. only when we are moving up <0.2
@@ -120,7 +121,7 @@ int PIDBias::Compute() {
     // above target band (setPoint_band) and temp_changes too fast
     if (steadyPowerAutoTune && error < -setPointBand && (millis() - lastTrigger > 30000)) {
       // steady temp
-      if (fabs(pastTemperatureChange(20)) <= 0.01) {
+      if (fabs(pastChangeOverLongTime) <= 0.01) {
         if (steadyPowerOffsetCalculated >= 0.1) {
           // DEBUG_print("Attention: steadyPowerOffset is probably too high (%0.2f -= %0.2f) (barely moving)\n", steadyPowerOffsetCalculated, 0.1);
           //*mySteadyPowerOffset -= 0.1;
@@ -132,7 +133,7 @@ int PIDBias::Compute() {
         lastTrigger = millis();
       }
       // going up
-      else if (pastTemperatureChange(20) > 0 && pastTemperatureChange(20) <= 0.1) {
+      else if (pastChangeOverLongTime > 0 && pastChangeOverLongTime <= 0.1) {
         if (steadyPowerOffsetCalculated >= 0.2) {
           DEBUG_print("Attention: steadyPowerOffset is probably too high (%0.2f -= %0.2f) (moving up at setPointBand)\n", steadyPowerOffsetCalculated, 0.3);
           *mySteadyPowerOffset -= 0.3;
@@ -147,7 +148,7 @@ int PIDBias::Compute() {
     }
 
     // below target band and temp not going up fast enough
-    if (steadyPowerAutoTune && error > setPointBand && pastTemperatureChange(20) <= 0.1 && pastTemperatureChange(20) >= 0 && sumOutputI == filterSumOutputI
+    if (steadyPowerAutoTune && error > setPointBand && pastChangeOverLongTime <= 0.1 && pastChangeOverLongTime >= 0 && sumOutputI == filterSumOutputI
         && (millis() - lastTrigger > 20000)) {
       // steadyPower auto-tuning
       double offset = 0.1;
@@ -189,7 +190,7 @@ int PIDBias::Compute() {
         + outputP + sumOutputI + outputD;
 
     // if we in upper-side of side-band, (nearly) not moving at all due to stable temp but yet not near setpoint, manipulate output once
-    if (error <= -setPointBand && fabs(pastTemperatureChange(20)) <= 0.1 && millis() - lastTrigger2 > 30000) {
+    if (error <= -setPointBand && fabs(pastChangeOverLongTime) <= 0.1 && millis() - lastTrigger2 > 30000) {
       double factor = 1;
       if (error <= -0.2) {
         factor = 0;
@@ -226,7 +227,7 @@ int PIDBias::Compute() {
   DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f = b:%5.2f + p:%5.2f + i:%5.2f(%5.2f) + d:%5.2f -\n",
     *myInput,
     (**mySetpoint - *myInput),
-    pastTemperatureChange(10)/2,
+    pastTemperatureChange(10*10)/2,
     convertOutputToUtilisation(output),
     *mySteadyPower + GetSteadyPowerOffsetCalculated(),
     convertOutputToUtilisation(GetOutputP()),

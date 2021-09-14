@@ -107,6 +107,15 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.9.0b7:
+  - Improve temperature readings to reduce undesireable actions of the PID controller:
+    - Detect outliers near setpoint and fix them automatically.
+    - Read temperature every 100ms (previous 1s) and save it to TemperatureHistory for later use.
+    - Implement average calculations on all temperature functions to stabilize temp readings.
+  - userConfig Changes:  
+    - Add missing DEBOUNCE_ANALOG_GPIO / DEBOUNCE_DIGITAL_GPIO defines in userConfig.h.SAMPLE.
+  - Plattformio: Add missing fastLed library
+  - Bugfixes: Some minor compilation fixes.
 - 2.9.0b6:
   - Update ESP32 schematic to reflect recommendation to use 5v (instead of 3.3v) for the TSIC.
   - Fix: Temporary using custom "Zacwire for TSIC" due to a bug inducting partly wrong temperature readings. ([Howto](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-and--Platformio))
