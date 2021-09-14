@@ -95,7 +95,6 @@
 #define DEBOUNCE_ANALOG_GPIO  0  // 0=off (default, no debounce check) | button press debounce time (in ms) to wait before acknowledgment of press (huge impact on performance. set as low as possible, eg 1-10ms).
 #define DEBOUNCE_DIGITAL_GPIO 30  // 30=default, 0=off (no debounce check) | button press debounce time (in ms) to wait before acknowledgment of press (set to any value, example 20-50ms).
 
-
 /*
  * In "FullControl" modification, you can also trigger controlActions when multiple buttons (toggle) are activated the same time. This allows 
  * to directly control more actions without using mqtt/blynk and GPIO ports.
