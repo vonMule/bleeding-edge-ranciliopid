@@ -32,7 +32,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "2.9.0b7";
+const char* sysVersion PROGMEM = "2.9.0b8";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -521,6 +521,13 @@ bool isBlynkWorking() { return ((BLYNK_ENABLE == 1) && (isWifiWorking()) && (Bly
 
 bool inSensitivePhase() { return (brewing || activeState == 4 || isrCounter > 1000); }
 
+int signnum(double x) {
+  if (x >= 0.0)
+    return 1;
+  else
+    return -1;
+}
+
 /********************************************************
  * Emergency Stop when temp too high
  *****************************************************/
@@ -569,7 +576,7 @@ double getAverageTemperature(int lookback, int offsetReading = 0) {
   if (count > 0) {
     return averageInput / count;
   } else {
-    if (millis() > 30000) ERROR_print("getAverageTemperature(): no samples found\n");
+    if (millis() > 60000) ERROR_print("getAverageTemperature(): no samples found\n");
     return 0;
   }
 }
@@ -771,13 +778,17 @@ int checkSensor(float validationTemperature, float actualTemperature) {
   } else if ((activeState==3 || activeState==1)  &&
      fabs(validationTemperature - actualTemperature) >= 0.2 &&
      fabs(actualTemperature - getTemperature(0)) >= 0.2 && 
-     fabs(validationTemperature - getTemperature(0)) < 0.2) {
+     signnum(getTemperature(0) - actualTemperature)*signnum(validationTemperature - actualTemperature) > 0
+     ) {
 #else
-  } else if (activeState==3 && 
-     fabs(actualTemperature - setPoint) <= 0.3 && 
-     fabs(validationTemperature - actualTemperature) >= 0.2 && 
+  } else if (activeState==3 &&
+     //fabs(actualTemperature - setPoint) <= 5 &&
+     fabs(validationTemperature - setPoint) <= 5 &&
+     fabs(validationTemperature - actualTemperature) >= 0.2 &&
      fabs(actualTemperature - getTemperature(0)) >= 0.2 &&
-     fabs(validationTemperature - getTemperature(0)) < 0.2) {
+     //fabs(validationTemperature - getTemperature(0)) <= 0.2 && //this check could be added also, but then return sensorStatus=1. 
+     signnum(getTemperature(0) - actualTemperature)*signnum(validationTemperature - actualTemperature) > 0
+     ) {
 #endif
       ERROR_print("temp sensor inaccuracy (TEMPSENSOR_BITWINDOW?): prev=%0.2f, actual=%0.2f, validation=%0.2f\n",
         getTemperature(0), actualTemperature, validationTemperature);
@@ -788,7 +799,7 @@ int checkSensor(float validationTemperature, float actualTemperature) {
   }
   if (error >= maxErrorCounter) {
     sensorMalfunction = true;
-    snprintf(debugLine, sizeof(debugLine), "temp sensor malfunction: validation=%0.2f, actual=%0.2f", validationTemperature, actualTemperature);  //XXX1 fix, also above
+    snprintf(debugLine, sizeof(debugLine), "temp sensor malfunction: validation=%0.2f, actual=%0.2f", validationTemperature, actualTemperature);
     ERROR_println(debugLine);
     mqttPublish((char*)"events", debugLine);
   }
@@ -1513,6 +1524,8 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
         DEBUG_println(debugLine);
         mqttPublish((char*)"events", debugLine);
         lastBrewReady = millis() - 60000;
+      } else if (brewReady && !brewReadyCurrent) {
+        //DEBUG_print("brewReady off: %d = %0.2f, %0.2f, %0.2f, %0.2f, %0.2f = %0.2f\n", readIndex, getTemperature(0), getTemperature(1), getTemperature(2), getTemperature(3), getTemperature(4), getAverageTemperature(5));
       }
       brewReady = brewReadyCurrent;
     }

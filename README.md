@@ -107,6 +107,9 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.9.0b8:
+  - Temperature outliner detection activated for a wider range of situations (this shall fix brew-detection)
+  - Minor adaption to PID tuning.
 - 2.9.0b7:
   - Improve temperature readings to reduce undesireable actions of the PID controller:
     - Detect outliers near setpoint and fix them automatically.

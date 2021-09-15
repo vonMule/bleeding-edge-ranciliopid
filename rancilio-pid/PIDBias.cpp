@@ -181,7 +181,7 @@ int PIDBias::Compute() {
         outputD /= 1;
       } else if (outputD < 0) {
         // moving upwards
-        outputD /= 4;
+        outputD /= 2;
       }
     }
 
