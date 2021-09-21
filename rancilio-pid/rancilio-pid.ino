@@ -32,7 +32,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "2.9.0b8";
+const char* sysVersion PROGMEM = "2.9.0b9";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -140,6 +140,7 @@ hw_timer_t* timer = NULL;
 const float heaterOverextendingFactor = 1.2;
 unsigned int heaterOverextendingIsrCounter = windowSize * heaterOverextendingFactor;
 unsigned long pidComputeLastRunTime = 0;
+unsigned long streamComputeLastRunTime = 0;
 double Input = 0, Output = 0;
 double previousTemperature = 0;
 double previousOutput = 0;
@@ -1242,7 +1243,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       case 6: // state 6 heat up because we want to steam
       {
         bPID.SetAutoTune(false); // do not tune during steam phase
-        bPID.SetSumOutputI(100);
 
         if (!steaming) {
           snprintf(debugLine, sizeof(debugLine),
@@ -1463,7 +1463,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
 
 #ifdef ESP32
   void IRAM_ATTR onTimer1ISR() {
-    ;
     timerAlarmWrite(timer, 10000, true); // 10ms
     if (isrCounter >= heaterOverextendingIsrCounter) {
       // turn off when when compute() is not run in time (safetly measure)
@@ -1485,27 +1484,27 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     }
   }
 #else
-void ICACHE_RAM_ATTR onTimer1ISR() {
-  timer1_write(50000); // set interrupt time to 10ms
-  if (isrCounter >= heaterOverextendingIsrCounter) {
-    // turn off when when compute() is not run in time (safetly measure)
-    digitalWrite(pinRelayHeater, LOW);
-    // ERROR_print("onTimer1ISR has stopped heater because pid.Compute() did not
-    // run\n");
-    // TODO: add more emergency handling?
-  } else if (isrCounter > windowSize) {
-    // dont change output when overextending withing overextending_factor
-    // threshold DEBUG_print("onTimer1ISR over extending due to processing
-    // delays: isrCounter=%u\n", isrCounter);
-  } else if (isrCounter >= Output) { // max(Output) = windowSize
-    digitalWrite(pinRelayHeater, LOW);
-  } else {
-    digitalWrite(pinRelayHeater, HIGH);
+  void ICACHE_RAM_ATTR onTimer1ISR() {
+    timer1_write(50000); // set interrupt time to 10ms
+    if (isrCounter >= heaterOverextendingIsrCounter) {
+      // turn off when when compute() is not run in time (safetly measure)
+      digitalWrite(pinRelayHeater, LOW);
+      // ERROR_print("onTimer1ISR has stopped heater because pid.Compute() did not
+      // run\n");
+      // TODO: add more emergency handling?
+    } else if (isrCounter > windowSize) {
+      // dont change output when overextending withing overextending_factor
+      // threshold DEBUG_print("onTimer1ISR over extending due to processing
+      // delays: isrCounter=%u\n", isrCounter);
+    } else if (isrCounter >= Output) { // max(Output) = windowSize
+      digitalWrite(pinRelayHeater, LOW);
+    } else {
+      digitalWrite(pinRelayHeater, HIGH);
+    }
+    if (isrCounter <= (heaterOverextendingIsrCounter + 100)) {
+      isrCounter += 10; // += 10 because one tick = 10ms
+    }
   }
-  if (isrCounter <= (heaterOverextendingIsrCounter + 100)) {
-    isrCounter += 10; // += 10 because one tick = 10ms
-  }
-}
 #endif
 
   /***********************************
@@ -1741,18 +1740,21 @@ void ICACHE_RAM_ATTR onTimer1ISR() {
         if (!pidMode) {
           Output = 0;
         } else {
-          if (Input <= setPointSteam) {
-            // full heat when temp below steam-temp
-            Output = windowSize;
-          } else if (Input > setPointSteam && (pastTemperatureChange(2*10) < 0)) {
-            // full heat when >setPointSteam BUT temp goes down!
-            Output = windowSize;
-          } else {
-            Output = 0;
+          if (millis() >= streamComputeLastRunTime + 1000) {
+            streamComputeLastRunTime = millis();
+            if (Input <= setPointSteam) {
+              // full heat when temp below steam-temp
+              Output = windowSize;
+            } else if (Input > setPointSteam && (pastTemperatureChange(2*10) < -0.05)) {
+              // full heat when >setPointSteam BUT temp goes down!
+              Output = windowSize;
+            } else {
+              Output = 0;
+            }
           }
         }
 
-        /* state 7: Steaming state active*/
+        /* state 7: Sleeping state active*/
       } else if (activeState == 7) {
         if (millis() - recurringOutput > 60000) {
           recurringOutput = millis();
