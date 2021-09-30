@@ -107,6 +107,9 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.9.0b10:
+  - Remove latest networt tunings (wifiSleep, keepalive, timeouts), because it looks like in some situations they break.
+  - Changed userConfig.Sample.h recommended defaults
 - 2.9.0b9:
   - Improve steaming cycle-times.
 - 2.9.0b8:

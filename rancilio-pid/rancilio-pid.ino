@@ -32,7 +32,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "2.9.0b9";
+const char* sysVersion PROGMEM = "2.9.0b10";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -974,11 +974,6 @@ int checkSensor(float validationTemperature, float actualTemperature) {
       DEBUG_print("Connecting to WIFI with SID %s ...\n", ssid);
       WiFi.persistent(false); // Don't save WiFi configuration in flash
       WiFi.disconnect(true); // Delete SDK WiFi config
-#ifdef ESP32
-      WiFi.setSleep(false);
-#else
-      WiFi.setSleepMode(WIFI_NONE_SLEEP); // needed for some disconnection bugs?
-#endif
 // displaymessage(0, "Connecting Wifi", "");
 #ifdef STATIC_IP
       IPAddress STATIC_IP;
@@ -986,10 +981,15 @@ int checkSensor(float validationTemperature, float actualTemperature) {
       IPAddress STATIC_SUBNET;
       WiFi.config(ip, gateway, subnet);
 #endif
-      /* Explicitly set the ESP8266 to be a WiFi-client, otherwise, it by
+      /* Explicitly set the ESP to be a WiFi-client, otherwise, it by
 default, would try to act as both a client and an access-point and could cause
 network-issues with your other WiFi-devices on your WiFi-network. */
       WiFi.mode(WIFI_STA);
+#ifdef ESP32
+      //WiFi.setSleep(false);  //improve network performance. disabled because sometimes reboot happen?!
+#else
+      WiFi.setSleepMode(WIFI_NONE_SLEEP); // needed for some disconnection bugs?
+#endif
       // WiFi.enableSTA(true);
       delay(100); // required for esp32?
       WiFi.setAutoConnect(false); // disable auto-connect
@@ -1738,17 +1738,25 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       } else if (activeState == 6) {
         bPID.SetMode(MANUAL);
         if (!pidMode) {
+          if (millis() >= streamComputeLastRunTime + 500) {
+            ERROR_print("steam: must not be inside this\n");
+            streamComputeLastRunTime = millis();
+          }
           Output = 0;
         } else {
           if (millis() >= streamComputeLastRunTime + 1000) {
             streamComputeLastRunTime = millis();
+            
             if (Input <= setPointSteam) {
               // full heat when temp below steam-temp
+              DEBUG_print("steam: input=%0.2f, past2s=%0.2f HEATING\n", Input,  pastTemperatureChange(2*10));  //XXX1
               Output = windowSize;
             } else if (Input > setPointSteam && (pastTemperatureChange(2*10) < -0.05)) {
-              // full heat when >setPointSteam BUT temp goes down!
+              // full heat when >setPointSteam BUT temp goes down!  XXX1
+              DEBUG_print("steam: input=%0.2f, past2s=%0.2f HEATING ABOVE\n", Input,  pastTemperatureChange(2*10));  //XXX1
               Output = windowSize;
             } else {
+              DEBUG_print("steam: input=%0.2f, past2s=%0.2f\n", Input,  pastTemperatureChange(2*10));  //XXX1
               Output = 0;
             }
           }
@@ -2686,8 +2694,8 @@ void sync_eeprom(bool startup_read, bool force_read) {
         snprintf(topicWill, sizeof(topicWill), "%s%s/%s", mqttTopicPrefix, hostname, "will");
         snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
         snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
-        mqttClient.setKeepAlive(3);      //activates mqttping keepalives (this is probably only needed to have better DEBUG logs)
-        mqttClient.setSocketTimeout(2);  //sets application level timeout
+        //mqttClient.setKeepAlive(3);      //activates mqttping keepalives (default 15)
+        mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)
         mqttClient.setServer(mqttServerIP, mqttServerPort);
         mqttClient.setCallback(mqttCallback1);
         if (!mqttReconnect(true)) {

@@ -146,14 +146,14 @@
 #define STEADYPOWER_OFFSET 3.0        // How much power should be added? (in %) (Rancilio Silvia 5E: 2.9, ...)
 
 #define SETPOINT 93           // Temperature SetPoint
-#define SETPOINT_STEAM 118    // Steam Temperature SetPoint (Rancilio: 118, ECM Casa Prima: 145, ...)
+#define SETPOINT_STEAM 116    // Steam Temperature SetPoint (Rancilio: 116, ECM Casa Prima: 145, ...)
 #define STARTTEMP 80.6        // If temperature is below this value then Coldstart state should be triggered
                               // (Rancilio Silvia 5E: 80.6 , ...)
 
 // Inner Zone PID values
 #define AGGKP 80        // Kp (Rancilio Silvia 5E: 80, ...)
 #define AGGTN 11        // Tn (Rancilio Silvia 5E: 11, ...)
-#define AGGTV 32        // Tv (Rancilio Silvia 5E: 32, ...)
+#define AGGTV 16        // Tv (Rancilio Silvia 5E: 16, ...)
 
 // Outer Zone PID values
 #define AGGOKP 170      // Kp (Rancilio Silvia 5E: 170, ...)
