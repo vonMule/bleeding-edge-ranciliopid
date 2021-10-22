@@ -14,7 +14,6 @@
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
 #define ONLYPID 1             // 1=Only PID with no Preinfussion | 0=PID + Preinfussion
-#define TEMPSENSOR_BITWINDOW  110 // (TEMPSENSOR=2) 125=default, When your temperature readings are sometimes broken, you can try out values in the range of +/-15.
 #define TEMPSENSORRECOVERY 0  // 1 = on, 2= off (default). If off, temp sensor errors will stop the heater until power cycle
 #define TRIGGERTYPE HIGH      // LOW = low trigger, HIGH = high trigger relay
 #define OTA true              // true=activate update via OTA

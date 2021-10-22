@@ -107,6 +107,14 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.9.0b11:
+  - Further improve temperature outlier detection.
+  - Temporary use custom ZACwire library, which offer:
+    - bitwindow auto-tuning right from the start.
+    - directMode to improve outlier detection and flapping temperature in seldom cases (esp32).
+    - Important: You have to [manually install](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-and--Platformio) library/ZACwire_for_TSic (only if you are using Arduino IDE).
+  - Add ZACwire library version check when compiling.
+  - Make TEMPSENSOR_BITWINDOW optional because it is no longer needed due to auto-tuning.
 - 2.9.0b10:
   - Remove latest networt tunings (wifiSleep, keepalive, timeouts), because it looks like in some situations they break.
   - Changed userConfig.Sample.h recommended defaults

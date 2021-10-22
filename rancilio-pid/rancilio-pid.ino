@@ -142,7 +142,7 @@ unsigned int heaterOverextendingIsrCounter = windowSize * heaterOverextendingFac
 unsigned long pidComputeLastRunTime = 0;
 unsigned long streamComputeLastRunTime = 0;
 double Input = 0, Output = 0;
-double previousTemperature = 0;
+double secondlatestTemperature = 0;
 double previousOutput = 0;
 int pidMode = 1; // 1 = Automatic, 0 = Manual
 
@@ -345,10 +345,13 @@ unsigned long previousTimerWaterLevelCheck = 0;
  * TSIC 30x TEMP
  ******************************************************/
 #include <ZACwire.h>
+#if (!defined(ZACWIRE_VERSION) || (defined(ZACWIRE_VERSION) && ZACWIRE_VERSION <= 133L))
+#error ERROR ZACwire library version must be >= 1.3.4
+#endif
 #ifdef ESP32
-ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0);
+ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
 #else
-ZACwire<pinTemperature> TSIC;
+ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
 #endif
 
 uint16_t temperature = 0;
@@ -745,13 +748,13 @@ double temperature_simulate_normal() {
 /********************************************************
  * check sensor value. If there is an issue, increase error value. 
  * If error is equal to maxErrorCounter, then set sensorMalfunction.
- * validationTemperature(=latest read sample) is read one sample (100ms) after actualTemperature.
+ * latestTemperature(=latest read sample) is read one sample (100ms) after secondlatestTemperature.
  * Returns: 0 := OK, 1 := Hardware issue, 2:= Software issue / outlier detected
  *****************************************************/
-int checkSensor(float validationTemperature, float actualTemperature) {
+int checkSensor(float latestTemperature, float secondlatestTemperature) {
   int sensorStatus = 1;
   if (sensorMalfunction) {
-    if (TempSensorRecovery == 1 && validationTemperature >= 0 && validationTemperature <= 150) {
+    if (TempSensorRecovery == 1 && latestTemperature >= 0 && latestTemperature <= 150) {
       sensorMalfunction = false;
       error = 0;
       sensorStatus = 0;
@@ -760,39 +763,40 @@ int checkSensor(float validationTemperature, float actualTemperature) {
     return sensorStatus;
   }
   
-  if (validationTemperature == 221) {
+  if (latestTemperature == 221) {
     error+=10;
     ERROR_print("temp sensor connection broken: consecErrors=%d, "
-                "validation=%0.2f, actual=%0.2f\n",
-        error, validationTemperature, actualTemperature);
-  } else if (validationTemperature == 222) {
+                "secondlatestTemperature=%0.2f, latestTemperature=%0.2f\n",
+        error, secondlatestTemperature, latestTemperature);
+  } else if (latestTemperature == 222) {
     error++;
     DEBUG_print("temp sensor read failed: consecErrors=%d, "
-                "validation=%0.2f, actual=%0.2f\n",
-        error, validationTemperature, actualTemperature);
-  } else if ((validationTemperature < 0 || validationTemperature > 150 || fabs(validationTemperature - actualTemperature) > 5)) {
+                "secondlatestTemperature=%0.2f, latestTemperature=%0.2f\n",
+        error, secondlatestTemperature, latestTemperature);
+  } else if ((latestTemperature < 0 || latestTemperature > 150 || fabs(latestTemperature - secondlatestTemperature) > 5)) {
     error++;
-    DEBUG_print("temp sensor read unrealistic: consecErrors=%d, validation=%0.2f, "
-                "actual=%0.2f\n",
-        error, validationTemperature, actualTemperature); 
+    DEBUG_print("temp sensor read unrealistic: consecErrors=%d, "
+        "secondlatestTemperature=%0.2f, latestTemperature=%0.2f\n",
+        error, secondlatestTemperature, latestTemperature); 
 #ifdef DEV_ESP
   } else if ((activeState==3 || activeState==1)  &&
-     fabs(validationTemperature - actualTemperature) >= 0.2 &&
-     fabs(actualTemperature - getTemperature(0)) >= 0.2 && 
-     signnum(getTemperature(0) - actualTemperature)*signnum(validationTemperature - actualTemperature) > 0
+     fabs(latestTemperature - secondlatestTemperature) >= 0.2 &&
+     fabs(secondlatestTemperature - getTemperature(0)) >= 0.2 && 
+     signnum(getTemperature(0) - secondlatestTemperature)*signnum(latestTemperature - secondlatestTemperature) > 0
      ) {
 #else
   } else if (activeState==3 &&
-     //fabs(actualTemperature - setPoint) <= 5 &&
-     fabs(validationTemperature - setPoint) <= 5 &&
-     fabs(validationTemperature - actualTemperature) >= 0.2 &&
-     fabs(actualTemperature - getTemperature(0)) >= 0.2 &&
-     //fabs(validationTemperature - getTemperature(0)) <= 0.2 && //this check could be added also, but then return sensorStatus=1. 
-     signnum(getTemperature(0) - actualTemperature)*signnum(validationTemperature - actualTemperature) > 0
+     //fabs(secondlatestTemperature - setPoint) <= 5 &&
+     fabs(latestTemperature - setPoint) <= 5 &&
+     fabs(latestTemperature - secondlatestTemperature) >= 0.2 &&
+     fabs(secondlatestTemperature - getTemperature(0)) >= 0.2 &&
+     //fabs(latestTemperature - getTemperature(0)) <= 0.2 && //this check could be added also, but then return sensorStatus=1. 
+     signnum(getTemperature(0) - secondlatestTemperature)*signnum(latestTemperature - secondlatestTemperature) > 0
      ) {
 #endif
-      ERROR_print("temp sensor inaccuracy (TEMPSENSOR_BITWINDOW?): prev=%0.2f, actual=%0.2f, validation=%0.2f\n",
-        getTemperature(0), actualTemperature, validationTemperature);
+      error++;
+      DEBUG_print("temp sensor inaccuracy: thirdlatestTemperature=%0.2f, secondlatestTemperature=%0.2f, latestTemperature=%0.2f\n",
+        getTemperature(0), secondlatestTemperature, latestTemperature);
       sensorStatus = 2;
   } else {
     error = 0;
@@ -800,7 +804,7 @@ int checkSensor(float validationTemperature, float actualTemperature) {
   }
   if (error >= maxErrorCounter) {
     sensorMalfunction = true;
-    snprintf(debugLine, sizeof(debugLine), "temp sensor malfunction: validation=%0.2f, actual=%0.2f", validationTemperature, actualTemperature);
+    snprintf(debugLine, sizeof(debugLine), "temp sensor malfunction: latestTemperature=%0.2f, secondlatestTemperature=%0.2f", latestTemperature, secondlatestTemperature);
     ERROR_println(debugLine);
     mqttPublish((char*)"events", debugLine);
   }
@@ -814,23 +818,29 @@ int checkSensor(float validationTemperature, float actualTemperature) {
  * If the value is not valid, new data is not stored.
  *****************************************************/
   void refreshTemp() {
-    unsigned long currentMillistemp = millis();
-    if (currentMillistemp >= previousTimerRefreshTemp + refreshTempInterval) {
-        //previousTemperature = getCurrentTemperature();
-        previousTimerRefreshTemp = currentMillistemp;
-        float currentTemperature = TSIC.getTemp();  ///XXX1 TODO test plain temp ino to see if there are also +100degree off samples!!!
+    if (millis() >= previousTimerRefreshTemp + refreshTempInterval) {
+        //secondlatestTemperature = getCurrentTemperature();
+        float latestTemperature = TSIC.getTemp();
+        //DEBUG_print("latestTemperature: %0.2f\n", latestTemperature);
         // Temperatur_C = temperature_simulate_steam();
         // Temperatur_C = temperature_simulate_normal();
-        int sensorStatus = checkSensor(currentTemperature, previousTemperature);
+        int sensorStatus = checkSensor(latestTemperature, secondlatestTemperature);
+        previousTimerRefreshTemp = millis();
         if (sensorStatus == 1) {  //hardware issue
+          //DEBUG_print("(%d) latestTemperature=%0.2f (%0.2f) |UnchangedHist: -4=%0.2f, -3=%0.2f, -2=%0.2f, -1=%0.2f (%d)\n",
+          //  sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0), TSIC.getBitWindow());
+          //DEBUG_print("curTemp ERR: %0.2f\n", currentTemperature);
           return;
         } else if (sensorStatus == 2) {  //software issue, outlier detected
-          updateTemperatureHistory(currentTemperature);  //use currentTemp as replacement
+          //DEBUG_print("latestTemperature saved (OUTLIER): %0.2f\n", latestTemperature);
+          updateTemperatureHistory(latestTemperature);  //use currentTemp as replacement
         } else {
-          updateTemperatureHistory(previousTemperature);
+          updateTemperatureHistory(secondlatestTemperature);
         } 
+        //DEBUG_print("(%d) latestTemperature=%0.2f (%0.2f) |SavedHist: -4=%0.2f, -3=%0.2f, -2=%0.2f, -1=%0.2f (%d)\n",
+        //  sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0), TSIC.getBitWindow());
         Input = getAverageTemperature(5*10);
-        previousTemperature = currentTemperature;
+        secondlatestTemperature = latestTemperature;
       }
     }
 
@@ -2813,22 +2823,21 @@ void sync_eeprom(bool startup_read, bool force_read) {
     // displaymessage(0, "Init. vars", "");
     isrCounter = 950; // required
     if (TSIC.begin() != true) { ERROR_println("TSIC Tempsensor cannot be initialized"); }
-    delay(120);
     while (true) {
-      previousTemperature = TSIC.getTemp();
-      // previousTemperature = temperature_simulate_steam();
-      // previousTemperature = temperature_simulate_normal();
-      delay(200);
+      secondlatestTemperature = TSIC.getTemp();
+      delay(100);
+      // secondlatestTemperature = temperature_simulate_steam();
+      // secondlatestTemperature = temperature_simulate_normal();
       Input = TSIC.getTemp();
       // Input = temperature_simulate_steam();
       // Input = temperature_simulate_normal();
-      if (checkSensor(Input, previousTemperature) == 0) {
-        updateTemperatureHistory(previousTemperature);
-        previousTemperature = Input;
+      if (checkSensor(Input, secondlatestTemperature) == 0) {
+        updateTemperatureHistory(secondlatestTemperature);
+        secondlatestTemperature = Input;
         break;
       }
       displaymessage(0, (char*)"Temp sensor defect", (char*)"");
-      ERROR_print("Temp sensor defect. Cannot read consistant values. Retrying\n");
+      ERROR_print("Temp sensor defect. Cannot read consistent values. Retrying\n");
       delay(1000);
     }
 
