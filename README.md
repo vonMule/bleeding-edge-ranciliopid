@@ -107,6 +107,9 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 2.9.0b12:
+  - Recover temperature when maschine had hung during steaming.
+  - Add logging when loop() is taking too much time.
 - 2.9.0b11:
   - Further improve temperature outlier detection.
   - Temporary use custom ZACwire library, which offer:

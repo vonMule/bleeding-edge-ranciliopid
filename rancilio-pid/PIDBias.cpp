@@ -134,7 +134,7 @@ int PIDBias::Compute() {
       }
       // going up
       else if (pastChangeOverLongTime > 0 && pastChangeOverLongTime <= 0.1) {
-        if (steadyPowerOffsetCalculated >= 0.2) {
+        if (steadyPowerOffsetCalculated >= 0.3) {
           DEBUG_print("Attention: steadyPowerOffset is probably too high (%0.2f -= %0.2f) (moving up at setPointBand)\n", steadyPowerOffsetCalculated, 0.3);
           *mySteadyPowerOffset -= 0.3;
           // TODO: perhaps we need to reduce steadyPowerOffset in eeprom (permanently)

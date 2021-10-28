@@ -32,7 +32,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "2.9.0b11";
+const char* sysVersion PROGMEM = "2.9.0b12";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -262,6 +262,7 @@ unsigned long previousTimerSleepCheck = 0;
  ******************************************************/
 bool sensorMalfunction = false;
 int error = 0;
+int errorFarOff = 0;
 const int maxErrorCounter = 10*10; // define maximum number of consecutive polls (of
                           // refreshTempInterval) to have errors
 
@@ -757,8 +758,9 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
     if (TempSensorRecovery == 1 && latestTemperature >= 0 && latestTemperature <= 150) {
       sensorMalfunction = false;
       error = 0;
+      errorFarOff = 0;
       sensorStatus = 0;
-      DEBUG_print("temp sensor recovered.\n");
+      ERROR_print("temp sensor recovered\n");
     }
     return sensorStatus;
   }
@@ -773,11 +775,26 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
     DEBUG_print("temp sensor read failed: consecErrors=%d, "
                 "secondlatestTemperature=%0.2f, latestTemperature=%0.2f\n",
         error, secondlatestTemperature, latestTemperature);
-  } else if ((latestTemperature < 0 || latestTemperature > 150 || fabs(latestTemperature - secondlatestTemperature) > 5)) {
+  } else if (latestTemperature < 0 || latestTemperature > 150) {
     error++;
     DEBUG_print("temp sensor read unrealistic: consecErrors=%d, "
         "secondlatestTemperature=%0.2f, latestTemperature=%0.2f\n",
         error, secondlatestTemperature, latestTemperature); 
+  } else if (fabs(latestTemperature - secondlatestTemperature) > 5) {
+    error++;
+    errorFarOff++;
+    
+    //support corner-case if due to some hangup the temperature jumps >5 degree.
+    if (errorFarOff >= (maxErrorCounter/2)) {
+      sensorStatus = 3;
+      ERROR_print("temp sensor read far off fixed: consecErrors=%d, "
+        "secondlatestTemperature=%0.2f, latestTemperature=%0.2f\n",
+        error, secondlatestTemperature, latestTemperature);
+    } else {
+      DEBUG_print("temp sensor read far off: consecErrors=%d, "
+        "secondlatestTemperature=%0.2f, latestTemperature=%0.2f\n",
+        error, secondlatestTemperature, latestTemperature);
+    }
 #ifdef DEV_ESP
   } else if ((activeState==3 || activeState==1)  &&
      fabs(latestTemperature - secondlatestTemperature) >= 0.2 &&
@@ -800,6 +817,7 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       sensorStatus = 2;
   } else {
     error = 0;
+    errorFarOff = 0;
     sensorStatus = 0;
   }
   if (error >= maxErrorCounter) {
@@ -818,7 +836,11 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
  * If the value is not valid, new data is not stored.
  *****************************************************/
   void refreshTemp() {
-    if (millis() >= previousTimerRefreshTemp + refreshTempInterval) {
+    unsigned long refreshTimeDiff = millis() - previousTimerRefreshTemp;
+    if (refreshTimeDiff >= refreshTempInterval) {
+        if (refreshTimeDiff >= (refreshTempInterval *1.5)) {
+          ERROR_print("refreshTemp(): Delay=%lu ms (loop() hang?)\n", refreshTimeDiff-refreshTempInterval);
+        }
         //secondlatestTemperature = getCurrentTemperature();
         float latestTemperature = TSIC.getTemp();
         //DEBUG_print("latestTemperature: %0.2f\n", latestTemperature);
@@ -831,7 +853,7 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
           //  sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0), TSIC.getBitWindow());
           //DEBUG_print("curTemp ERR: %0.2f\n", currentTemperature);
           return;
-        } else if (sensorStatus == 2) {  //software issue, outlier detected
+        } else if (sensorStatus == 2 || sensorStatus == 3) {  //software issue: outlier detected(==2) or temperature jump (==3)
           //DEBUG_print("latestTemperature saved (OUTLIER): %0.2f\n", latestTemperature);
           updateTemperatureHistory(latestTemperature);  //use currentTemp as replacement
         } else {
@@ -996,7 +1018,7 @@ default, would try to act as both a client and an access-point and could cause
 network-issues with your other WiFi-devices on your WiFi-network. */
       WiFi.mode(WIFI_STA);
 #ifdef ESP32
-      //WiFi.setSleep(false);  //improve network performance. disabled because sometimes reboot happen?!
+      //WiFi.setSleep(false);  //improve network performance. disabled because sometimes reboot happen?!  //TODO XXX1 readd to Line 1009
 #else
       WiFi.setSleepMode(WIFI_NONE_SLEEP); // needed for some disconnection bugs?
 #endif
@@ -2705,7 +2727,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
         snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
         snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
         //mqttClient.setKeepAlive(3);      //activates mqttping keepalives (default 15)
-        mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)
+        mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)  //TODO XXX1 remove?
         mqttClient.setServer(mqttServerIP, mqttServerPort);
         mqttClient.setCallback(mqttCallback1);
         if (!mqttReconnect(true)) {
