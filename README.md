@@ -1,15 +1,31 @@
-# ranciliopid - Open source PID for your espresso machine
+# RANCILIO BLEEDING EDGE
 
-BLEEDING EDGE MASTER VERSION 
+## Do it yourself, open source PID for your espresso machine  
 
 Version 2.9.0b
 
-forked of [Rancilio-Silvia PID](http://rancilio-pid.de).
+forked of [Rancilio-Silvia PID](http://rancilio-pid.de) a long time ago.
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
 
-## Most important features compared to the original rancilio-pid software:
+## Videos
+<details>
+  <summary>Click to expand!</summary>
+
+  ESP32 Functions with full Softwarecontrol: https://www.youtube.com/watch?v=rxVFKlREcDk
+
+  Cleaning Mode: https://www.youtube.com/watch?v=qoNPq2WBcS0
+
+  Waterlevel Sensor: https://www.youtube.com/watch?v=JpUrzaUCCnQ
+
+  Two cups of a double cappuccino with the new Steamfunction: https://www.youtube.com/watch?v=dgLpD719_sw
+
+</details>
+
+
+
+## Most important features compared to the rancilio-pid software:
 1. New PID Controller "Multi-state PID with steadyPower (Bias)"
    - Target-Temperature for brewing and steaming (!) is automatically controlled by PID.
    - Auto-Tuning of all PID settings. No knowledge or special tunings required.
@@ -67,7 +83,7 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
 - This software is tested thoroughly with the pid-only hardware solution on Silvia 5e, and with a permanently run full-hardware solution on an 10 year old Silvia. Also a 10 year old Gaggia Classic is tested successfully. I am grateful for any further feedback. 
 - Please monitor our machine's temperature closely the first few run times. The muti-state pid controller should never lead to temperatures greater than 5 degress above setpoint!
 
-## Sample bleeding-edge workings
+## Sample data log
 - You can use the mqtt interface to export live data for monitoring purposes as can be seen in this [Grafana Dashboard](https://snapshot.raintank.io/dashboard/snapshot/lYe7XigrehSfVsvAWYifEwd2d5hNC0dl).
 
 ## Instructions on how to migrate from official rancilio to bleeding-edge
