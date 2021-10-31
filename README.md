@@ -12,16 +12,16 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
 ## Videos
 <details>
   <summary>Click to expand!</summary>
-
-  ESP32 Functions with full Softwarecontrol: https://www.youtube.com/watch?v=rxVFKlREcDk
-
-  Cleaning Mode: https://www.youtube.com/watch?v=qoNPq2WBcS0
-
-  Waterlevel Sensor: https://www.youtube.com/watch?v=JpUrzaUCCnQ
-
-  Two cups of a double cappuccino with the new Steamfunction: https://www.youtube.com/watch?v=dgLpD719_sw
-
+  
+| Description             |  Video |
+:-----------------------------------------------:|:---------------------------------------------:
+ESP32 Functions with full Softwarecontrol | [![ESP32 Functions with full Softwarecontrol](https://i.ytimg.com/an_webp/rxVFKlREcDk/mqdefault_6s.webp?du=3000&sqp=CJaW-osG&rs=AOn4CLAjotgxXfj23ZHmyM99NYkDJW-c1Q)](https://www.youtube.com/watch?v=rxVFKlREcDk)
+Cleaning Mode | [![Cleaning Mode](https://i.ytimg.com/an_webp/qoNPq2WBcS0/mqdefault_6s.webp?du=3000&sqp=CLib-osG&rs=AOn4CLDrTuOcnzJ-uSO20gZPU3eq3Bdenw)](https://www.youtube.com/watch?v=qoNPq2WBcS0)
+Waterlevel Sensor | [![Waterlevel Sensor](https://i.ytimg.com/an_webp/JpUrzaUCCnQ/mqdefault_6s.webp?du=3000&sqp=COiT-osG&rs=AOn4CLBkSR_0zfGU3lOtfSMTnDjSrerT5g)](https://www.youtube.com/watch?v=JpUrzaUCCnQ)
+Two cups of a double cappuccino with the new Steamfunction | [![Two cups of a double cappuccino with the new Steamfunction](https://i.ytimg.com/an_webp/dgLpD719_sw/mqdefault_6s.webp?du=3000&sqp=CPyK-osG&rs=AOn4CLAbaNVVPl1_OytsG0jLuHppCOsrEg)](https://www.youtube.com/watch?v=dgLpD719_sw)
+  
 </details>
+
 
 
 
