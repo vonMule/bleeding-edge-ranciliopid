@@ -1,5 +1,5 @@
 /********************************************************
- * BLEEDING EDGE RANCILIO-PID.
+ * Perfect Coffee PID
  * https://github.com/medlor/bleeding-edge-ranciliopid
  *****************************************************/
 #include "controls.h"

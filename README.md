@@ -1,28 +1,27 @@
-# RANCILIO BLEEDING EDGE
+# PERFECT COFFEE PID 
+(former bleeding edge ranciliopid)
 
-## Do it yourself, open source PID for your espresso machine  
+## Do it yourself, open-source PID for your espresso machine  
 
-Version 2.9.0b
-
-forked of [Rancilio-Silvia PID](http://rancilio-pid.de) a long time ago.
+Version 3.0.0
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
 
 ## Videos
+[![Introduction](https://img.youtube.com/vi/dQWHeygS9ws/hqdefault.jpg)](https://www.youtube.com/watch?v=dQWHeygS9ws)
 <details>
-  <summary>Click to expand!</summary>
-  
+  <summary>Click for more videos!</summary>
+
 | Description             |  Video |
 :-----------------------------------------------:|:---------------------------------------------:
-ESP32 Functions with full Softwarecontrol | [![ESP32 Functions with full Softwarecontrol](https://i.ytimg.com/an_webp/rxVFKlREcDk/mqdefault_6s.webp?du=3000&sqp=CJaW-osG&rs=AOn4CLAjotgxXfj23ZHmyM99NYkDJW-c1Q)](https://www.youtube.com/watch?v=rxVFKlREcDk)
-Cleaning Mode | [![Cleaning Mode](https://i.ytimg.com/an_webp/qoNPq2WBcS0/mqdefault_6s.webp?du=3000&sqp=CLib-osG&rs=AOn4CLDrTuOcnzJ-uSO20gZPU3eq3Bdenw)](https://www.youtube.com/watch?v=qoNPq2WBcS0)
-Waterlevel Sensor | [![Waterlevel Sensor](https://i.ytimg.com/an_webp/JpUrzaUCCnQ/mqdefault_6s.webp?du=3000&sqp=COiT-osG&rs=AOn4CLBkSR_0zfGU3lOtfSMTnDjSrerT5g)](https://www.youtube.com/watch?v=JpUrzaUCCnQ)
-Two cups of a double cappuccino with the new Steamfunction | [![Two cups of a double cappuccino with the new Steamfunction](https://i.ytimg.com/an_webp/dgLpD719_sw/mqdefault_6s.webp?du=3000&sqp=CPyK-osG&rs=AOn4CLAbaNVVPl1_OytsG0jLuHppCOsrEg)](https://www.youtube.com/watch?v=dgLpD719_sw)
-  
+ESP32 Functions with full Softwarecontrol | [![ESP32 Functions with full Softwarecontrol](https://img.youtube.com/vi/rxVFKlREcDk/hqdefault.jpg)](https://www.youtube.com/watch?v=rxVFKlREcDk)
+Cleaning Mode | [![Cleaning Mode](https://img.youtube.com/vi/qoNPq2WBcS0/hqdefault.jpg)](https://www.youtube.com/watch?v=qoNPq2WBcS0)
+Waterlevel Sensor | [![Waterlevel Sensor](https://img.youtube.com/vi/JpUrzaUCCnQ/hqdefault.jpg)](https://www.youtube.com/watch?v=JpUrzaUCCnQ)
+Two cups of a double cappuccino with the new Steamfunction | [![Two cups of a double cappuccino with the new Steamfunction](https://img.youtube.com/vi/dgLpD719_sw/hqdefault.jpg)](https://www.youtube.com/watch?v=dgLpD719_sw)
 </details>
 
-
+&nbsp;
 
 
 ## Most important features compared to the rancilio-pid software:
@@ -123,65 +122,37 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
-- 2.9.0b12:
-  - Recover temperature when maschine had hung during steaming.
-  - Add logging when loop() is taking too much time.
-- 2.9.0b11:
-  - Further improve temperature outlier detection.
-  - Temporary use custom ZACwire library, which offer:
-    - bitwindow auto-tuning right from the start.
-    - directMode to improve outlier detection and flapping temperature in seldom cases (esp32).
-    - Important: You have to [manually install](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-and--Platformio) library/ZACwire_for_TSic (only if you are using Arduino IDE).
-  - Add ZACwire library version check when compiling.
-  - Make TEMPSENSOR_BITWINDOW optional because it is no longer needed due to auto-tuning.
-- 2.9.0b10:
-  - Remove latest networt tunings (wifiSleep, keepalive, timeouts), because it looks like in some situations they break.
-  - Changed userConfig.Sample.h recommended defaults
-- 2.9.0b9:
-  - Improve steaming cycle-times.
-- 2.9.0b8:
-  - Temperature outliner detection activated for a wider range of situations (this shall fix brew-detection)
-  - Minor adaption to PID tuning.
-- 2.9.0b7:
+- 3.0.0:
+  - Project is getting renamed to "Perfect Coffee PID".
   - Improve temperature readings to reduce undesireable actions of the PID controller:
     - Detect outliers near setpoint and fix them automatically.
     - Read temperature every 100ms (previous 1s) and save it to TemperatureHistory for later use.
     - Implement average calculations on all temperature functions to stabilize temp readings.
-  - userConfig Changes:  
-    - Add missing DEBOUNCE_ANALOG_GPIO / DEBOUNCE_DIGITAL_GPIO defines in userConfig.h.SAMPLE.
-  - Plattformio: Add missing fastLed library
-  - Bugfixes: Some minor compilation fixes.
-- 2.9.0b6:
-  - Update ESP32 schematic to reflect recommendation to use 5v (instead of 3.3v) for the TSIC.
-  - Fix: Temporary using custom "Zacwire for TSIC" due to a bug inducting partly wrong temperature readings. ([Howto](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-and--Platformio))
-  - Feature: TEMPSENSOR_BITWINDOW: When your temperature readings are not working every couple of minutes, you can try out values in the range of 110-135.
-  - Feature: Detect and warn about bitwindow issues (temperature reading flapping) (only DEBUGMODE)
-  - Improvements on network timeouts.
-  - Remove support for DS19B20 temperature sensors.
-  - userConfig Changes:
-    - Added TEMPSENSOR_BITWINDOW (default 125microseconds)
-    - Removed TEMPSENSOR
-  - Fix nodemcu compile error using platformio
-- 2.9.0b5:
-  - Fix: Remove a false-positive error in debug log 
-- 2.9.0b4:
-  - Performance improvement: controlActions is now using interrupts with an optional debounce feature (instead of polling each gpio)
-    - I am grateful for any c++ volunteer who can improve the GpioCheck.ino code.
-  - Fix: Debug timeout set to 5 hours also when plattformio is used.
-- 2.9.0b3:
-  - Code indentation
-- 2.9.0b2:
-  - Fix: controllerActions: Improve debouncing of analog(ADC) and digital buttons/switches.
-  - Code cleanup and compiler warning fixes.
-- 2.9.0b1:
-  - Add full support for platformio and fix compile warnings.
+    - Temporary use custom ZACwire library, which offer:
+      - bitwindow auto-tuning right from the start.
+      - directMode to improve outlier detection and flapping temperature in seldom cases (esp32).
+      - Important: You have to [manually install](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-and--Platformio) library/ZACwire_for_TSic (only if you are using Arduino IDE).
+  - Add full support for platformio, code cleanup and fix compile warnings.
     - Force espressif8266 to Version 2 (until external libs are adapted)
-  - Arduino IDE: Remove some libaries which from now on have to be installed manually. see [wiki](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-Platformio)
+  - Arduino IDE: Remove some libaries which from now on have to be installed manually, see [Wiki](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-Platformio).
+  - Performance improvement: 
+    - controlActions are now using interrupts with an optional debounce feature (instead of polling each gpio).
+  - Update ESP32 schematic to reflect recommendation to use 5v (instead of 3.3v) for the TSIC.
   - Fix: 
     - DISPLAY_TEXT_STATE is working on exp8266.
-  - userConfig:
-    - breaking change:
+    - controllerActions: Improve debouncing of analog(ADC) and digital buttons/switches.
+    - Improve steaming cycle-times.
+  - Remove support for DS19B20 temperature sensors.
+  - Improvements in error logging.
+  - UserConfig Changes:
+    - Breaking Change:
       - renamed DISPLAY to DISPLAY_HARDWARE
+    - Removed:
+      - TEMPSENSOR
+    - Added:
+      - DEBOUNCE_ANALOG_GPIO / DEBOUNCE_DIGITAL_GPIO
+    - Changes:
+      - recommended defaults
 - 2.8.0:
   - Feature: Add support to detect low water using a VL53L0X Time of Flight distance sensor. see [Howto](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Water-level-measurement-using-VL53L0X-(Time-of-Flight-distance-sensor))
   - Helge supplied a 3d printing model for rancilio silvia's water tank lid which can be used with the VL53L0X sensor. (thanks Helge!)

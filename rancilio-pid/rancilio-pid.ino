@@ -1,5 +1,5 @@
 /********************************************************
- * BLEEDING EDGE FORK OF RANCILIO-PID
+ * Perfect Coffee PID
  * https://github.com/medlor/bleeding-edge-ranciliopid
  *
  * The "old" origin can be found at http://rancilio-pid.de/
@@ -32,7 +32,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "2.9.0b12";
+const char* sysVersion PROGMEM = "3.0.0";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -1781,14 +1781,14 @@ network-issues with your other WiFi-devices on your WiFi-network. */
             
             if (Input <= setPointSteam) {
               // full heat when temp below steam-temp
-              DEBUG_print("steam: input=%0.2f, past2s=%0.2f HEATING\n", Input,  pastTemperatureChange(2*10));  //XXX1
+              //DEBUG_print("steam: input=%0.2f, past2s=%0.2f HEATING\n", Input,  pastTemperatureChange(2*10));
               Output = windowSize;
             } else if (Input > setPointSteam && (pastTemperatureChange(2*10) < -0.05)) {
-              // full heat when >setPointSteam BUT temp goes down!  XXX1
-              DEBUG_print("steam: input=%0.2f, past2s=%0.2f HEATING ABOVE\n", Input,  pastTemperatureChange(2*10));  //XXX1
+              // full heat when >setPointSteam BUT temp goes down!
+              //DEBUG_print("steam: input=%0.2f, past2s=%0.2f HEATING ABOVE\n", Input,  pastTemperatureChange(2*10));
               Output = windowSize;
             } else {
-              DEBUG_print("steam: input=%0.2f, past2s=%0.2f\n", Input,  pastTemperatureChange(2*10));  //XXX1
+              //DEBUG_print("steam: input=%0.2f, past2s=%0.2f\n", Input,  pastTemperatureChange(2*10));
               Output = 0;
             }
           }
