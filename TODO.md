@@ -2,13 +2,11 @@
 - mqtt events/ should deliver json not string.
 - String replacement (https://cpp4arduino.com/2020/02/07/how-to-format-strings-without-the-string-class.html)
 - convert all float to long.
+- Improve temperature outliner detection by using all sampled temperatures (every <100ms, instead of once a second.)
 
 
 Feature Requests:
-- TOF Sensor: waterlevel + abtropfschale
-  - Wasserdeckel 2-teilig drucken und mit TOF ausstatten.
-- Feature wäre definitiv noch das zuheizen beim Wasserbezug im Hotwater
-
+- brewing profile support
 
 
 

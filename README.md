@@ -1,15 +1,30 @@
-# ranciliopid - Open source PID for your espresso machine
+# PERFECT COFFEE PID 
+(former bleeding edge ranciliopid)
 
-BLEEDING EDGE MASTER VERSION 
+## Do it yourself, open-source PID for your espresso machine  
 
-Version 2.8.0
-
-forked of [Rancilio-Silvia PID](http://rancilio-pid.de).
+Version 3.0.0
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
 
-## Most important features compared to the original rancilio-pid software:
+## Videos
+[![Introduction](https://img.youtube.com/vi/dQWHeygS9ws/hqdefault.jpg)](https://www.youtube.com/watch?v=dQWHeygS9ws)
+<details>
+  <summary>Click for more videos!</summary>
+
+| Description             |  Video |
+:-----------------------------------------------:|:---------------------------------------------:
+ESP32 Functions with full Softwarecontrol | [![ESP32 Functions with full Softwarecontrol](https://img.youtube.com/vi/rxVFKlREcDk/hqdefault.jpg)](https://www.youtube.com/watch?v=rxVFKlREcDk)
+Cleaning Mode | [![Cleaning Mode](https://img.youtube.com/vi/qoNPq2WBcS0/hqdefault.jpg)](https://www.youtube.com/watch?v=qoNPq2WBcS0)
+Waterlevel Sensor | [![Waterlevel Sensor](https://img.youtube.com/vi/JpUrzaUCCnQ/hqdefault.jpg)](https://www.youtube.com/watch?v=JpUrzaUCCnQ)
+Two cups of a double cappuccino with the new Steamfunction | [![Two cups of a double cappuccino with the new Steamfunction](https://img.youtube.com/vi/dgLpD719_sw/hqdefault.jpg)](https://www.youtube.com/watch?v=dgLpD719_sw)
+</details>
+
+&nbsp;
+
+
+## Most important features compared to the rancilio-pid software:
 1. New PID Controller "Multi-state PID with steadyPower (Bias)"
    - Target-Temperature for brewing and steaming (!) is automatically controlled by PID.
    - Auto-Tuning of all PID settings. No knowledge or special tunings required.
@@ -67,7 +82,7 @@ You can chat with us directly using our [discord server](https://discord.gg/VA5Z
 - This software is tested thoroughly with the pid-only hardware solution on Silvia 5e, and with a permanently run full-hardware solution on an 10 year old Silvia. Also a 10 year old Gaggia Classic is tested successfully. I am grateful for any further feedback. 
 - Please monitor our machine's temperature closely the first few run times. The muti-state pid controller should never lead to temperatures greater than 5 degress above setpoint!
 
-## Sample bleeding-edge workings
+## Sample data log
 - You can use the mqtt interface to export live data for monitoring purposes as can be seen in this [Grafana Dashboard](https://snapshot.raintank.io/dashboard/snapshot/lYe7XigrehSfVsvAWYifEwd2d5hNC0dl).
 
 ## Instructions on how to migrate from official rancilio to bleeding-edge
@@ -107,6 +122,37 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.0.0:
+  - Project is getting renamed to "Perfect Coffee PID".
+  - Improve temperature readings to reduce undesireable actions of the PID controller:
+    - Detect outliers near setpoint and fix them automatically.
+    - Read temperature every 100ms (previous 1s) and save it to TemperatureHistory for later use.
+    - Implement average calculations on all temperature functions to stabilize temp readings.
+    - Temporary use custom ZACwire library, which offer:
+      - bitwindow auto-tuning right from the start.
+      - directMode to improve outlier detection and flapping temperature in seldom cases (esp32).
+      - Important: You have to [manually install](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-and--Platformio) library/ZACwire_for_TSic (only if you are using Arduino IDE).
+  - Add full support for platformio, code cleanup and fix compile warnings.
+    - Force espressif8266 to Version 2 (until external libs are adapted)
+  - Arduino IDE: Remove some libaries which from now on have to be installed manually, see [Wiki](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/How-to-compile-on-Arduino-Platformio).
+  - Performance improvement: 
+    - controlActions are now using interrupts with an optional debounce feature (instead of polling each gpio).
+  - Update ESP32 schematic to reflect recommendation to use 5v (instead of 3.3v) for the TSIC.
+  - Fix: 
+    - DISPLAY_TEXT_STATE is working on exp8266.
+    - controllerActions: Improve debouncing of analog(ADC) and digital buttons/switches.
+    - Improve steaming cycle-times.
+  - Remove support for DS19B20 temperature sensors.
+  - Improvements in error logging.
+  - UserConfig Changes:
+    - Breaking Change:
+      - renamed DISPLAY to DISPLAY_HARDWARE
+    - Removed:
+      - TEMPSENSOR
+    - Added:
+      - DEBOUNCE_ANALOG_GPIO / DEBOUNCE_DIGITAL_GPIO
+    - Changes:
+      - recommended defaults
 - 2.8.0:
   - Feature: Add support to detect low water using a VL53L0X Time of Flight distance sensor. see [Howto](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Water-level-measurement-using-VL53L0X-(Time-of-Flight-distance-sensor))
   - Helge supplied a 3d printing model for rancilio silvia's water tank lid which can be used with the VL53L0X sensor. (thanks Helge!)

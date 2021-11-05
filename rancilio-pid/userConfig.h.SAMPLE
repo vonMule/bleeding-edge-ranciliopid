@@ -1,5 +1,5 @@
 /********************************************************
- * Version 2.8.0
+ * Version 3.0.0
  * Config must be configured by the user
  *****************************************************/
 
@@ -14,7 +14,6 @@
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
 #define ONLYPID 1             // 1=Only PID with no Preinfussion | 0=PID + Preinfussion
-#define TEMPSENSOR 2          // 1=DS19B20; 2=TSIC306. It is not recommended to use DS19B20 due to latencies.
 #define TEMPSENSORRECOVERY 0  // 1 = on, 2= off (default). If off, temp sensor errors will stop the heater until power cycle
 #define TRIGGERTYPE HIGH      // LOW = low trigger, HIGH = high trigger relay
 #define OTA true              // true=activate update via OTA
@@ -92,6 +91,9 @@
  *******/
 #define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"  //when a simple switch is connected on port A0 and this switch is used to trigger BREWING.
 
+#define DEBOUNCE_ANALOG_GPIO  0  // 0=off (default, no debounce check) | button press debounce time (in ms) to wait before acknowledgment of press (huge impact on performance. set as low as possible, eg 1-10ms).
+#define DEBOUNCE_DIGITAL_GPIO 30  // 30=default, 0=off (no debounce check) | button press debounce time (in ms) to wait before acknowledgment of press (set to any value, example 20-50ms).
+
 /*
  * In "FullControl" modification, you can also trigger controlActions when multiple buttons (toggle) are activated the same time. This allows 
  * to directly control more actions without using mqtt/blynk and GPIO ports.
@@ -110,7 +112,7 @@
 /*******
  * Display Settings
  *******/
-#define DISPLAY 0                         // 0=Deaktiviert, 1=SH1106_128X64, 2=SSD1306_128X64
+#define DISPLAY_HARDWARE 0                // 0=Deaktiviert, 1=SH1106_128X64, 2=SSD1306_128X64
 #define ROTATE_DISPLAY 0                  // 0=Off (Default), 1=180 degree clockwise rotation
 #define DISPLAY_TEXT_STATE 1              // 1=On  (Default), 0=Off display text of Maschine-state
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter", 3:="text"
@@ -143,14 +145,14 @@
 #define STEADYPOWER_OFFSET 3.0        // How much power should be added? (in %) (Rancilio Silvia 5E: 2.9, ...)
 
 #define SETPOINT 93           // Temperature SetPoint
-#define SETPOINT_STEAM 118    // Steam Temperature SetPoint (Rancilio: 118, ECM Casa Prima: 145, ...)
+#define SETPOINT_STEAM 116    // Steam Temperature SetPoint (Rancilio: 116, ECM Casa Prima: 145, ...)
 #define STARTTEMP 80.6        // If temperature is below this value then Coldstart state should be triggered
                               // (Rancilio Silvia 5E: 80.6 , ...)
 
 // Inner Zone PID values
 #define AGGKP 80        // Kp (Rancilio Silvia 5E: 80, ...)
 #define AGGTN 11        // Tn (Rancilio Silvia 5E: 11, ...)
-#define AGGTV 32        // Tv (Rancilio Silvia 5E: 32, ...)
+#define AGGTV 16        // Tv (Rancilio Silvia 5E: 16, ...)
 
 // Outer Zone PID values
 #define AGGOKP 170      // Kp (Rancilio Silvia 5E: 170, ...)
