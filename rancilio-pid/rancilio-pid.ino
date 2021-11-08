@@ -32,7 +32,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.0.0";
+const char* sysVersion PROGMEM = "3.1.0_b1";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -1007,6 +1007,9 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       WiFi.persistent(false); // Don't save WiFi configuration in flash
       WiFi.disconnect(true); // Delete SDK WiFi config
 // displaymessage(0, "Connecting Wifi", "");
+#ifdef ESP32
+      WiFi.setSleep(false);  //TODO XXX1 readd to Line 1009 Helge added
+#endif
 #ifdef STATIC_IP
       IPAddress STATIC_IP;
       IPAddress STATIC_GATEWAY;
@@ -1018,7 +1021,7 @@ default, would try to act as both a client and an access-point and could cause
 network-issues with your other WiFi-devices on your WiFi-network. */
       WiFi.mode(WIFI_STA);
 #ifdef ESP32
-      //WiFi.setSleep(false);  //improve network performance. disabled because sometimes reboot happen?!  //TODO XXX1 readd to Line 1009
+      //WiFi.setSleep(false);  //improve network performance. disabled because sometimes reboot happen?!  //TODO XXX1 readd to Line 1009 Helge removed
 #else
       WiFi.setSleepMode(WIFI_NONE_SLEEP); // needed for some disconnection bugs?
 #endif
@@ -2727,7 +2730,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
         snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
         snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
         //mqttClient.setKeepAlive(3);      //activates mqttping keepalives (default 15)
-        mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)  //TODO XXX1 remove?
+        //mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)  //TODO XXX1 remove? Helge
         mqttClient.setServer(mqttServerIP, mqttServerPort);
         mqttClient.setCallback(mqttCallback1);
         if (!mqttReconnect(true)) {

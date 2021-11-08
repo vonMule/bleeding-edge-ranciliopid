@@ -122,6 +122,8 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.1.0_beta1:
+  - remove some network tuning
 - 3.0.0:
   - Project is getting renamed to "Perfect Coffee PID".
   - Improve temperature readings to reduce undesireable actions of the PID controller:
