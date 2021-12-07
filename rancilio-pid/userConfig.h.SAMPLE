@@ -66,7 +66,7 @@
  *        GPIO number: ESP8266/nodemcu: A0 = 17 && esp32: https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
  *        "toggle" keeps its state and "trigger" only shortly changes its state before it resets.
  *        ACTION_BLOCK = "<lowerBoundary>-<upperBoundary>:<ACTION>"
- *            ACTION = BREWING|HOTWATER|STEAMING|PUMP|VALVE|... (see controls.h for a full list of supported actions)
+ *            ACTION = BREWING|HOTWATER|STEAMING|MENU|... (see controls.h for a full list of supported actions)
  *
  *
  *    Examples:
@@ -124,6 +124,25 @@
                                           // to shutdown (Silvia 5E: 1800). Show countdown for the last 3 minutes.
 #define STEAM_READY_TEMP 116              // (display only) if temperature is higher then this value then the steam-ready icon is shown
                                           // (Rancilio: 116, ECM Casa Prima: 130?, ...)
+
+
+/*******
+ * Menu Settings
+ * 
+ * Ordered list of menu items which will be displayed when the "menu" action is triggered.
+ *
+ * Format of MENU_CONFIG:
+ *  MENU_CONFIG = "<MENU_CONFIG_BLOCK_1>#<MENU_CONFIG_BLOCK_2>#<unlimited number of blocks>"
+ *     MENU_CONFIG_BLOCK_X = "<TYPE>:<ITEM>:<STEP_SIZE>"
+ *        TYPE = Is either "CONFIG" or "ACTION". Depending on the ITEM.
+ *        ITEM = SETPOINT|SETPOINTSTEAM|BREWTIME|PREINFUSION|SLEEPING|CLEANING|... (see controls.h for a full list of supported items).
+ *        STEP_SIZE = Definition of how much the actual value is changed when INC or DEC button is pressed. Use 1 for booleans.
+ *
+ *    Example:
+ *    #define MENU_CONFIG "ACTION:SLEEPING:1#CONFIG:SETPOINT:0.5#CONFIG:BREWTIME:0.5#CONFIG:PREINFUSION_PAUSE:0.1#CONFIG:PREINFUSION:0.1#CONFIG:PID_ON:1"
+ *
+ *******/
+#define MENU_CONFIG ""
 
 
 /*******

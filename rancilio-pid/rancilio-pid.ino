@@ -369,6 +369,15 @@ controlMap* controlsConfig = NULL;
 unsigned long lastCheckGpio = 0;
 
 /********************************************************
+ * MENU
+ ******************************************************/
+unsigned int menuPosition = 0;
+float menuValue = 0;
+unsigned long previousTimerMenuCheck = 0;
+const unsigned int menuOffTimer = 7000;
+menuMap* menuConfig = NULL;
+
+/********************************************************
  * BLYNK
  ******************************************************/
 #define BLYNK_PRINT Serial
@@ -391,6 +400,38 @@ String PreviousPastTemperatureChange = "";
 String PreviousInputString = "";
 bool blynkDisabledTemporary = false;
 
+void blynkSave(char* setting) {
+  if (!strcmp(setting, "Input")) { Blynk.virtualWrite(V2, String(Input, 2)); }
+  else if (!strcmp(setting, "aggKp")) { Blynk.virtualWrite(V4, String(aggKp, 1)); }
+  else if (!strcmp(setting, "aggTn")) { Blynk.virtualWrite(V5, String(aggTn, 1)); }
+  else if (!strcmp(setting, "aggTv")) { Blynk.virtualWrite(V6, String(aggTv, 1)); }
+  else if (!strcmp(setting, "setPoint")) { Blynk.virtualWrite(V7, String(setPoint, 1)); }
+  else if (!strcmp(setting, "brewtime")) { Blynk.virtualWrite(V8, String(brewtime, 1)); }
+  else if (!strcmp(setting, "preinfusion")) { Blynk.virtualWrite(V9, String(preinfusion, 1)); }
+  else if (!strcmp(setting, "preinfusionpause")) { Blynk.virtualWrite(V10, String(preinfusionpause, 1)); }
+  else if (!strcmp(setting, "error")) { Blynk.virtualWrite(V11, String(Input - *activeSetPoint, 2)); }
+  else if (!strcmp(setting, "starttemp")) { Blynk.virtualWrite(V12, String(starttemp, 1)); }
+  else if (!strcmp(setting, "pidON")) { Blynk.virtualWrite(V13, String(pidON)); }
+  else if (!strcmp(setting, "output")) { Blynk.virtualWrite(V23, String(convertOutputToUtilisation(Output), 2)); }
+  else if (!strcmp(setting, "aggoKp")) { Blynk.virtualWrite(V30, String(aggoKp, 1)); }
+  else if (!strcmp(setting, "aggoTn")) { Blynk.virtualWrite(V31, String(aggoTn, 1)); }
+  else if (!strcmp(setting, "aggoTv")) { Blynk.virtualWrite(V32, String(aggoTv, 1)); }
+  else if (!strcmp(setting, "brewDetectionSensitivity")) { Blynk.virtualWrite(V34, String(brewDetectionSensitivity, 1)); }
+  else if (!strcmp(setting, "pastTemperatureChange")) { Blynk.virtualWrite(V35, String(pastTemperatureChange(10*10) / 2, 2)); }
+  else if (!strcmp(setting, "brewDetectionPower")) { Blynk.virtualWrite(V36, String(brewDetectionPower, 1)); }
+  else if (!strcmp(setting, "steadyPower")) { Blynk.virtualWrite(V41, String(steadyPower, 1)); }
+  else if (!strcmp(setting, "steadyPowerOffset")) { Blynk.virtualWrite(V42, String(steadyPowerOffset, 1)); }
+  else if (!strcmp(setting, "steadyPowerOffsetTime")) { Blynk.virtualWrite(V43, String(steadyPowerOffsetTime, 1)); }
+  else if (!strcmp(setting, "power_off_timer_min")) { Blynk.virtualWrite(V45, String(powerOffTimer >= 0 ? ((powerOffTimer + 59) / 60) : 0)); }
+  else if (!strcmp(setting, "setPointSteam")) { Blynk.virtualWrite(V50, String(setPointSteam, 1)); }
+  else if (!strcmp(setting, "cleaningCycles")) { Blynk.virtualWrite(V61, cleaningCycles); }
+  else if (!strcmp(setting, "cleaningInterval")) { Blynk.virtualWrite(V62, cleaningInterval); }
+  else if (!strcmp(setting, "cleaningPause")) { Blynk.virtualWrite(V63, cleaningPause); }
+  else {
+    ERROR_print("blynkSave(%s) not supported.\n", setting);
+  }
+}
+
 /******************************************************
  * Receive following BLYNK PIN values from app/server
  ******************************************************/
@@ -405,10 +446,11 @@ BLYNK_APP_CONNECTED() {
   DEBUG_print("Blynk Client Connected.\n");
   print_settings();
   printControlsConfig(controlsConfig);
+  printMenuConfig(menuConfig);
   // one time refresh on connect cause BLYNK_READ seems not to work always
-  Blynk.virtualWrite(V61, cleaningCycles);
-  Blynk.virtualWrite(V62, cleaningInterval);
-  Blynk.virtualWrite(V63, cleaningPause);
+  blynkSave((char*)"cleaningCycles");
+  blynkSave((char*)"cleaningInterval");
+  blynkSave((char*)"cleaningPause");
 }
 // This is called when Smartphone App is closed
 BLYNK_APP_DISCONNECTED() { DEBUG_print("Blynk Client Disconnected.\n"); }
@@ -435,9 +477,9 @@ BLYNK_WRITE(V42) { steadyPowerOffset = param.asDouble(); }
 BLYNK_WRITE(V43) { steadyPowerOffsetTime = param.asInt(); }
 BLYNK_WRITE(V44) { burstPower = param.asDouble(); }
 BLYNK_WRITE(V50) { setPointSteam = param.asDouble(); }
-BLYNK_READ(V51) { Blynk.virtualWrite(V61, cleaningCycles); }
-BLYNK_READ(V52) { Blynk.virtualWrite(V62, cleaningInterval); }
-BLYNK_READ(V53) { Blynk.virtualWrite(V63, cleaningPause); }
+BLYNK_READ(V51) { blynkSave((char*)"cleaningCycles"); }
+BLYNK_READ(V52) { blynkSave((char*)"cleaningInterval"); }
+BLYNK_READ(V53) { blynkSave((char*)"cleaningPause"); }
 BLYNK_WRITE(V101) {
   int val = param.asInt();
   // TODO replace hardcoded with dynamically startup-time in which time-frame we
@@ -1007,9 +1049,6 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       WiFi.persistent(false); // Don't save WiFi configuration in flash
       WiFi.disconnect(true); // Delete SDK WiFi config
 // displaymessage(0, "Connecting Wifi", "");
-#ifdef ESP32
-      WiFi.setSleep(false);  //TODO XXX1 readd to Line 1009 Helge added
-#endif
 #ifdef STATIC_IP
       IPAddress STATIC_IP;
       IPAddress STATIC_GATEWAY;
@@ -1021,7 +1060,7 @@ default, would try to act as both a client and an access-point and could cause
 network-issues with your other WiFi-devices on your WiFi-network. */
       WiFi.mode(WIFI_STA);
 #ifdef ESP32
-      //WiFi.setSleep(false);  //improve network performance. disabled because sometimes reboot happen?!  //TODO XXX1 readd to Line 1009 Helge removed
+      //WiFi.setSleep(false);  //improve network performance. disabled because sometimes reboot happen?!
 #else
       WiFi.setSleepMode(WIFI_NONE_SLEEP); // needed for some disconnection bugs?
 #endif
@@ -1079,9 +1118,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       // performance tests has shown to only send one api-call per sendToBlynk()
       if (blynkSendCounter == 1) {
         if (steadyPower != steadyPowerSavedInBlynk) {
-          Blynk.virtualWrite(V41,
-              steadyPower); // auto-tuning params should be
-                            // saved by Blynk.virtualWrite()
+          blynkSave((char*)"steadyPower");  // auto-tuning params should be saved by Blynk.virtualWrite()
           steadyPowerSavedInBlynk = steadyPower;
         } else {
           blynkSendCounter++;
@@ -1089,7 +1126,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       }
       if (blynkSendCounter == 2) {
         if (String(pastTemperatureChange(10*10) / 2, 2) != PreviousPastTemperatureChange) {
-          Blynk.virtualWrite(V35, String(pastTemperatureChange(10*10) / 2, 2));
+          blynkSave((char*)"pastTemperatureChange");
           PreviousPastTemperatureChange = String(pastTemperatureChange(10*10) / 2, 2);
         } else {
           blynkSendCounter++;
@@ -1097,7 +1134,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       }
       if (blynkSendCounter == 3) {
         if (String(Input - setPoint, 2) != PreviousError) {
-          Blynk.virtualWrite(V11, String(Input - *activeSetPoint, 2));
+          blynkSave((char*)"error");
           PreviousError = String(Input - *activeSetPoint, 2);
         } else {
           blynkSendCounter++;
@@ -1105,7 +1142,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       }
       if (blynkSendCounter == 4) {
         if (String(convertOutputToUtilisation(Output), 2) != PreviousOutputString) {
-          Blynk.virtualWrite(V23, String(convertOutputToUtilisation(Output), 2));
+          blynkSave((char*)"Output");
           PreviousOutputString = String(convertOutputToUtilisation(Output), 2);
         } else {
           blynkSendCounter++;
@@ -1115,7 +1152,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
         int power_off_timer_min = powerOffTimer >= 0 ? ((powerOffTimer + 59) / 60) : 0;
         if (power_off_timer_min != previousPowerOffTimer) {
-          Blynk.virtualWrite(V45, String(power_off_timer_min));
+          blynkSave((char*)"power_off_timer_min");
           previousPowerOffTimer = power_off_timer_min;
         } else {
           blynkSendCounter++;
@@ -1123,7 +1160,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       }
       if (blynkSendCounter >= 6) {
         if (String(Input, 2) != PreviousInputString) {
-          Blynk.virtualWrite(V2, String(Input, 2)); // send value to server
+          blynkSave((char*)"Input");
           PreviousInputString = String(Input, 2);
         }
         blynkSendCounter = 0;
@@ -1221,7 +1258,9 @@ network-issues with your other WiFi-devices on your WiFi-network. */
             // persist starttemp auto-tuning setting
             mqttPublish((char*)"starttemp/set", number2string(starttemp));
             mqttPublish((char*)"starttemp", number2string(starttemp));
-            Blynk.virtualWrite(V12, String(starttemp, 1));
+            #if (BLYNK_ENABLE == 1)
+            blynkSave((char*)"starttemp");
+            #endif
             eepromForceSync = millis();
           } else {
             DEBUG_print("Auto-Tune starttemp disabled\n");
@@ -2191,85 +2230,85 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     // save latest values to eeprom and sync back to blynk
     if (aggKp != aggKp_sav) {
       preferences.putDouble("aggKp", aggKp);
-      Blynk.virtualWrite(V4, aggKp);
+      blynkSave((char*)"aggKp");
     }
     if (aggTn != aggTn_sav) {
       preferences.putDouble("aggTn", aggTn);
-      Blynk.virtualWrite(V5, aggTn);
+      blynkSave((char*)"aggTn");
     }
     if (aggTv != aggTv_sav) {
       preferences.putDouble("aggTv", aggTv);
-      Blynk.virtualWrite(V6, aggTv);
+      blynkSave((char*)"aggTv");
     }
     if (setPoint != setPoint_sav) {
       preferences.putDouble("setPoint", setPoint);
-      Blynk.virtualWrite(V7, setPoint);
+      blynkSave((char*)"setPoint");
       DEBUG_print("EEPROM: setPoint (%0.2f) is saved\n", setPoint);
     }
     if (brewtime != brewtime_sav) {
       preferences.putDouble("brewtime", brewtime);
-      Blynk.virtualWrite(V8, brewtime);
+      blynkSave((char*)"brewtime");
       DEBUG_print("EEPROM: brewtime (%0.2f) is saved (previous:%0.2f)\n", brewtime, brewtime_sav);
     }
     if (preinfusion != preinf_sav) {
       preferences.putDouble("preinf", preinfusion);
-      Blynk.virtualWrite(V9, preinfusion);
+      blynkSave((char*)"preinfusion");
     }
     if (preinfusionpause != preinfpau_sav) {
       preferences.putDouble("preinfpau", preinfusionpause);
-      Blynk.virtualWrite(V10, preinfusionpause);
+      blynkSave((char*)"preinfusionpause");
     }
     if (starttemp != starttemp_sav) {
       preferences.putDouble("starttemp", starttemp);
-      Blynk.virtualWrite(V12, starttemp);
+      blynkSave((char*)"starttemp");
       DEBUG_print("EEPROM: starttemp (%0.2f) is saved\n", starttemp);
     }
     if (aggoKp != aggoKp_sav) {
       preferences.putDouble("aggoKp", aggoKp);
-      Blynk.virtualWrite(V30, aggoKp);
+      blynkSave((char*)"aggoKp");
     }
     if (aggoTn != aggoTn_sav) {
       preferences.putDouble("aggoTn", aggoTn);
-      Blynk.virtualWrite(V31, aggoTn);
+      blynkSave((char*)"aggoTn");
     }
     if (aggoTv != aggoTv_sav) {
       preferences.putDouble("aggoTv", aggoTv);
-      Blynk.virtualWrite(V32, aggoTv);
+      blynkSave((char*)"aggoTv");
     }
     if (brewDetectionSensitivity != bDetSen_sav) {
       preferences.putDouble("bDetSen", brewDetectionSensitivity);
-      Blynk.virtualWrite(V34, brewDetectionSensitivity);
+      blynkSave((char*)"brewDetectionSensitivity");
     }
     if (steadyPower != stePow_sav) {
       preferences.putDouble("stePow", steadyPower);
-      Blynk.virtualWrite(V41, steadyPower);
+      blynkSave((char*)"steadyPower");
       DEBUG_print("EEPROM: steadyPower (%0.2f) is saved (previous:%0.2f)\n", steadyPower, stePow_sav);
     }
     if (steadyPowerOffset != stePowOff_sav) {
       preferences.putDouble("stePowOff", steadyPowerOffset);
-      Blynk.virtualWrite(V42, steadyPowerOffset);
+      blynkSave((char*)"steadyPowerOffset");
     }
     if (steadyPowerOffsetTime != stePowOT_sav) {
       preferences.putInt("stePowOT", steadyPowerOffsetTime);
-      Blynk.virtualWrite(V43, steadyPowerOffsetTime);
+      blynkSave((char*)"steadyPowerOffsetTime");
     }
     if (burstPower != burstPower_sav) {
       preferences.putDouble("burstPower", burstPower);
-      Blynk.virtualWrite(V44, burstPower);
+      blynkSave((char*)"burstPower");
     }
     if (brewDetectionPower != bDetPow_sav) {
       preferences.putDouble("bDetPow", brewDetectionPower);
-      Blynk.virtualWrite(V36, brewDetectionPower);
+      blynkSave((char*)"brewDetectionPower");
       DEBUG_print("EEPROM: brewDetectionPower (%0.2f) is saved (previous:%0.2f)\n", brewDetectionPower, bDetPow_sav);
     }
     if (pidON != pidON_sav) {
       preferences.putInt("pidON", pidON);
-      Blynk.virtualWrite(V13, pidON);
+      blynkSave((char*)"pidON");
       DEBUG_print("EEPROM: pidON (%d) is saved (previous:%d)\n", pidON, pidON_sav);
     }
     if (setPointSteam != sPointSte_sav) {
       preferences.putDouble("sPointSte", setPointSteam);
-      Blynk.virtualWrite(V50, setPointSteam);
+      blynkSave((char*)"setPointSteam");
       DEBUG_print("EEPROM: setPointSteam (%0.2f) is saved\n", setPointSteam);
     }
     // if ( cleaningCycles != clCycles_sav) { preferences.putInt("clCycles",
@@ -2484,85 +2523,85 @@ void sync_eeprom(bool startup_read, bool force_read) {
   // save latest values to eeprom and sync back to blynk
   if (aggKp != aggKp_sav) {
     EEPROM.put(0, aggKp);
-    Blynk.virtualWrite(V4, aggKp);
+    blynkSave((char*)"aggKp");
   }
   if (aggTn != aggTn_sav) {
     EEPROM.put(10, aggTn);
-    Blynk.virtualWrite(V5, aggTn);
+    blynkSave((char*)"aggTn");
   }
   if (aggTv != aggTv_sav) {
     EEPROM.put(20, aggTv);
-    Blynk.virtualWrite(V6, aggTv);
+    blynkSave((char*)"aggTv");
   }
   if (setPoint != setPoint_sav) {
     EEPROM.put(30, setPoint);
-    Blynk.virtualWrite(V7, setPoint);
+    blynkSave((char*)"setPoint");
     DEBUG_print("EEPROM: setPoint (%0.2f) is saved\n", setPoint);
   }
   if (brewtime != brewtime_sav) {
     EEPROM.put(40, brewtime);
-    Blynk.virtualWrite(V8, brewtime);
+    blynkSave((char*)"brewtime");
     DEBUG_print("EEPROM: brewtime (%0.2f) is saved (previous:%0.2f)\n", brewtime, brewtime_sav);
   }
   if (preinfusion != preinf_sav) {
     EEPROM.put(50, preinfusion);
-    Blynk.virtualWrite(V9, preinfusion);
+    blynkSave((char*)"preinfusion");
   }
   if (preinfusionpause != preinfpau_sav) {
     EEPROM.put(60, preinfusionpause);
-    Blynk.virtualWrite(V10, preinfusionpause);
+    blynkSave((char*)"preinfusionpause");
   }
   if (starttemp != starttemp_sav) {
     EEPROM.put(80, starttemp);
-    Blynk.virtualWrite(V12, starttemp);
+    blynkSave((char*)"starttemp");
     DEBUG_print("EEPROM: starttemp (%0.2f) is saved\n", starttemp);
   }
   if (aggoKp != aggoKp_sav) {
     EEPROM.put(90, aggoKp);
-    Blynk.virtualWrite(V30, aggoKp);
+    blynkSave((char*)"aggoKp");
   }
   if (aggoTn != aggoTn_sav) {
     EEPROM.put(100, aggoTn);
-    Blynk.virtualWrite(V31, aggoTn);
+    blynkSave((char*)"aggoTn");
   }
   if (aggoTv != aggoTv_sav) {
     EEPROM.put(110, aggoTv);
-    Blynk.virtualWrite(V32, aggoTv);
+    blynkSave((char*)"aggoTv");
   }
   if (brewDetectionSensitivity != bDetSen_sav) {
     EEPROM.put(130, brewDetectionSensitivity);
-    Blynk.virtualWrite(V34, brewDetectionSensitivity);
+    blynkSave((char*)"brewDetectionSensitivity");
   }
   if (steadyPower != stePow_sav) {
     EEPROM.put(140, steadyPower);
-    Blynk.virtualWrite(V41, steadyPower);
+    blynkSave((char*)"steadyPower");
     DEBUG_print("EEPROM: steadyPower (%0.2f) is saved (previous:%0.2f)\n", steadyPower, stePow_sav);
   }
   if (steadyPowerOffset != stePowOff_sav) {
     EEPROM.put(150, steadyPowerOffset);
-    Blynk.virtualWrite(V42, steadyPowerOffset);
+    blynkSave((char*)"steadyPowerOffset");
   }
   if (steadyPowerOffsetTime != stePowOT_sav) {
     EEPROM.put(160, steadyPowerOffsetTime);
-    Blynk.virtualWrite(V43, steadyPowerOffsetTime);
+    blynkSave((char*)"steadyPowerOffsetTime");
   }
   if (burstPower != burstPower_sav) {
     EEPROM.put(170, burstPower);
-    Blynk.virtualWrite(V44, burstPower);
+    blynkSave((char*)"burstPower");
   }
   if (brewDetectionPower != bDetPow_sav) {
     EEPROM.put(190, brewDetectionPower);
-    Blynk.virtualWrite(V36, brewDetectionPower);
+    blynkSave((char*)"brewDetectionPower");
     DEBUG_print("EEPROM: brewDetectionPower (%0.2f) is saved (previous:%0.2f)\n", brewDetectionPower, bDetPow_sav);
   }
   if (pidON != pidON_sav) {
     EEPROM.put(200, pidON);
-    Blynk.virtualWrite(V13, pidON);
+    blynkSave((char*)"pidON");
     DEBUG_print("EEPROM: pidON (%d) is saved (previous:%d)\n", pidON, pidON_sav);
   }
   if (setPointSteam != sPointSte_sav) {
     EEPROM.put(210, setPointSteam);
-    Blynk.virtualWrite(V50, setPointSteam);
+    blynkSave((char*)"setPointSteam");
     DEBUG_print("EEPROM: setPointSteam (%0.2f) is saved\n", setPointSteam);
   }
   EEPROM.commit();
@@ -2605,6 +2644,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
     DEBUG_print("pidON: %d\n", pidON);
     printControlsConfig(controlsConfig);
     printMultiToggleConfig();
+    printMenuConfig(menuConfig);
     DEBUG_print("========================\n");
   }
 
@@ -2686,6 +2726,8 @@ void sync_eeprom(bool startup_read, bool force_read) {
     controlsConfig = parseControlsConfig();
     configureControlsHardware(controlsConfig);
 
+    menuConfig = parseMenuConfig();
+
     // if simulatedBrewSwitch is already "on" on startup, then we brew should
     // not start automatically
     if (simulatedBrewSwitch) {
@@ -2730,7 +2772,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
         snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
         snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
         //mqttClient.setKeepAlive(3);      //activates mqttping keepalives (default 15)
-        //mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)  //TODO XXX1 remove? Helge
+        mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)
         mqttClient.setServer(mqttServerIP, mqttServerPort);
         mqttClient.setCallback(mqttCallback1);
         if (!mqttReconnect(true)) {

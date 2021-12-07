@@ -19,7 +19,6 @@ void splitStringBySeperator(char* source, char seperator, char** resultLeft, cha
     resultRight = NULL;
   }
 }
-
 void splitStringBySeperator(char* source, char seperator, int* resultLeft, int* resultRight) {
   char* separator1 = strchr(source, seperator);
   if (separator1 != 0) {
@@ -44,12 +43,23 @@ void splitStringBySeperator(char* source, char seperator, int* resultLeft, char*
     ERROR_println(debugLine);
   }
 }
+void splitStringBySeperator(char* source, char seperator, char** resultLeft, float* resultRight) {
+  char* separator1 = strchr(source, seperator);
+  if (separator1 != 0) {
+    *separator1 = 0;
+    *resultLeft = source;
+    ++separator1;
+    *resultRight = atof(separator1);
+  } else {
+    snprintf(debugLine, sizeof(debugLine), "Cannot split line=%s by seperator=%c", source, seperator);
+    ERROR_println(debugLine);
+  }
+}
+
 
 controlMap* parseControlsConfig() {
   controlMap* controlsConfig = NULL;
   controlMap* lastControlMap = NULL;
-
-  DEBUG_println(debugLine);
 
   // Read each controlsConfigPin pair
   // eg. CONTROLS_CONFIG
@@ -207,6 +217,180 @@ void printMultiToggleConfig() {
   }
 }
 
+menuMap* parseMenuConfig() {
+  menuMap* menuConfig = NULL;
+  menuMap* lastMenuMap = NULL;
+  // Read each menuConfigPin pair
+  // eg. MENU_CONFIG "CONFIG:SETPOINT:0.5:#CONFIG:BREWTIME:0.5#CONFIG:PREINFUSION:0.1#CONFIG:PREINFUSION_PAUSE:0.1#ACTION:SLEEPING:1"
+  char* menuConfigDefine = (char*)calloc(1, strlen(MENU_CONFIG) + 1);
+  strncpy(menuConfigDefine, MENU_CONFIG, strlen(MENU_CONFIG));
+  char* menuConfigBlock;
+  while ((menuConfigBlock = strtok_r(menuConfigDefine, "#", &menuConfigDefine)) != NULL) {
+    // snprintf(debugLine, sizeof(debugLine), "controlsConfigBlock=%s", controlsConfigBlock); DEBUG_println(debugLine);
+    char* menuConfigType = NULL;   // CONFIG | ACTION
+    char* menuConfigItem = NULL;   // CONFIG=<Support setting to change> | ACTION=<Action_Name>
+    float menuConfigValueStep = -1;  // CONFIG=<step-size> | ACTION =<1|0>
+    splitStringBySeperator(menuConfigBlock, ':', &menuConfigType, &menuConfigItem);
+    splitStringBySeperator(menuConfigItem, ':', &menuConfigItem, &menuConfigValueStep);
+    if (!menuConfigType || !menuConfigValueStep) { break; }
+    //snprintf(debugLine, sizeof(debugLine), "menuConfigType=%s menuConfigItem=%s menuConfigValueStep=%0.2f", menuConfigType, menuConfigItem, menuConfigValueStep); 
+    //DEBUG_println(debugLine);
+    menuMap* nextMenuMap = NULL;
+    nextMenuMap = (menuMap*)calloc(1, sizeof(struct menuMap));
+    nextMenuMap->type = menuConfigType;
+    nextMenuMap->item = menuConfigItem;
+    nextMenuMap->valueStep = menuConfigValueStep;
+    nextMenuMap->action = strcmp(menuConfigType, "ACTION") == 0 ? convertActionToDefine(menuConfigItem): UNDEFINED_ACTION;
+    nextMenuMap->value = NULL;
+    nextMenuMap->unit = NULL;
+    nextMenuMap->value = (menuMapValue*)calloc(1, sizeof(struct menuMapValue));
+    if (strcmp(nextMenuMap->item, "SETPOINT") == 0) {
+        nextMenuMap->unit = (char*)"C";
+        nextMenuMap->value->type = (char*)"double";
+        nextMenuMap->value->ptr = &setPoint;
+    } else if (strcmp(nextMenuMap->item, "BREWTIME") == 0) {
+        nextMenuMap->unit = (char*)"s";
+        nextMenuMap->value->type = (char*)"double";
+        nextMenuMap->value->ptr = &brewtime;
+    } else if (strcmp(nextMenuMap->item, "PREINFUSION") == 0) {
+        nextMenuMap->unit = (char*)"s";
+        nextMenuMap->value->type = (char*)"double";
+        nextMenuMap->value->ptr = &preinfusion;
+    } else if (strcmp(nextMenuMap->item, "PREINFUSION_PAUSE") == 0) {
+        nextMenuMap->unit = (char*)"s";
+        nextMenuMap->value->type = (char*)"double";
+        nextMenuMap->value->ptr = &preinfusionpause;
+    } else if (strcmp(nextMenuMap->item, "SLEEPING") == 0) {
+        nextMenuMap->value->type = (char*)"bool";
+        nextMenuMap->value->ptr = &sleeping;
+    } else if (strcmp(nextMenuMap->item, "CLEANING") == 0) {
+        nextMenuMap->value->type = (char*)"bool";
+        nextMenuMap->value->ptr = &cleaning;
+    } else if (strcmp(nextMenuMap->item, "PID_ON") == 0) {
+        nextMenuMap->value->type = (char*)"bool";
+        nextMenuMap->value->ptr = &pidON;
+    } else if (strcmp(nextMenuMap->item, "SETPOINT_STEAM") == 0) {
+        nextMenuMap->unit = (char*)"C";
+        nextMenuMap->value->type = (char*)"double";
+        nextMenuMap->value->ptr = &setPointSteam;
+    } else {
+      ERROR_print("menuConfig defined %s but is not a supported setting\n", nextMenuMap->item);
+      continue;
+    }
+    if (menuConfig == NULL && lastMenuMap == NULL) {
+      menuConfig = nextMenuMap;
+      lastMenuMap = menuConfig;
+    } else {
+      lastMenuMap->nextMenuMap = nextMenuMap;
+      lastMenuMap = nextMenuMap;
+    }
+  }
+  return menuConfig;
+}
+
+void printMenuConfig(menuMap* menuConfig) {
+  if (!menuConfig) {
+    DEBUG_println("menuConfig is empty");
+    return;
+  }
+  DEBUG_println("MenuConfig:");
+  menuMap* ptr = menuConfig;
+  int counter = 0;
+  do {
+    counter++;
+    if (strcmp(ptr->type, "ACTION") == 0) {
+      snprintf(debugLine, sizeof(debugLine), "%d: %s %s", counter, ptr->type, convertDefineToAction(ptr->action));
+    } else {
+      snprintf(debugLine, sizeof(debugLine), "%d: %s %s in steps of %0.2f", counter, ptr->type, ptr->item, ptr->valueStep);
+    }
+    DEBUG_println(debugLine);
+  } while ((ptr = ptr->nextMenuMap) != NULL);
+}
+
+menuMap* getMenuConfigPosition(menuMap* menuConfig, unsigned int menuPosition) {
+  //menuPosition starts with 1 !
+  if (!menuConfig) {
+    DEBUG_println("menuConfig is empty");
+    return NULL;
+  }
+  menuMap* ptr = menuConfig;
+  int counter = 1;
+  do {
+    if (counter == menuPosition) return ptr;
+    counter++;
+  } while ((ptr = ptr->nextMenuMap) != NULL);
+  return NULL;
+}
+
+const char* convertDefineToVariable(char *str) {
+  if (!strcmp(str, "SETPOINT")) return "setPoint";
+  if (!strcmp(str, "SETPOINTSTEAM")) return "setPointSteam";
+  if (!strcmp(str, "BREWTIME")) return "brewtime";
+  if (!strcmp(str, "PREINFUSION")) return "preinfusion";
+  if (!strcmp(str, "PREINFUSION_PAUSE")) return "preinfusionpause";
+  if (!strcmp(str, "PID_ON")) return "pidON"; 
+  ERROR_print("convertDefineToVariable(%s) not supported", str);
+  return NULL;
+}
+
+const char* convertDefineToReadAbleVariable(char *str) {
+  if (!strcmp(str, "SETPOINT")) return "Brew Temperature";
+  if (!strcmp(str, "SETPOINTSTEAM")) return "Steaming Temperature";
+  if (!strcmp(str, "BREWTIME")) return "Brew Duration";
+  if (!strcmp(str, "PREINFUSION")) return "Preinfusion Duration";
+  if (!strcmp(str, "PREINFUSION_PAUSE")) return "Preinfusion Pause";
+  if (!strcmp(str, "PID_ON")) return "Heating";
+  if (!strcmp(str, "SLEEPING")) return "Sleeping";
+  if (!strcmp(str, "STEAMING")) return "Steaming";
+  if (!strcmp(str, "CLEANING")) return "Cleaning";
+  return str;
+}
+
+void menuConfigPositionModifyByStep(menuMap* menuConfigPosition, bool increase = 1) {
+  if (strcmp(menuConfigPosition->type, "ACTION") == 0) {
+    actionController(menuConfigPosition->action, increase);
+  } else {
+    char* setting = (char*)convertDefineToVariable(menuConfigPosition->item);
+    static char settingMQTTSet[50];
+    if (setting) snprintf(settingMQTTSet, sizeof(settingMQTTSet), "%s/set", setting);
+    if (!strcmp(menuConfigPosition->value->type, "bool")) {
+      if (increase) {
+        *((int*)menuConfigPosition->value->ptr) = 1;
+      } else {
+        *((int*)menuConfigPosition->value->ptr) = 0;
+      }
+      if (setting) { 
+        mqttPublish(setting, number2string(*((int*)menuConfigPosition->value->ptr)));
+        mqttPublish(settingMQTTSet, number2string(*((int*)menuConfigPosition->value->ptr)));
+      }
+    } else if (!strcmp(menuConfigPosition->value->type, "double")) {
+        if (increase) {
+          *((double*)menuConfigPosition->value->ptr) += double(menuConfigPosition->valueStep);
+        } else {
+          *((double*)menuConfigPosition->value->ptr) -= double(menuConfigPosition->valueStep);
+        }
+        if (setting) {
+          mqttPublish(setting, number2string(*((double*)menuConfigPosition->value->ptr)));
+          mqttPublish(settingMQTTSet, number2string(*((double*)menuConfigPosition->value->ptr)));
+        }
+    } else {
+        if (increase) {
+          *((int*)menuConfigPosition->value->ptr) += int(menuConfigPosition->valueStep);
+        } else {
+          *((int*)menuConfigPosition->value->ptr) -= int(menuConfigPosition->valueStep);
+        }
+        if (setting) {
+          mqttPublish(setting, number2string(*((int*)menuConfigPosition->value->ptr)));
+          mqttPublish(settingMQTTSet, number2string(*((int*)menuConfigPosition->value->ptr)));
+        }
+    }
+    eepromForceSync = millis();
+#if (BLYNK_ENABLE == 1)
+    if (setting) blynkSave(setting);
+#endif
+  }
+}
+
 void publishActions() {
   char topicAction[32];
   for (int i = 0; i < MAX_NUM_ACTIONS; i++) {
@@ -217,7 +401,6 @@ void publishActions() {
     }
   }
 }
-
 
 void configureControlsHardware(controlMap* controlsConfig) {
   if (!controlsConfig) {
@@ -279,10 +462,12 @@ int convertActionToDefine(char* action) {
     return STEAMING;
   } else if (!strcmp(action, "CLEANING")) {
     return CLEANING;
-  } else if (!strcmp(action, "TEMP_INC")) {
-    return TEMP_INC;
-  } else if (!strcmp(action, "TEMP_DEC")) {
-    return TEMP_DEC;
+  } else if (!strcmp(action, "MENU")) {
+    return MENU;
+  } else if (!strcmp(action, "MENU_INC")) {
+    return MENU_INC;
+  } else if (!strcmp(action, "MENU_DEC")) {
+    return MENU_DEC;
   } else if (!strcmp(action, "SLEEPING")) {
     return SLEEPING;
   }
@@ -312,10 +497,12 @@ char* convertDefineToAction(int action) {
     return (char*)"STEAMING";
   } else if (action == CLEANING) {
     return (char*)"CLEANING";
-  } else if (action == TEMP_INC) {
-    return (char*)"TEMP_INC";
-  } else if (action == TEMP_DEC) {
-    return (char*)"TEMP_DEC";
+  } else if (action == MENU) {
+    return (char*)"MENU";
+  } else if (action == MENU_INC) {
+    return (char*)"MENU_INC";
+  } else if (action == MENU_DEC) {
+    return (char*)"MENU_DEC";
   } else if (action == SLEEPING) {
     return (char*)"SLEEPING";
   }
@@ -397,6 +584,18 @@ void actionController(int action, int newState, bool publishAction, bool publish
       actionState[action] = newState;
       sleepingAction(newState);
       actionPublish((char*)"actions/SLEEPING", 110, newState, publishAction, publishActionBlynk);
+    } else if (action == MENU) {
+      actionState[action] = newState;
+      menuAction(newState);
+      //actionPublish((char*)"actions/MENU", 110, newState, publishAction, publishActionBlynk);
+    } else if (action == MENU_INC) {
+      actionState[action] = newState;
+      menuIncAction(newState);
+      //actionPublish((char*)"actions/MENUINC", 110, newState, publishAction, publishActionBlynk);
+    } else if (action == MENU_DEC) {
+      actionState[action] = newState;
+      menuDecAction(newState);
+      //actionPublish((char*)"actions/MENUDEC", 110, newState, publishAction, publishActionBlynk);
     }
     snprintf(debugLine, sizeof(debugLine), "actionController: Completed %s %d->%d", convertDefineToAction(action), oldState, actionState[action]);
     DEBUG_println(debugLine);
@@ -690,4 +889,35 @@ void sleepingAction(int state) {
     MaschineColdstartRunOnce = false;
     steadyPowerOffsetModified = steadyPowerOffset;
   }
+}
+
+void menuAction(int state) {
+  //show menu by increasing menuPos++
+  menuPosition++;
+  if (!getMenuConfigPosition(menuConfig, menuPosition)) {
+    menuPosition=0;
+    return;
+  }
+  DEBUG_print("running menuAction(%d)\n", menuPosition);
+  //refresh menu timer
+  previousTimerMenuCheck = millis();  
+  sleeping = 0;
+}
+
+void menuIncAction(int state) {
+  menuMap* menuConfigPosition = getMenuConfigPosition(menuConfig, menuPosition);
+  if (!menuConfigPosition) return;
+  DEBUG_print("running menuIncAction(%d)\n", menuPosition);
+  //refresh menu timer
+  previousTimerMenuCheck = millis();
+  menuConfigPositionModifyByStep(menuConfigPosition, true);
+}
+
+void menuDecAction(int state) {
+  menuMap* menuConfigPosition = getMenuConfigPosition(menuConfig, menuPosition);
+  if (!menuConfigPosition) return;
+  DEBUG_print("running menuDecAction(%d)\n", menuPosition);
+  //refresh menu timer
+  previousTimerMenuCheck = millis();
+  menuConfigPositionModifyByStep(menuConfigPosition, false); 
 }

@@ -4,6 +4,7 @@
 #include "rancilio-pid.h"
 const int Display = DISPLAY_HARDWARE;
 
+#include <controls.h>
 #include "icon.h"
 #if (ICON_COLLECTION == 2)
 #include "icon_winter.h"
@@ -64,3 +65,12 @@ extern bool forceOffline;
 extern bool isWifiWorking();
 extern bool isBlynkWorking();
 extern bool isMqttWorking();
+extern int brewing;
+extern unsigned long lastBrewEnd;
+extern unsigned int powerOffTimer;
+extern unsigned int menuPosition;
+extern unsigned long previousTimerMenuCheck;
+extern const unsigned int menuOffTimer;
+extern menuMap* menuConfig;
+extern float menuValue;
+extern const char* convertDefineToReadAbleVariable(char*);

@@ -33,6 +33,10 @@
 #define CONTROLS_CONFIG ""
 #endif
 
+#ifndef MENU_CONFIG
+#define MENU_CONFIG ""
+#endif
+
 #ifndef TEMPSENSOR_BITWINDOW
 #define TEMPSENSOR_BITWINDOW 125
 #endif

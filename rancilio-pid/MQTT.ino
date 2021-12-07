@@ -219,7 +219,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "brewtime") == 0) {
     if (persistSetting((char*)"brewtime", &brewtime, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V8, String(brewtime, 1));
+      blynkSave((char*)"brewtime");
 #endif
     }
     return;
@@ -227,7 +227,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "starttemp") == 0) {
     if (persistSetting((char*)"starttemp", &starttemp, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V12, String(starttemp, 1));
+      blynkSave((char*)"starttemp");
 #endif
     }
     return;
@@ -235,7 +235,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "setPoint") == 0) {
     if (persistSetting((char*)"setPoint", &setPoint, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V7, String(setPoint, 1));
+      blynkSave((char*)"setPoint");
 #endif
     }
     return;
@@ -243,7 +243,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "preinfusion") == 0) {
     if (persistSetting((char*)"preinfusion", &preinfusion, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V9, String(preinfusion, 1));
+      blynkSave((char*)"preinfusion");
 #endif
     }
     return;
@@ -251,7 +251,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "preinfusionpause") == 0) {
     if (persistSetting((char*)"preinfusionpause", &preinfusionpause, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V10, String(preinfusionpause, 1));
+      blynkSave((char*)"preinfusionpause");
 #endif
     }
     return;
@@ -259,7 +259,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "pidON") == 0) {
     if (persistSetting((char*)"pidON", &pidON, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V13, String(pidON));
+      blynkSave((char*)"pidON");
 #endif
     }
     pidON = pidON == 0 ? 0 : 1;
@@ -268,7 +268,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "brewDetectionSensitivity") == 0) {
     if (persistSetting((char*)"brewDetectionSensitivity", &brewDetectionSensitivity, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V34, String(brewDetectionSensitivity, 1));
+      blynkSave((char*)"brewDetectionSensitivity");
 #endif
     }
     return;
@@ -276,7 +276,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "brewDetectionPower") == 0) {
     if (persistSetting((char*)"brewDetectionPower", &brewDetectionPower, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V36, String(brewDetectionPower, 1));
+      blynkSave((char*)"brewDetectionPower");
 #endif
     }
     return;
@@ -284,7 +284,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "steadyPower") == 0) {
     if (persistSetting((char*)"steadyPower", &steadyPower, data_str)) {
 #if (BLYNK_ENABLE == 1)
-// Blynk.virtualWrite(V41, String(steadyPower, 1));  //handled every few seconds by another func
+      //blynkSave((char*)"steadyPower");  //handled every few seconds by another func
 #endif
     }
     return;
@@ -292,7 +292,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "steadyPowerOffset") == 0) {
     if (persistSetting((char*)"steadyPowerOffset", &steadyPowerOffset, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V42, String(steadyPowerOffset, 1));
+      blynkSave((char*)"steadyPowerOffset");
 #endif
     }
     return;
@@ -300,7 +300,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "steadyPowerOffsetTime") == 0) {
     if (persistSetting((char*)"steadyPowerOffsetTime", &steadyPowerOffsetTime, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V43, String(steadyPowerOffsetTime, 1));
+      blynkSave((char*)"steadyPowerOffsetTime");
 #endif
     }
     return;
@@ -308,7 +308,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "aggKp") == 0) {
     if (persistSetting((char*)"aggKp", &aggKp, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V4, String(aggKp, 1));
+      blynkSave((char*)"aggKp");
 #endif
     }
     return;
@@ -316,7 +316,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "aggTn") == 0) {
     if (persistSetting((char*)"aggTn", &aggTn, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V5, String(aggTn, 1));
+      blynkSave((char*)"aggTn");
 #endif
     }
     return;
@@ -324,7 +324,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "aggTv") == 0) {
     if (persistSetting((char*)"aggTv", &aggTv, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V6, String(aggTv, 1));
+      blynkSave((char*)"aggTv");
 #endif
     }
     return;
@@ -332,7 +332,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "aggoKp") == 0) {
     if (persistSetting((char*)"aggoKp", &aggoKp, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V30, String(aggoKp, 1));
+      blynkSave((char*)"aggoKp");
 #endif
     }
     return;
@@ -340,7 +340,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "aggoTn") == 0) {
     if (persistSetting((char*)"aggoTn", &aggoTn, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V31, String(aggoTn, 1));
+      blynkSave((char*)"aggoTn");
 #endif
     }
     return;
@@ -348,7 +348,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "aggoTv") == 0) {
     if (persistSetting((char*)"aggoTv", &aggoTv, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V32, String(aggoTv, 1));
+      blynkSave((char*)"aggoTv");
 #endif
     }
     return;
@@ -356,7 +356,7 @@ void mqttParse(char* topic_str, char* data_str) {
   if (strcmp(configVar, "setPointSteam") == 0) { // TOBIAS: update wiki (blynk address,..)
     if (persistSetting((char*)"setPointSteam", &setPointSteam, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      Blynk.virtualWrite(V50, String(setPointSteam, 1));
+      blynkSave((char*)"setPointSteam");
 #endif
     }
     return;

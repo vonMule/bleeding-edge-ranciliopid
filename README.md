@@ -58,8 +58,9 @@ Two cups of a double cappuccino with the new Steamfunction | [![Two cups of a do
      - VALVE     := activate Valve  (not yet)
      - CLEANING  := activate cleaning mode
      - SLEEPING  := activate sleeping mode
-     - TEMP_INC  := increase setPoint (not yet)
-     - TEMP_DEC  := decrease setPoint (not yet)
+     - MENU      := activate menu
+     - MENU_INC  := increase value shown in menu
+     - MENU_DEC  := decrease value shown in menu
    - while also supporting the switch types: toggles (eg switches) and triggers (eg push buttons)
    - added MQTT support to control ACTIONS using topics ../actions/<ACTION> with supported payloads of 0|1|-1 (off|on|switch)
      Example: "custom/Küche.Rancilio2/actions/STEAMING"
@@ -123,7 +124,13 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 
 ## Changelog
 - 3.1.0_beta1:
-  - remove some network tuning
+  - Initial support for MENU which can be used to control settings using the display-case with buttons:
+    - Action "MENU" added.
+    - Actions TEMP_INC and TEMP_DEC renamed to MENU_INC and MENU_DEC respectively.
+    - Added new userConfig.h setting MENU_CONFIG which is used to configure menu settings.
+    - Following menu operations are supported (can be extended on request):
+      - SETPOINT, SETPOINTSTEAM, BREWTIME, PREINFUSION, PREINFUSION_PAUSE, PID_ON
+  - Refactor some blynk stuff.
 - 3.0.0:
   - Project is getting renamed to "Perfect Coffee PID".
   - Improve temperature readings to reduce undesireable actions of the PID controller:

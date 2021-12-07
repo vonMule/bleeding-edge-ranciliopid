@@ -2,6 +2,7 @@ userConfig.h*
 !userConfig.h.SAMPLE
 *.bak
 *.swp
+*.ino.cpp
 .vscode
 .pio/*
 .DS_Store
