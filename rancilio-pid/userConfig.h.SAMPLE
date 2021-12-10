@@ -10,6 +10,7 @@
  * General settings
  *****************************************************/
 #define MACHINE_TYPE "rancilio"  // supported values are "rancilio", "gaggia" and "ecm".
+#define TEMPSENSOR 2          // 2=TSIC306; 3=MAX6675K (1=DS19B20 not supported anymore)
 
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
@@ -34,7 +35,7 @@
 #define ENABLE_HARDWARE_LED_RGB_ON  LightGreen  // (ENABLE_HARDWARE_LED=2) Color name when leds should be turned on. List of Colours: https://github.com/FastLED/FastLED/wiki/Pixel-reference
 #define ENABLE_HARDWARE_LED_RGB_OFF LightPink  // (ENABLE_HARDWARE_LED=2) Color name when leds should be turned off.
 
-//#define DEBUGMODE                // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
+//#define DEBUGMODE                // to enable Debug uncomment this line. Afterwards you can connect via telnet to port 23 to see debug logs.
 #define ENABLE_CALIBRATION_MODE 0  // 0=off (default). 1=on. If on, PID is disabled and CALIBRATION information is logged in DEBUG log (eg. CONTROLS_CONFIG, WATER_LEVEL_SENSOR)
 
 
@@ -52,6 +53,11 @@
 #define pinBrewAction      15
 #define pinHotwaterAction   5
 #define pinSteamingAction   2
+
+// Pin mapping for MAX6675
+#define pinTemperatureSO  19
+#define pinTemperatureCS  5
+#define pinTemperatureCLK 18
 
 /*******
  * GPIO Pin Usage: Here you can define how the GPIO boards (analog/digital) shall be used to execute functions.

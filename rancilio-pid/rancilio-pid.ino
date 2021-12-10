@@ -331,7 +331,7 @@ unsigned long curMicrosPreviousLoop = 0;
 const unsigned long loopReportCount = 100;
 
 /********************************************************
- * Water level sensor  30x TEMP
+ * Water level sensor
  ******************************************************/
 #if (WATER_LEVEL_SENSOR_ENABLE)
 #include <VL53L0X.h>
@@ -343,17 +343,26 @@ int waterSensorCheckTimer = 10000; // how often shall the water level be
 unsigned long previousTimerWaterLevelCheck = 0;
 
 /********************************************************
- * TSIC 30x TEMP
+ * Temperature Sensor: TSIC 30x TEMP / Max6675
  ******************************************************/
-#include <ZACwire.h>
+
+#if (TEMPSENSOR == 3)
+  #define TEMPSENSOR_NAME "MAX6675"
+  #include <max6675.h>
+  MAX6675 thermocouple(pinTemperatureCLK, pinTemperatureCS, pinTemperatureSO);
+  uint64_t thermocouple_last_read = millis();
+#else // default sensor
+  #define TEMPSENSOR_NAME "TSIC306"
+  #include <ZACwire.h>
 #if (!defined(ZACWIRE_VERSION) || (defined(ZACWIRE_VERSION) && ZACWIRE_VERSION <= 133L))
 #error ERROR ZACwire library version must be >= 1.3.4
 #endif
-#ifdef ESP32
+    #ifdef ESP32
 ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
-#else
+    #else
 ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
-#endif
+    #endif
+#endif    
 
 uint16_t temperature = 0;
 volatile uint16_t temp_value[2] = { 0 };
@@ -842,7 +851,7 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
           ERROR_print("refreshTemp(): Delay=%lu ms (loop() hang?)\n", refreshTimeDiff-refreshTempInterval);
         }
         //secondlatestTemperature = getCurrentTemperature();
-        float latestTemperature = TSIC.getTemp();
+        float latestTemperature = readTemperatureFromSensor();
         //DEBUG_print("latestTemperature: %0.2f\n", latestTemperature);
         // Temperatur_C = temperature_simulate_steam();
         // Temperatur_C = temperature_simulate_normal();
@@ -1499,13 +1508,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     if (isrCounter >= heaterOverextendingIsrCounter) {
       // turn off when when compute() is not run in time (safetly measure)
       digitalWrite(pinRelayHeater, LOW);
-      // ERROR_print("onTimer1ISR has stopped heater because pid.Compute() did
-      // not run\n");
+      //ERROR_print("onTimer1ISR has stopped heater because pid.Compute() did not run\n");
       // TODO: add more emergency handling?
     } else if (isrCounter > windowSize) {
-      // dont change output when overextending withing overextending_factor
-      // threshold DEBUG_print("onTimer1ISR over extending due to processing
-      // delays: isrCounter=%u\n", isrCounter);
+      // dont change output when overextending within overextending_factor threshold 
+      //DEBUG_print("onTimer1ISR over extending due to processing delays: isrCounter=%u\n", isrCounter);
     } else if (isrCounter >= Output) { // max(Output) = windowSize
       digitalWrite(pinRelayHeater, LOW);
     } else {
@@ -2584,6 +2591,20 @@ void sync_eeprom(bool startup_read, bool force_read) {
     curMicrosPreviousLoop = curMicros;
   }
 
+  float readTemperatureFromSensor() {
+    float temperature;
+#if (TEMPSENSOR == 2)
+    temperature = TSIC.getTemp();  ///XXX1 TODO test plain temp ino to see if there are also +100degree off samples!!!
+#elif (TEMPSENSOR == 3)
+    while(millis() < thermocouple_last_read + TEMPSENSOR_MAX6675K_MIN_DELAY){ 
+      // delay: between reads there must be at least 250ms delay!!!
+    }
+    temperature = thermocouple.readCelsius();
+    thermocouple_last_read = millis();
+#endif
+return temperature;
+  } 
+
   void print_settings() {
     DEBUG_print("========================\n");
     DEBUG_print("Machine: %s | Version: %s\n", MACHINE_TYPE, sysVersion);
@@ -2600,6 +2621,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
                 "steadyPowerOffsetTime: %u\n",
         steadyPower, steadyPowerOffset, steadyPowerOffsetTime);
     DEBUG_print("pidON: %d\n", pidON);
+    DEBUG_print("Temperature sensor: %s\n", TEMPSENSOR_NAME);
     printControlsConfig(controlsConfig);
     printMultiToggleConfig();
     DEBUG_print("========================\n");
@@ -2637,7 +2659,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
     }
 
     /********************************************************
-     * Ini Pins
+     * Init Pins
      ******************************************************/
     pinMode(pinRelayVentil, OUTPUT);
     digitalWrite(pinRelayVentil, relayOFF);
@@ -2844,13 +2866,16 @@ void sync_eeprom(bool startup_read, bool force_read) {
      ******************************************************/
     // displaymessage(0, "Init. vars", "");
     isrCounter = 950; // required
+#if (TEMPSENSOR == 2)    
     if (TSIC.begin() != true) { ERROR_println("TSIC Tempsensor cannot be initialized"); }
+#endif    
+    delay(120);
     while (true) {
-      secondlatestTemperature = TSIC.getTemp();
+      secondlatestTemperature = readTemperatureFromSensor();
       delay(100);
       // secondlatestTemperature = temperature_simulate_steam();
       // secondlatestTemperature = temperature_simulate_normal();
-      Input = TSIC.getTemp();
+      Input = readTemperatureFromSensor();
       // Input = temperature_simulate_steam();
       // Input = temperature_simulate_normal();
       if (checkSensor(Input, secondlatestTemperature) == 0) {
