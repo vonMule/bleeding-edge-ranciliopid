@@ -3,7 +3,7 @@
 
 ## Do it yourself, open-source PID for your espresso machine  
 
-Version 3.0.0
+Version 3.1.0
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -123,6 +123,11 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.1.0_beta2:
+  - Initial support for Thermistor K-type with MAX6675 (Thanks to aschoelzhorn!).
+  - userConfig.h:
+    - Added:
+      TEMPSENSOR (default=2)
 - 3.1.0_beta1:
   - Initial support for MENU which can be used to control settings using the display-case with buttons:
     - Action "MENU" added.

@@ -32,7 +32,7 @@ Preferences preferences;
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.1.0_b1";
+const char* sysVersion PROGMEM = "3.1.0_b2";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -279,7 +279,11 @@ unsigned long previousTimerMqttHandle = 0;
 unsigned long previousTimerBlynkHandle = 0;
 unsigned long previousTimerDebugHandle = 0;
 unsigned long previousTimerPidCheck = 0;
+#if (TEMPSENSOR==3)
+const long refreshTempInterval = 260; // How often to read the temperature sensor (must be >250ms)
+#else
 const long refreshTempInterval = 100; // How often to read the temperature sensor
+#endif
 #ifdef EMERGENCY_TEMP
 const unsigned int emergencyTemperature = EMERGENCY_TEMP; // temperature at which the emergency shutdown should take
                                                           // place. DONT SET IT ABOVE 120 DEGREE!!
@@ -345,13 +349,11 @@ unsigned long previousTimerWaterLevelCheck = 0;
 /********************************************************
  * Temperature Sensor: TSIC 30x TEMP / Max6675
  ******************************************************/
-
 #if (TEMPSENSOR == 3)
   #define TEMPSENSOR_NAME "MAX6675"
   #include <max6675.h>
   MAX6675 thermocouple(pinTemperatureCLK, pinTemperatureCS, pinTemperatureSO);
-  uint64_t thermocouple_last_read = millis();
-#else // default sensor
+#else // TSIC306 default sensor
   #define TEMPSENSOR_NAME "TSIC306"
   #include <ZACwire.h>
 #if (!defined(ZACWIRE_VERSION) || (defined(ZACWIRE_VERSION) && ZACWIRE_VERSION <= 133L))
@@ -1550,11 +1552,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     if (isrCounter >= heaterOverextendingIsrCounter) {
       // turn off when when compute() is not run in time (safetly measure)
       digitalWrite(pinRelayHeater, LOW);
-      //ERROR_print("onTimer1ISR has stopped heater because pid.Compute() did not run\n");
+      // ERROR_print("onTimer1ISR has stopped heater because pid.Compute() did not run\n");
       // TODO: add more emergency handling?
     } else if (isrCounter > windowSize) {
       // dont change output when overextending within overextending_factor threshold 
-      //DEBUG_print("onTimer1ISR over extending due to processing delays: isrCounter=%u\n", isrCounter);
+      // DEBUG_print("onTimer1ISR over extending due to processing delays: isrCounter=%u\n", isrCounter);
     } else if (isrCounter >= Output) { // max(Output) = windowSize
       digitalWrite(pinRelayHeater, LOW);
     } else {
@@ -2634,17 +2636,11 @@ void sync_eeprom(bool startup_read, bool force_read) {
   }
 
   float readTemperatureFromSensor() {
-    float temperature;
-#if (TEMPSENSOR == 2)
-    temperature = TSIC.getTemp();  ///XXX1 TODO test plain temp ino to see if there are also +100degree off samples!!!
-#elif (TEMPSENSOR == 3)
-    while(millis() < thermocouple_last_read + TEMPSENSOR_MAX6675K_MIN_DELAY){ 
-      // delay: between reads there must be at least 250ms delay!!!
-    }
-    temperature = thermocouple.readCelsius();
-    thermocouple_last_read = millis();
+#if (TEMPSENSOR == 3)
+    return thermocouple.readCelsius();
+#else
+    return TSIC.getTemp();  ///XXX1 TODO test plain temp ino to see if there are also +100degree off samples!!!
 #endif
-return temperature;
   } 
 
   void print_settings() {
@@ -2662,8 +2658,7 @@ return temperature;
     DEBUG_print("steadyPower: %0.2f | steadyPowerOffset: %0.2f | "
                 "steadyPowerOffsetTime: %u\n",
         steadyPower, steadyPowerOffset, steadyPowerOffsetTime);
-    DEBUG_print("pidON: %d\n", pidON);
-    DEBUG_print("Temperature sensor: %s\n", TEMPSENSOR_NAME);
+    DEBUG_print("pidON: %d | tempSensor: %s\n", pidON, TEMPSENSOR_NAME);
     printControlsConfig(controlsConfig);
     printMultiToggleConfig();
     printMenuConfig(menuConfig);
