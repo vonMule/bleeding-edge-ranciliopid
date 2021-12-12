@@ -2908,11 +2908,11 @@ void sync_eeprom(bool startup_read, bool force_read) {
     isrCounter = 950; // required
 #if (TEMPSENSOR == 2)    
     if (TSIC.begin() != true) { ERROR_println("TSIC Tempsensor cannot be initialized"); }
-#endif    
     delay(120);
+#endif    
     while (true) {
       secondlatestTemperature = readTemperatureFromSensor();
-      delay(100);
+      delay(refreshTempInterval);
       // secondlatestTemperature = temperature_simulate_steam();
       // secondlatestTemperature = temperature_simulate_normal();
       Input = readTemperatureFromSensor();
