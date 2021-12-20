@@ -75,30 +75,21 @@ extern RemoteDebug Debug;
 
 // returns heater utilization in percent
 double convertOutputToUtilisation(double);
-
 // returns heater utilization in Output
 double convertUtilisationToOutput(double);
-
 double pastTemperatureChange(int);
 double pastTemperatureChange(int, bool);
-
 double getCurrentTemperature();
 float readTemperatureFromSensor();
-
 bool almostEqual(float, float);
-
 void print_settings();
-
 void checkWifi();
-
 void checkWifi(bool, unsigned long);
-
 extern char debugLine[200];
-
 void maintenance();
-void sync_eeprom();
-void sync_eeprom(bool, bool);
-
 void performance_check();
+void blynkSave(char* setting);
+void set_profile();
+void set_profile(bool);
 
 #endif

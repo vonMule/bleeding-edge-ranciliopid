@@ -123,6 +123,43 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.1.0_beta3_test:
+  - TEST ONLY
+  - TODO nodemcu+mqttInternal + wiki
+  - Add support for up to 3 "Profiles", which can be used to quickly switch between different brew setings (eg. when different beans are used).
+    - An individual profile comprises of following settings:
+      - Brew Temperature / setPoint
+      - Brew Time 
+      - Preinfusion time and pause
+      - Coldstart Temperature / startTemp
+    - Profiles can be selected by any means, eg mqtt/blynk/menu/.. . The variable for this is "profile".
+    - The selected profile is also shown on the display, see new setting ENABLE_PROFILE_STATUS.
+    - ATTENTION: Following variable names has changed and therefore any mqtt dashboards and tools have to be adapted (eg IotMQTT/Grafana/nodered):
+      - setPoint -> activeSetPoint
+      - brewtime -> brewTime
+      - starttemp -> activeStartTemp
+      - preinfusion -> activePreinfusion
+      - preinfusionpause -> activePreinfusionPause
+      - Hint: Changing the value of any of variables (eg using mqtt/blynk) will update the respective setting of the currently activated profile.
+    - Blynk:
+      - Added new virtual Pin V3 for "profile", which can be any number between 1 and 3.
+      - Added [Blynk Showcase](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/blynk/blynk-showcase_v3.1.0.mp4).
+  - userConfig.h Changes:
+    - Added:
+      - ENABLE_PROFILE_STATUS
+      - Renamed SETPOINT to SETPOINT1
+      - Renamed BREWTIME to SETPOINT1
+      - Renamed PREINFUSION to PREINFUSION1
+      - Renamed PREINFUSION_PAUSE to PREINFUSION_PAUSE1
+    - Added:
+      - SETPOINT2, SETPOINT3
+      - STARTTEMP2, STARTTEMP3
+      - PREINFUSION2, PREINFUSION3
+      - PREINFUSION_PAUSE2, PREINFUSION_PAUSE3
+  - Updated IoTMQTT Dashboard [IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json](https://github.com/medlor/bleeding-edge-ranciliopid/tree/3.1.0_beta/IoTMQTTPanel/IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json) to include Profile and Action support. [Showcase](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/IoTMQTTPanel/IoTMQTT-showcase_v3.1.0.mp4).
+  - Refactor eeprom stuff to extra file.
+  - Fixes:
+    - Fix blynk "heater output" not being shown.
 - 3.1.0_beta2:
   - Initial support for Thermistor K-type with MAX6675 (Thanks to aschoelzhorn!).
   - userConfig.h:
@@ -506,6 +543,7 @@ Also to the nice people in our rancilio discord channel and the ones who contrib
 
 ## Also special thanks to the great icon artwork
 - ["washing hand"](https://thenounproject.com/matfine/collection/cleaning-icon/?i=2749704) by [Mat fine](https://thenounproject.com/matfine) from [the Noun Project](https://thenounproject.com/matfine/collection/cleaning-icon/?i=2749704) licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/legalcode)
+- ["menu"](https://thenounproject.com/icon/menu-2943760/) by [Mat fine](https://thenounproject.com/matfine) from [the Noun Project](https://thenounproject.com/icon/tasks-2943947/) licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/legalcode)
 - ["Glückliche Gesichter Emoticons"](https://pixabay.com/de/illustrations/gl%C3%BCckliche-gesichter-emoticons-5049116/) by [Annalise Batista](https://pixabay.com/de/users/annaliseart-7089643/) licensed under [Pixabay license](https://pixabay.com/de/service/terms/#license)
   
 

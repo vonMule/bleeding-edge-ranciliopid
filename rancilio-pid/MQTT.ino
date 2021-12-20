@@ -122,10 +122,12 @@ void mqttCallback1(char* topic, unsigned char* data, unsigned int length) {
   char data_str[255];
   os_memcpy(data_str, data, length);
   data_str[length] = '\0';
-  // DEBUG_print("MQTT: %s = %s\n", topic_str, data_str);
+  DEBUG_print("MQTT: %s = %s\n", topic_str, data_str);
+  const int ignore_retained_actions_after_reconnect = 20000;
   if (strstr(topic_str, "/actions/") != NULL) {
-    const int ignore_retained_actions_after_reconnect = 20000;
     if (millis() >= mqttConnectTime + ignore_retained_actions_after_reconnect) { mqttParseActions(topic_str, data_str); }
+  } else if (strstr(topic_str, "/active") != NULL) {  //ignore profile dependent variables after reconnect
+    if (millis() >= mqttConnectTime + ignore_retained_actions_after_reconnect) { mqttParse(topic_str, data_str); }
   } else {
     mqttParse(topic_str, data_str);
   }
@@ -216,42 +218,50 @@ void mqttParse(char* topic_str, char* data_str) {
     // DEBUG_print("Ignoring topic (%s)\n", topic_str);
     return;
   }
-  if (strcmp(configVar, "brewtime") == 0) {
-    if (persistSetting((char*)"brewtime", &brewtime, data_str)) {
+  if (strcmp(configVar, "profile") == 0) {
+    if (persistSetting((char*)"profile", &profile, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      blynkSave((char*)"brewtime");
+      blynkSave((char*)"profile");  //XXX2 add this new var in all blynk places
 #endif
     }
     return;
   }
-  if (strcmp(configVar, "starttemp") == 0) {
-    if (persistSetting((char*)"starttemp", &starttemp, data_str)) {
+  if (strcmp(configVar, "activeBrewTime") == 0) {
+    if (persistSetting((char*)"activeBrewTime", activeBrewTime, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      blynkSave((char*)"starttemp");
+      blynkSave((char*)"activeBrewTime");
 #endif
     }
     return;
   }
-  if (strcmp(configVar, "setPoint") == 0) {
-    if (persistSetting((char*)"setPoint", &setPoint, data_str)) {
+  if (strcmp(configVar, "activeStartTemp") == 0) {
+    if (persistSetting((char*)"activeStartTemp", activeStartTemp, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      blynkSave((char*)"setPoint");
+      blynkSave((char*)"activeStartTemp");
 #endif
     }
     return;
   }
-  if (strcmp(configVar, "preinfusion") == 0) {
-    if (persistSetting((char*)"preinfusion", &preinfusion, data_str)) {
+  if (strcmp(configVar, "activeSetPoint") == 0) {
+    if (persistSetting((char*)"activeSetPoint", activeSetPoint, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      blynkSave((char*)"preinfusion");
+      blynkSave((char*)"activeSetPoint");
 #endif
     }
     return;
   }
-  if (strcmp(configVar, "preinfusionpause") == 0) {
-    if (persistSetting((char*)"preinfusionpause", &preinfusionpause, data_str)) {
+  if (strcmp(configVar, "activePreinfusion") == 0) {
+    if (persistSetting((char*)"activePreinfusion", activePreinfusion, data_str)) {
 #if (BLYNK_ENABLE == 1)
-      blynkSave((char*)"preinfusionpause");
+      blynkSave((char*)"activePreinfusion");
+#endif
+    }
+    return;
+  }
+  if (strcmp(configVar, "activePreinfusionPause") == 0) {
+    if (persistSetting((char*)"activePreinfusionPause", activePreinfusionPause, data_str)) {
+#if (BLYNK_ENABLE == 1)
+      blynkSave((char*)"activePreinfusionPause");
 #endif
     }
     return;
@@ -399,8 +409,9 @@ bool persistSetting(char* setting, int* value, char* data_str) {
 bool persistSetting(char* setting, unsigned int* value, char* data_str) {
   unsigned int data_int;
   sscanf(data_str, "%u", &data_int);
+  DEBUG_print("1 setting %s=%s (=%d) (prev=%d)\n", setting, data_str, data_int, *value);
   if (data_int != *value) {
-    // DEBUG_print("setting %s=%s (=%d) (prev=%d)\n", type, data_str, data_int, *value);
+    DEBUG_print("2 setting %s=%s (=%d) (prev=%d)\n", setting, data_str, data_int, *value);
     *value = data_int;
     mqttPublish(setting, data_str);
     eepromForceSync = millis();
@@ -410,11 +421,12 @@ bool persistSetting(char* setting, unsigned int* value, char* data_str) {
 }
 
 void mqttPublishSettings() {
-  mqttPublish((char*)"brewtime/set", number2string(brewtime));
-  mqttPublish((char*)"starttemp/set", number2string(starttemp));
-  mqttPublish((char*)"setPoint/set", number2string(setPoint));
-  mqttPublish((char*)"preinfusion/set", number2string(preinfusion));
-  mqttPublish((char*)"preinfusionpause/set", number2string(preinfusionpause));
+  mqttPublish((char*)"profile/set", number2string(profile));
+  mqttPublish((char*)"activeBrewTime/set", number2string(*activeBrewTime));
+  mqttPublish((char*)"activeStartTemp/set", number2string(*activeStartTemp));
+  mqttPublish((char*)"activeSetPoint/set", number2string(*activeSetPoint));
+  mqttPublish((char*)"activePreinfusion/set", number2string(*activePreinfusion));
+  mqttPublish((char*)"activePreinfusionPause/set", number2string(*activePreinfusionPause));
   mqttPublish((char*)"pidON/set", number2string(pidON));
   mqttPublish((char*)"brewDetectionSensitivity/set", number2string(brewDetectionSensitivity));
   mqttPublish((char*)"brewDetectionPower/set", number2string(brewDetectionPower));

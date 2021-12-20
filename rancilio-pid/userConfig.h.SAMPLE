@@ -1,5 +1,5 @@
 /********************************************************
- * Version 3.0.0
+ * Version 3.1.0
  * Config must be configured by the user
  *****************************************************/
 
@@ -123,6 +123,7 @@
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter", 3:="text"
 #define DISPLAY_TEXT "Bleeding-Edge PID"  // Text is displayed on bootup (max 21 chars)
 //#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)
+#define ENABLE_PROFILE_STATUS 2           // 0 = off. 1 = always show . 2 = only show not-default profile (which is "profile 1")
 #define ENABLE_FAILURE_STATUS_ICONS 1     // 1 = on (default), 0 = off. If enabled show status icons if services are offline.
 #define ENABLE_SCREEN_SAVER 3             // 0=Disable, 1=Enable(blank screen), 2=Enable(use BrewReady Collection Icon), 3=Enable(Use Maschine logo)
 #define ENABLE_POWER_OFF_COUNTDOWN 0      // 0 = off (default) | 1...n If maschine is inactive for this amount of seconds, we expect the maschine
@@ -140,7 +141,7 @@
  *  MENU_CONFIG = "<MENU_CONFIG_BLOCK_1>#<MENU_CONFIG_BLOCK_2>#<unlimited number of blocks>"
  *     MENU_CONFIG_BLOCK_X = "<TYPE>:<ITEM>:<STEP_SIZE>"
  *        TYPE = Is either "CONFIG" or "ACTION". Depending on the ITEM.
- *        ITEM = SETPOINT|SETPOINTSTEAM|BREWTIME|PREINFUSION|SLEEPING|CLEANING|... (see controls.h for a full list of supported items).
+ *        ITEM = PROFILE|SETPOINT|SETPOINTSTEAM|BREWTIME|PREINFUSION|SLEEPING|CLEANING|... (see controls.h for a full list of supported items).
  *        STEP_SIZE = Definition of how much the actual value is changed when INC or DEC button is pressed. Use 1 for booleans.
  *
  *    Example:
@@ -162,16 +163,12 @@
 /*******
  * General PID values
  *******/
+#define SETPOINT_STEAM 116            // Steam Temperature SetPoint (Rancilio: 116, ECM Casa Prima: 145, ...)
 #define STEADYPOWER 4.6 // Constant power of heater to accomodate against loss of heat to environment (in %)
                         // (Rancilio Silvia 5E: 4.6 , ...)
 #define STEADYPOWER_OFFSET_TIME 850   // If brew group is very cold, we need to put additional power to the heater:
                                       // How long should this additional power be delivered (in s) (Rancilio Silvia 5E: 850, ...)
 #define STEADYPOWER_OFFSET 3.0        // How much power should be added? (in %) (Rancilio Silvia 5E: 2.9, ...)
-
-#define SETPOINT 93           // Temperature SetPoint
-#define SETPOINT_STEAM 116    // Steam Temperature SetPoint (Rancilio: 116, ECM Casa Prima: 145, ...)
-#define STARTTEMP 80.6        // If temperature is below this value then Coldstart state should be triggered
-                              // (Rancilio Silvia 5E: 80.6 , ...)
 
 // Inner Zone PID values
 #define AGGKP 80        // Kp (Rancilio Silvia 5E: 80, ...)
@@ -185,11 +182,25 @@
 
 
 /*******
- * BREW & Preinfusion settings
+ * PROFILE dependent Temperature, Brew & Preinfusion settings
  *******/
-#define BREWTIME         30   // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
-#define PREINFUSION       0   // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
-#define PREINFUSION_PAUSE 0   // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+#define SETPOINT1 93           // Temperature SetPoint
+#define STARTTEMP1 78.1        // If temperature is below this value then Coldstart state should be triggered // (Rancilio Silvia 5E: 80.6 , ...)
+#define BREWTIME1 24.1         // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
+#define PREINFUSION1 2.3       // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
+#define PREINFUSION_PAUSE1 2.2 // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+
+#define SETPOINT2 94           // Temperature SetPoint
+#define STARTTEMP2 79.1        // If temperature is below this value then Coldstart state should be triggered // (Rancilio Silvia 5E: 80.6 , ...)
+#define BREWTIME2 24.0         // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
+#define PREINFUSION2 2.6       // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
+#define PREINFUSION_PAUSE2 2.2 // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+
+#define SETPOINT3 95           // Temperature SetPoint
+#define STARTTEMP3 80          // If temperature is below this value then Coldstart state should be triggered // (Rancilio Silvia 5E: 80.6 , ...)
+#define BREWTIME3 28.1         // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
+#define PREINFUSION3 0         // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
+#define PREINFUSION_PAUSE3 0   // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
 
 
 /*******

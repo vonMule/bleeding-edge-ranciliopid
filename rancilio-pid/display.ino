@@ -59,7 +59,7 @@ char* outputSimpleState() {
   }
   if (!pidON) { return (char*)"Turned off"; }
   if (brewReady) { return (char*)"Ready"; }
-  return (char*)"Please wait";
+  return (char*)""; //"Please wait";
 }
 
 void setDisplayTextState(int activeState, char* displaymessagetext, char* displaymessagetext2) {
@@ -270,7 +270,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.drawGlyph(align_right - 11, 20 + 7, 0x047);
       }
     } else if (activeState == 4) {
-      totalBrewTime = (OnlyPID ? brewtime : preinfusion + preinfusionpause + brewtime) * 1000;
+      totalBrewTime = (OnlyPID ? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
       align_right = align_right_2digits_decimal;
       u8g2.setFont(u8g2_font_profont22_tf);
       u8g2.setCursor(align_right, 3);
@@ -306,25 +306,31 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
   u8g2.print(displaymessagetext2);
 
   // add status icons
-#if (ENABLE_FAILURE_STATUS_ICONS == 1)
-  if (image_flip) {
+  if (millis() >= 10000) {
     byte icon_y = 64 - (status_icon_height - 1);
     byte icon_counter = 0;
-    if ((!forceOffline && !isWifiWorking()) || (forceOffline && !FORCE_OFFLINE)) {
-      u8g2.drawXBMP(0, 64 - status_icon_height + 1, status_icon_width, status_icon_height, wifi_not_ok_bits);
-      u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, wifi_not_ok_bits);
-      icon_counter++;
+    #if (ENABLE_PROFILE_STATUS > 0)
+      if (profile == 1 && ENABLE_PROFILE_STATUS == 1 && !screenSaverOn) { u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, profile_1_bits); icon_counter++; }
+      else if (profile == 2 && !screenSaverOn) { u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, profile_2_bits); icon_counter++; }
+      else if (profile == 3 && !screenSaverOn) { u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, profile_3_bits); icon_counter++; }
+    #endif
+    #if (ENABLE_FAILURE_STATUS_ICONS == 1)
+      if (image_flip) {   
+        if ((!forceOffline && !isWifiWorking()) || (forceOffline && !FORCE_OFFLINE)) {
+          u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, wifi_not_ok_bits);
+          icon_counter++;
+        }
+        if (BLYNK_ENABLE && !isBlynkWorking() && !FORCE_OFFLINE) {
+          u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, blynk_not_ok_bits);
+          icon_counter++;
+        }
+        if (MQTT_ENABLE && !isMqttWorking() && !FORCE_OFFLINE) {
+          u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, mqtt_not_ok_bits);
+          icon_counter++;
+        }
     }
-    if (BLYNK_ENABLE && !isBlynkWorking() && !FORCE_OFFLINE) {
-      u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, blynk_not_ok_bits);
-      icon_counter++;
-    }
-    if (MQTT_ENABLE && !isMqttWorking() && !FORCE_OFFLINE) {
-      u8g2.drawXBMP(icon_counter * (status_icon_width - 1), icon_y, status_icon_width, status_icon_height, mqtt_not_ok_bits);
-      icon_counter++;
-    }
+    #endif
   }
-#endif
   u8g2.sendBuffer();
 }
 
@@ -381,29 +387,57 @@ void showMenu(char** displaymessagetext, char** displaymessagetext2) {
   menuMap* menuConfigPosition = getMenuConfigPosition(menuConfig, menuPosition);
   if (!menuConfigPosition) return;
   if (image_flip) {
-    u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_rotate_bits);
+    u8g2.drawXBMP(0, 0, icon_width, icon_height, menu_rotate_bits);
   } else {
-    u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_bits);
+    u8g2.drawXBMP(0, 0, icon_width, icon_height, menu_bits);
   }
   u8g2.setFont(u8g2_font_profont22_tf);
   if (!strcmp(menuConfigPosition->value->type, "bool")) {
+    bool menuValue;
+    if (menuConfigPosition->value->is_double_ptr) {
+      menuValue = **(int**)menuConfigPosition->value->ptr;
+    } else {
+      menuValue = *(int*)menuConfigPosition->value->ptr;
+    }
     u8g2.setCursor(align_right_2digits, 3);
-    if (*(int*)menuConfigPosition->value->ptr == 0) {
+    if ( menuValue == 0) {
       u8g2.print("Off");
     } else {
       u8g2.print("On");
     }
+  }
+  else if (!strcmp(menuConfigPosition->value->type, "int")) {
+    int menuValue;
+    if (menuConfigPosition->value->is_double_ptr) {
+      menuValue = **(int**)menuConfigPosition->value->ptr;
+    } else {
+      menuValue = *(int*)menuConfigPosition->value->ptr;
+    }
+    if (menuValue >= 100) {
+          align_right = align_right_3digits;
+        } else {
+          if (menuValue >= 10) {
+            align_right = align_right_2digits;
+          } else align_right = align_right_1digits_decimal;
+    }
+    u8g2.setCursor(align_right, 3);
+    u8g2.print(menuValue, 1);
   } else {
-      double menuValue = *(double*)menuConfigPosition->value->ptr;
-      if (menuValue - 100 > -FLT_EPSILON) {
-            align_right = align_right_3digits;
-          } else {
-            if (menuValue >= 10) {
-              align_right = align_right_2digits;
-            } else align_right = align_right_1digits_decimal;
-      }
-      u8g2.setCursor(align_right, 3);
-      u8g2.print(menuValue, 1);
+    double menuValue;
+    if (menuConfigPosition->value->is_double_ptr) {
+      menuValue = **(double**)menuConfigPosition->value->ptr;
+    } else {
+      menuValue = *(double*)menuConfigPosition->value->ptr;
+    }
+    if (menuValue - 100 > -FLT_EPSILON) {
+          align_right = align_right_3digits;
+        } else {
+          if (menuValue >= 10) {
+            align_right = align_right_2digits;
+          } else align_right = align_right_1digits_decimal;
+    }
+    u8g2.setCursor(align_right, 3);
+    u8g2.print(menuValue, 1);
   }
   char* unit = menuConfigPosition->unit;
   if (!unit) {

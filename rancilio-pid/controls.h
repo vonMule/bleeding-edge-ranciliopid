@@ -39,7 +39,8 @@ typedef struct controlMap {
 } controlMap;
 
 typedef struct menuMapValue {
-  char* type;  // type of ptr
+  char* type;  // type of real value 
+  bool is_double_ptr;  //is it a ptr to a ptr pointing to the real value
   void* ptr; // ptr to real value
 } menuMapValue;
 
@@ -84,8 +85,8 @@ void cleaningAction(int state);
 void steamingAction(int state);
 void hotwaterAction(int state);
 void brewingAction(int state);
-void mqttCallback1(char* topic, unsigned char* data, unsigned int length);
-void mqtt_callback_2(uint32_t* client, const char* topic, uint32_t topic_len, const char* data, uint32_t length);
+//extern void mqttCallback1(char* topic, unsigned char* data, unsigned int length);  XXX1 remove?
+//extern void mqtt_callback_2(uint32_t* client, const char* topic, uint32_t topic_len, const char* data, uint32_t length);
 
 int simulatedBrewSwitch = 0;
 

@@ -4,7 +4,7 @@
 #include "rancilio-pid.h"
 const int Display = DISPLAY_HARDWARE;
 
-#include <controls.h>
+#include "controls.h"
 #include "icon.h"
 #if (ICON_COLLECTION == 2)
 #include "icon_winter.h"
@@ -57,9 +57,10 @@ extern int pidON;
 extern int steaming;
 extern unsigned long totalBrewTime;
 extern const int OnlyPID;
-extern double brewtime;
-extern double preinfusion;
-extern double preinfusionpause;
+extern unsigned int profile;
+extern double* activeBrewtime;
+extern double* activePreinfusion;
+extern double* activePreinfusionPause;
 extern unsigned long brewTimer;
 extern bool forceOffline;
 extern bool isWifiWorking();

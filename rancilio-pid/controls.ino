@@ -247,32 +247,45 @@ menuMap* parseMenuConfig() {
     if (strcmp(nextMenuMap->item, "SETPOINT") == 0) {
         nextMenuMap->unit = (char*)"C";
         nextMenuMap->value->type = (char*)"double";
-        nextMenuMap->value->ptr = &setPoint;
+        nextMenuMap->value->ptr = &activeSetPoint;
+        nextMenuMap->value->is_double_ptr = true;
     } else if (strcmp(nextMenuMap->item, "BREWTIME") == 0) {
         nextMenuMap->unit = (char*)"s";
         nextMenuMap->value->type = (char*)"double";
-        nextMenuMap->value->ptr = &brewtime;
+        nextMenuMap->value->ptr = &activeBrewTime;
+        nextMenuMap->value->is_double_ptr = true;
     } else if (strcmp(nextMenuMap->item, "PREINFUSION") == 0) {
         nextMenuMap->unit = (char*)"s";
         nextMenuMap->value->type = (char*)"double";
-        nextMenuMap->value->ptr = &preinfusion;
+        nextMenuMap->value->ptr = &activePreinfusion;
+        nextMenuMap->value->is_double_ptr = true;
     } else if (strcmp(nextMenuMap->item, "PREINFUSION_PAUSE") == 0) {
         nextMenuMap->unit = (char*)"s";
         nextMenuMap->value->type = (char*)"double";
-        nextMenuMap->value->ptr = &preinfusionpause;
+        nextMenuMap->value->ptr = &activePreinfusionPause;
+        nextMenuMap->value->is_double_ptr = true;
     } else if (strcmp(nextMenuMap->item, "SLEEPING") == 0) {
         nextMenuMap->value->type = (char*)"bool";
         nextMenuMap->value->ptr = &sleeping;
+        nextMenuMap->value->is_double_ptr = false;
     } else if (strcmp(nextMenuMap->item, "CLEANING") == 0) {
         nextMenuMap->value->type = (char*)"bool";
         nextMenuMap->value->ptr = &cleaning;
+        nextMenuMap->value->is_double_ptr = false;
     } else if (strcmp(nextMenuMap->item, "PID_ON") == 0) {
         nextMenuMap->value->type = (char*)"bool";
         nextMenuMap->value->ptr = &pidON;
+        nextMenuMap->value->is_double_ptr = false;
     } else if (strcmp(nextMenuMap->item, "SETPOINT_STEAM") == 0) {
         nextMenuMap->unit = (char*)"C";
         nextMenuMap->value->type = (char*)"double";
         nextMenuMap->value->ptr = &setPointSteam;
+        nextMenuMap->value->is_double_ptr = false;
+    } else if (strcmp(nextMenuMap->item, "PROFILE") == 0) {
+        nextMenuMap->unit = (char*)"";
+        nextMenuMap->value->type = (char*)"int";
+        nextMenuMap->value->ptr = &profile;
+        nextMenuMap->value->is_double_ptr = false;
     } else {
       ERROR_print("menuConfig defined %s but is not a supported setting\n", nextMenuMap->item);
       continue;
@@ -314,7 +327,7 @@ menuMap* getMenuConfigPosition(menuMap* menuConfig, unsigned int menuPosition) {
     return NULL;
   }
   menuMap* ptr = menuConfig;
-  int counter = 1;
+  unsigned int counter = 1;
   do {
     if (counter == menuPosition) return ptr;
     counter++;
@@ -323,12 +336,13 @@ menuMap* getMenuConfigPosition(menuMap* menuConfig, unsigned int menuPosition) {
 }
 
 const char* convertDefineToVariable(char *str) {
-  if (!strcmp(str, "SETPOINT")) return "setPoint";
+  if (!strcmp(str, "SETPOINT")) return "activeSetPoint";
   if (!strcmp(str, "SETPOINTSTEAM")) return "setPointSteam";
-  if (!strcmp(str, "BREWTIME")) return "brewtime";
-  if (!strcmp(str, "PREINFUSION")) return "preinfusion";
-  if (!strcmp(str, "PREINFUSION_PAUSE")) return "preinfusionpause";
-  if (!strcmp(str, "PID_ON")) return "pidON"; 
+  if (!strcmp(str, "BREWTIME")) return "activeBrewTime";
+  if (!strcmp(str, "PREINFUSION")) return "activePreinfusion";
+  if (!strcmp(str, "PREINFUSION_PAUSE")) return "activePreinfusionPause";
+  if (!strcmp(str, "PID_ON")) return "pidON";
+  if (!strcmp(str, "PROFILE")) return "profile"; 
   ERROR_print("convertDefineToVariable(%s) not supported", str);
   return NULL;
 }
@@ -343,6 +357,7 @@ const char* convertDefineToReadAbleVariable(char *str) {
   if (!strcmp(str, "SLEEPING")) return "Sleeping";
   if (!strcmp(str, "STEAMING")) return "Steaming";
   if (!strcmp(str, "CLEANING")) return "Cleaning";
+  if (!strcmp(str, "PROFILE")) return "Profile";
   return str;
 }
 
@@ -354,35 +369,53 @@ void menuConfigPositionModifyByStep(menuMap* menuConfigPosition, bool increase =
     static char settingMQTTSet[50];
     if (setting) snprintf(settingMQTTSet, sizeof(settingMQTTSet), "%s/set", setting);
     if (!strcmp(menuConfigPosition->value->type, "bool")) {
-      if (increase) {
-        *((int*)menuConfigPosition->value->ptr) = 1;
+      bool value;
+      if (menuConfigPosition->value->is_double_ptr) {
+        value = **((int**)menuConfigPosition->value->ptr);
       } else {
-        *((int*)menuConfigPosition->value->ptr) = 0;
+        value = *((int*)menuConfigPosition->value->ptr);
+      }
+      if (increase) {
+        value = 1;
+      } else {
+        value = 0;
       }
       if (setting) { 
-        mqttPublish(setting, number2string(*((int*)menuConfigPosition->value->ptr)));
-        mqttPublish(settingMQTTSet, number2string(*((int*)menuConfigPosition->value->ptr)));
+        mqttPublish(setting, number2string(value));
+        mqttPublish(settingMQTTSet, number2string(value));
       }
     } else if (!strcmp(menuConfigPosition->value->type, "double")) {
-        if (increase) {
-          *((double*)menuConfigPosition->value->ptr) += double(menuConfigPosition->valueStep);
-        } else {
-          *((double*)menuConfigPosition->value->ptr) -= double(menuConfigPosition->valueStep);
-        }
-        if (setting) {
-          mqttPublish(setting, number2string(*((double*)menuConfigPosition->value->ptr)));
-          mqttPublish(settingMQTTSet, number2string(*((double*)menuConfigPosition->value->ptr)));
-        }
+      double value;
+      if (menuConfigPosition->value->is_double_ptr) {
+        value = **((double**)menuConfigPosition->value->ptr);
+      } else {
+        value = *((double*)menuConfigPosition->value->ptr);
+      }
+      if (increase) {
+        value += double(menuConfigPosition->valueStep);
+      } else {
+        value -= double(menuConfigPosition->valueStep);
+      }
+      if (setting) {
+        mqttPublish(setting, number2string(value));
+        mqttPublish(settingMQTTSet, number2string(value));
+      }
     } else {
-        if (increase) {
-          *((int*)menuConfigPosition->value->ptr) += int(menuConfigPosition->valueStep);
-        } else {
-          *((int*)menuConfigPosition->value->ptr) -= int(menuConfigPosition->valueStep);
-        }
-        if (setting) {
-          mqttPublish(setting, number2string(*((int*)menuConfigPosition->value->ptr)));
-          mqttPublish(settingMQTTSet, number2string(*((int*)menuConfigPosition->value->ptr)));
-        }
+      int value;
+      if (menuConfigPosition->value->is_double_ptr) {
+        value = **((int**)menuConfigPosition->value->ptr);
+      } else {
+        value = *((int*)menuConfigPosition->value->ptr);
+      }
+      if (increase) {
+        value += int(menuConfigPosition->valueStep);
+      } else {
+        value -= int(menuConfigPosition->valueStep);
+      }
+      if (setting) {
+        mqttPublish(setting, number2string(value));
+        mqttPublish(settingMQTTSet, number2string(value));
+      }
     }
     eepromForceSync = millis();
 #if (BLYNK_ENABLE == 1)
