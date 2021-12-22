@@ -8,11 +8,8 @@
  *****************************************************/
 
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 
-// Libraries for OTA
-#include <ArduinoOTA.h> ///XXX1 needed?
-
-//#include <WiFiUdp.h>  ///XXX1 needed?
 #include <float.h>
 #include <math.h>
 
@@ -110,7 +107,7 @@ int activeState = 3; // (0:= undefined / EMERGENCY_TEMP reached)
  * history of temperatures
  *****************************************************/
 const int numReadings = 75 * 10; // number of values per Array
-double readingsTemp[numReadings]; // the readings from Temp
+float readingsTemp[numReadings]; // the readings from Temp
 float readingsTime[numReadings]; // the readings from time
 int readIndex = 0; // the index of the current reading
 unsigned long lastBrewTime = 0;
@@ -130,21 +127,22 @@ const float heaterOverextendingFactor = 1.2;
 unsigned int heaterOverextendingIsrCounter = windowSize * heaterOverextendingFactor;
 unsigned long pidComputeLastRunTime = 0;
 unsigned long streamComputeLastRunTime = 0;
-double Input = 0, Output = 0;
-double secondlatestTemperature = 0;
+float Input = 0;
+double Output = 0;  // must be double: https://github.com/espressif/arduino-esp32/issues/3661
+float secondlatestTemperature = 0;
 double previousOutput = 0;
 int pidMode = 1; // 1 = Automatic, 0 = Manual
 
-double setPoint1 = SETPOINT1;
-double setPoint2 = SETPOINT2;
-double setPoint3 = SETPOINT3;
-double* activeSetPoint = &setPoint1;
-double starttemp1 = STARTTEMP1;
-double starttemp2 = STARTTEMP2;
-double starttemp3 = STARTTEMP3;
-double* activeStartTemp = &starttemp1;
-double setPointSteam = SETPOINT_STEAM;
-double steamReadyTemp = STEAM_READY_TEMP;
+float setPoint1 = SETPOINT1;
+float setPoint2 = SETPOINT2;
+float setPoint3 = SETPOINT3;
+float* activeSetPoint = &setPoint1;
+float starttemp1 = STARTTEMP1;
+float starttemp2 = STARTTEMP2;
+float starttemp3 = STARTTEMP3;
+float* activeStartTemp = &starttemp1;
+float setPointSteam = SETPOINT_STEAM;
+float steamReadyTemp = STEAM_READY_TEMP;
 
 // State 1: Coldstart PID values
 const int coldStartStep1ActivationOffset = 15;
@@ -154,53 +152,49 @@ const int coldStartStep1ActivationOffset = 15;
 // ... none ...
 
 // State 3: Inner Zone PID values
-double aggKp = AGGKP;
-double aggTn = AGGTN;
-double aggTv = AGGTV;
+float aggKp = AGGKP;
+float aggTn = AGGTN;
+float aggTv = AGGTV;
 #if (aggTn == 0)
-double aggKi = 0;
+float aggKi = 0;
 #else
-double aggKi = aggKp / aggTn;
+float aggKi = aggKp / aggTn;
 #endif
-double aggKd = aggTv * aggKp;
+float aggKd = aggTv * aggKp;
 
 // State 4: Brew PID values
 // ... none ...
-double brewDetectionPower = BREWDETECTION_POWER;
+float brewDetectionPower = BREWDETECTION_POWER;
 
 // State 5: Outer Zone Pid values
-double aggoKp = AGGOKP;
-double aggoTn = AGGOTN;
-double aggoTv = AGGOTV;
+float aggoKp = AGGOKP;
+float aggoTn = AGGOTN;
+float aggoTv = AGGOTV;
 #if (aggoTn == 0)
-double aggoKi = 0;
+float aggoKi = 0;
 #else
-double aggoKi = aggoKp / aggoTn;
+float aggoKi = aggoKp / aggoTn;
 #endif
-double aggoKd = aggoTv * aggoKp;
-const double outerZoneTemperatureDifference = 1;
-// const double steamZoneTemperatureDifference = 3;
+float aggoKd = aggoTv * aggoKp;
+const float outerZoneTemperatureDifference = 1;
+// const float steamZoneTemperatureDifference = 3;
 
 /********************************************************
  * PID with Bias (steadyPower) Temperature Controller
  *****************************************************/
 #include "PIDBias.h"
-double steadyPower = STEADYPOWER; // in percent
-double steadyPowerSaved = steadyPower;
-double steadyPowerSavedInBlynk = 0;
-double steadyPowerMQTTDisableUpdateUntilProcessed = 0; // used as semaphore
+float steadyPower = STEADYPOWER; // in percent
+float steadyPowerSaved = steadyPower;
+float steadyPowerSavedInBlynk = 0;
+float steadyPowerMQTTDisableUpdateUntilProcessed = 0; // used as semaphore
 unsigned long steadyPowerMQTTDisableUpdateUntilProcessedTime = 0;
-int burstShot = 0; // this is 1, when the user wants to immediatly set the
-                   // heater power to the value specified in burstPower
-double burstPower = 20; // in percent
-
 const int lastBrewTimeOffset = 4 * 1000; // compensate for lag in software brew-detection
 
 // If the espresso hardware itself is cold, we need additional power for
 // steadyPower to hold the water temperature
-double steadyPowerOffset = STEADYPOWER_OFFSET; // heater power (in percent) which should be added to
+float steadyPowerOffset = STEADYPOWER_OFFSET; // heater power (in percent) which should be added to
                                                // steadyPower during steadyPowerOffsetTime
-double steadyPowerOffsetModified = steadyPowerOffset;
+float steadyPowerOffsetModified = steadyPowerOffset;
 unsigned int steadyPowerOffsetTime = STEADYPOWER_OFFSET_TIME; // timeframe (in s) for which
                                                               // steadyPowerOffsetActivateTime should be active
 unsigned long steadyPowerOffsetActivateTime = 0;
@@ -208,7 +202,7 @@ unsigned long steadyPowerOffsetDecreaseTimer = 0;
 unsigned long lastUpdateSteadyPowerOffset = 0; // last time steadyPowerOffset was updated
 bool MaschineColdstartRunOnce = false;
 bool MachineColdOnStart = true;
-double starttempOffset = 0; // Increasing this lead to too high temp and emergency measures taking
+float starttempOffset = 0; // Increasing this lead to too high temp and emergency measures taking
                             // place. For my rancilio it is best to leave this at 0.
 
 PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyPowerOffsetActivateTime, &steadyPowerOffsetTime, &activeSetPoint, aggKp, aggKi, aggKd);
@@ -216,18 +210,18 @@ PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyP
 /********************************************************
  * BREWING / PREINFUSSION
  ******************************************************/
-double brewtime1 = BREWTIME1;
-double brewtime2 = BREWTIME2;
-double brewtime3 = BREWTIME3;
-double* activeBrewTime = &brewtime1;
-double preinfusion1 = PREINFUSION1;
-double preinfusion2 = PREINFUSION2;
-double preinfusion3 = PREINFUSION3;
-double* activePreinfusion = &preinfusion1;
-double preinfusionpause1 = PREINFUSION_PAUSE1;
-double preinfusionpause2 = PREINFUSION_PAUSE2;
-double preinfusionpause3 = PREINFUSION_PAUSE3;
-double* activePreinfusionPause = &preinfusionpause1;
+float brewtime1 = BREWTIME1;
+float brewtime2 = BREWTIME2;
+float brewtime3 = BREWTIME3;
+float* activeBrewTime = &brewtime1;
+float preinfusion1 = PREINFUSION1;
+float preinfusion2 = PREINFUSION2;
+float preinfusion3 = PREINFUSION3;
+float* activePreinfusion = &preinfusion1;
+float preinfusionpause1 = PREINFUSION_PAUSE1;
+float preinfusionpause2 = PREINFUSION_PAUSE2;
+float preinfusionpause3 = PREINFUSION_PAUSE3;
+float* activePreinfusionPause = &preinfusionpause1;
 int brewing = 0; // Attention: "brewing" must only be changed in brew()
                  // (ONLYPID=0) or brewingAction() (ONLYPID=1)!
 bool waitingForBrewSwitchOff = false;
@@ -298,7 +292,7 @@ const unsigned int emergencyTemperature = EMERGENCY_TEMP; // temperature at whic
 #else
 const unsigned int emergencyTemperature = 120; // fallback
 #endif
-double brewDetectionSensitivity = BREWDETECTION_SENSITIVITY; // if temperature decreased within the last 6
+float brewDetectionSensitivity = BREWDETECTION_SENSITIVITY; // if temperature decreased within the last 6
                                                              // seconds by this amount, then we detect a
                                                              // brew.
 #ifdef BREW_READY_DETECTION
@@ -391,6 +385,23 @@ unsigned long previousTimerMenuCheck = 0;
 const unsigned int menuOffTimer = 7000;
 menuMap* menuConfig = NULL;
 
+/******************************************************
+ * WiFi helper scripts
+ ******************************************************/
+#ifdef ESP32
+void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info){
+  DEBUG_print("Connected to AP successfully\n");
+}
+
+void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info){
+  DEBUG_print("WiFi connected. IP=%s\n", WiFi.localIP().toString().c_str());
+}
+
+void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
+  ERROR_print("WiFi lost connection. (IP=%s) Reason: %u\n", WiFi.localIP().toString().c_str(), info.disconnected.reason);
+}
+#endif
+
 /********************************************************
  * BLYNK
  ******************************************************/
@@ -398,6 +409,7 @@ menuMap* menuConfig = NULL;
 #define BLYNK_YELLOW "#ED9D00"
 #define BLYNK_RED "#D3435C"
 unsigned long previousTimerBlynk = 0;
+unsigned long blynkConnectTime = 0;
 const long intervalBlynk = 1000; // Update Intervall zur App
 int blynkSendCounter = 1;
 bool blynkSyncRunOnce = false;
@@ -420,6 +432,7 @@ bool blynkDisabledTemporary = false;
  * Receive following BLYNK PIN values from app/server
  ******************************************************/
 BLYNK_CONNECTED() {
+  blynkConnectTime = millis();
   if (!blynkSyncRunOnce) {
     blynkSyncRunOnce = true;
     Blynk.syncAll(); // get all values from server/app when connected
@@ -432,44 +445,42 @@ BLYNK_APP_CONNECTED() {
   printControlsConfig(controlsConfig);
   printMenuConfig(menuConfig);
   // one time refresh on connect cause BLYNK_READ seems not to work always
-  //blynkSave((char*)"cleaningCycles");
-  //blynkSave((char*)"cleaningInterval");
-  //blynkSave((char*)"cleaningPause");
+  blynkSave((char*)"cleaningCycles");
+  blynkSave((char*)"cleaningInterval");
+  blynkSave((char*)"cleaningPause");
 }
 // This is called when Smartphone App is closed
 BLYNK_APP_DISCONNECTED() { DEBUG_print("Blynk Client Disconnected.\n"); }
-BLYNK_WRITE(V3) { profile = param.asInt(); }  ///XXX2 also update wiki
-BLYNK_WRITE(V4) { aggKp = param.asDouble(); }
-BLYNK_WRITE(V5) { aggTn = param.asDouble(); }
-BLYNK_WRITE(V6) { aggTv = param.asDouble(); }
-BLYNK_WRITE(V7) { *activeSetPoint = param.asDouble(); }   ///XXX2 TODO!! all new active* settings must not be retained after reconnect and startup
-BLYNK_WRITE(V8) { *activeBrewTime = param.asDouble(); }
-BLYNK_WRITE(V9) { *activePreinfusion = param.asDouble(); }
-BLYNK_WRITE(V10) { *activePreinfusionPause = param.asDouble(); }
-BLYNK_WRITE(V12) { *activeStartTemp = param.asDouble(); }
+BLYNK_WRITE(V3) { profile = param.asInt(); }
+BLYNK_WRITE(V4) { aggKp = param.asFloat(); }
+BLYNK_WRITE(V5) { aggTn = param.asFloat(); }
+BLYNK_WRITE(V6) { aggTv = param.asFloat(); }
+BLYNK_WRITE(V7) { if ((millis() - blynkConnectTime > 10000 )) *activeSetPoint = param.asFloat(); }
+BLYNK_WRITE(V8) { if ((millis() - blynkConnectTime > 10000 )) *activeBrewTime = param.asFloat(); }
+BLYNK_WRITE(V9) { if ((millis() - blynkConnectTime > 10000 )) *activePreinfusion = param.asFloat(); }
+BLYNK_WRITE(V10) { if ((millis() - blynkConnectTime > 10000 )) *activePreinfusionPause = param.asFloat(); }
+BLYNK_WRITE(V12) { if ((millis() - blynkConnectTime > 10000 )) *activeStartTemp = param.asFloat(); }
 BLYNK_WRITE(V13) { pidON = param.asInt() == 1 ? 1 : 0; }
-BLYNK_WRITE(V30) { aggoKp = param.asDouble(); }
-BLYNK_WRITE(V31) { aggoTn = param.asDouble(); }
-BLYNK_WRITE(V32) { aggoTv = param.asDouble(); }
-BLYNK_WRITE(V34) { brewDetectionSensitivity = param.asDouble(); }
-BLYNK_WRITE(V36) { brewDetectionPower = param.asDouble(); }
-BLYNK_WRITE(V40) { burstShot = param.asInt(); }
+BLYNK_WRITE(V30) { aggoKp = param.asFloat(); }
+BLYNK_WRITE(V31) { aggoTn = param.asFloat(); }
+BLYNK_WRITE(V32) { aggoTv = param.asFloat(); }
+BLYNK_WRITE(V34) { brewDetectionSensitivity = param.asFloat(); }
+BLYNK_WRITE(V36) { brewDetectionPower = param.asFloat(); }
+//BLYNK_WRITE(V40) { burstShot = param.asInt(); }
 BLYNK_WRITE(V41) {
-  steadyPower = param.asDouble();
+  steadyPower = param.asFloat();
   // TODO fix this bPID.SetSteadyPowerDefault(steadyPower); //TOBIAS: working?
 }
-BLYNK_WRITE(V42) { steadyPowerOffset = param.asDouble(); }
+BLYNK_WRITE(V42) { steadyPowerOffset = param.asFloat(); }
 BLYNK_WRITE(V43) { steadyPowerOffsetTime = param.asInt(); }
-BLYNK_WRITE(V44) { burstPower = param.asDouble(); }
-BLYNK_WRITE(V50) { setPointSteam = param.asDouble(); }
-//BLYNK_READ(V51) { blynkSave((char*)"cleaningCycles"); }
-//BLYNK_READ(V52) { blynkSave((char*)"cleaningInterval"); }
-//BLYNK_READ(V53) { blynkSave((char*)"cleaningPause"); }
+//BLYNK_WRITE(V44) { burstPower = param.asFloat(); }
+BLYNK_WRITE(V50) { setPointSteam = param.asFloat(); }
+BLYNK_READ(V51) { blynkSave((char*)"cleaningCycles"); }
+BLYNK_READ(V52) { blynkSave((char*)"cleaningInterval"); }
+BLYNK_READ(V53) { blynkSave((char*)"cleaningPause"); }
 BLYNK_WRITE(V101) {
   int val = param.asInt();
-  // TODO replace hardcoded with dynamically startup-time in which time-frame we
-  // ignore "saved" ON events.
-  if (millis() <= 10000 && val != 0) {
+  if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
     actionController(BREWING, 0, true, false);
     Blynk.virtualWrite(V101, 0);
   } else {
@@ -478,7 +489,7 @@ BLYNK_WRITE(V101) {
 }
 BLYNK_WRITE(V102) {
   int val = param.asInt();
-  if (millis() <= 10000 && val != 0) {
+  if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
     actionController(HOTWATER, 0, true, false);
     Blynk.virtualWrite(V102, 0);
   } else {
@@ -487,7 +498,7 @@ BLYNK_WRITE(V102) {
 }
 BLYNK_WRITE(V103) {
   int val = param.asInt();
-  if (millis() <= 10000 && val != 0) {
+  if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
     actionController(STEAMING, 0, true, false);
     Blynk.virtualWrite(V103, 0);
   } else {
@@ -496,7 +507,7 @@ BLYNK_WRITE(V103) {
 }
 BLYNK_WRITE(V107) {
   int val = param.asInt();
-  if (millis() <= 10000 && val != 0) {
+  if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
     actionController(CLEANING, 0, true, false);
     Blynk.virtualWrite(V107, 0);
   } else {
@@ -505,7 +516,7 @@ BLYNK_WRITE(V107) {
 }
 BLYNK_WRITE(V110) {
   int val = param.asInt();
-  if (millis() <= 10000 && val != 0) {
+  if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
     actionController(SLEEPING, 0, true, false);
     Blynk.virtualWrite(V110, 0);
   } else {
@@ -514,7 +525,7 @@ BLYNK_WRITE(V110) {
 }
 #endif
 
-void blynkSave123(char* setting) {
+void blynkSave(char* setting) {
   #if (BLYNK_ENABLE==1)
   if (!strcmp(setting, "Input")) { Blynk.virtualWrite(V2, String(Input, 2)); }
   else if (!strcmp(setting, "profile")) { Blynk.virtualWrite(V3, profile); }
@@ -558,23 +569,6 @@ WidgetLED brewReadyLed(V14);
 #endif
 
 /******************************************************
- * WiFi helper scripts
- ******************************************************/
-#ifdef ESP32
-void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info){
-  DEBUG_print("Connected to AP successfully\n");
-}
-
-void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info){
-  DEBUG_print("WiFi connected. IP=%s\n", WiFi.localIP().toString().c_str());
-}
-
-void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
-  ERROR_print("WiFi lost connection. (IP=%s) Reason: %u\n", WiFi.localIP().toString().c_str(), info.disconnected.reason);
-}
-#endif
-
-/******************************************************
  * HELPER
  ******************************************************/
 bool isWifiWorking() {
@@ -597,7 +591,7 @@ bool isBlynkWorking() {
 
 bool inSensitivePhase() { return (brewing || activeState == 4 || isrCounter > 1000); }
 
-int signnum(double x) {
+int signnum(float x) {
   if (x >= 0.0)
     return 1;
   else
@@ -626,7 +620,7 @@ void testEmergencyStop() {
 /********************************************************
  * history temperature data
  *****************************************************/
-void updateTemperatureHistory(double myInput) {
+void updateTemperatureHistory(float myInput) {
   readIndex++;
   if (readIndex >= numReadings) {
     readIndex = 0;
@@ -637,8 +631,8 @@ void updateTemperatureHistory(double myInput) {
 
 // calculate the average temperature over the last (lookback) temperatures
 // samples
-double getAverageTemperature(int lookback, int offsetReading = 0) {
-  double averageInput = 0;
+float getAverageTemperature(int lookback, int offsetReading = 0) {
+  float averageInput = 0;
   int count = 0;
   if (lookback >= numReadings) lookback = numReadings - 1;
   for (int offset = 0; offset < lookback; offset++) {
@@ -658,10 +652,10 @@ double getAverageTemperature(int lookback, int offsetReading = 0) {
 }
 
 // calculate the temperature difference between NOW and a datapoint in history
-double pastTemperatureChange(int lookback) {
+float pastTemperatureChange(int lookback) {
    return pastTemperatureChange(lookback, true);
 }
-double pastTemperatureChange(int lookback, bool enable_avg) {
+float pastTemperatureChange(int lookback, bool enable_avg) {
   // take 10samples (10*100ms = 1sec) for average calculations
   // thus lookback must be > avg_timeframe
   const int avg_timeframe = 10;  
@@ -669,8 +663,8 @@ double pastTemperatureChange(int lookback, bool enable_avg) {
   if (enable_avg) {
     int historicOffset = lookback - avg_timeframe;
     if (historicOffset < 0) return 0; //pastTemperatureChange will be 0 nevertheless
-    double cur = getAverageTemperature(avg_timeframe);
-    double past = getAverageTemperature(avg_timeframe, historicOffset);
+    float cur = getAverageTemperature(avg_timeframe);
+    float past = getAverageTemperature(avg_timeframe, historicOffset);
     // ignore not yet initialized values
     if (cur == 0 || past == 0) return 0;
     return cur - past;
@@ -683,9 +677,9 @@ double pastTemperatureChange(int lookback, bool enable_avg) {
   }
 }
 
-double getCurrentTemperature() { return readingsTemp[readIndex]; }
+float getCurrentTemperature() { return readingsTemp[readIndex]; }
 
-double getTemperature(int lookback) {
+float getTemperature(int lookback) {
   if (lookback >= numReadings) lookback = numReadings - 1;
   int offset = lookback % numReadings;
   int historicIndex = (readIndex - offset);
@@ -696,12 +690,12 @@ double getTemperature(int lookback) {
 }
 
 // returns heater utilization in percent
-double convertOutputToUtilisation(double Output) { return (100 * Output) / windowSize; }
+float convertOutputToUtilisation(double Output) { return (100 * Output) / windowSize; }
 
 // returns heater utilization in Output
-double convertUtilisationToOutput(double utilization) { return (utilization / 100) * windowSize; }
+double convertUtilisationToOutput(float utilization) { return (utilization / 100) * windowSize; }
 
-bool checkBrewReady(double setPoint, float marginOfFluctuation, int lookback) {
+bool checkBrewReady(float setPoint, float marginOfFluctuation, int lookback) {
   if (almostEqual(marginOfFluctuation, 0)) return false;
   if (lookback >= numReadings) lookback = numReadings - 1;
   for (int offset = 0; offset <= floor(lookback / 5); offset++) {
@@ -789,7 +783,7 @@ void setGpioAction(int action, bool mode) {
 #endif
 }
 
-double temperature_simulate_steam() {
+float temperature_simulate_steam() {
   unsigned long now = millis();
   // if ( now <= 20000 ) return 102;
   // if ( now <= 26000 ) return 99;
@@ -807,7 +801,7 @@ double temperature_simulate_steam() {
   return *activeSetPoint;
 }
 
-double temperature_simulate_normal() {
+float temperature_simulate_normal() {
   unsigned long now = millis();
   if (now <= 12000) return 82;
   if (now <= 15000) return 85;
@@ -1243,7 +1237,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           // auto-tune starttemp
           if (millis() < 400000 && steadyPowerOffsetActivateTime > 0 && pidMode && MachineColdOnStart && !steaming && !sleeping
               && !cleaning) { // ugly hack to only adapt setPoint after power-on
-            double tempChange = pastTemperatureChange(10*10);
+            float tempChange = pastTemperatureChange(10*10);
             if (Input - *activeSetPoint >= 0) {
               if (tempChange > 0.05 && tempChange <= 0.15) {
                 DEBUG_print("Auto-Tune starttemp(%0.2f -= %0.2f) | "
@@ -1910,14 +1904,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
       }
 
-      if (burstShot == 1 && pidMode == 1) {
-        burstShot = 0;
-        bPID.SetBurst(burstPower);
-        snprintf(debugLine, sizeof(debugLine), "BURST Output=%0.2f", convertOutputToUtilisation(Output));
-        DEBUG_println(debugLine);
-        mqttPublish((char*)"events", (char*)debugLine);
-      }
-
       maintenance(); // update displayMessageLine1 & Line2
       displaymessage(activeState, (char*)displayMessageLine1, (char*)displayMessageLine2);
 
@@ -2054,7 +2040,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
 #if (TEMPSENSOR == 3)
     return thermocouple.readCelsius();
 #else
-    return TSIC.getTemp();  ///XXX1 TODO test plain temp ino to see if there are also +100degree off samples!!!
+    return TSIC.getTemp();
 #endif
   }
 
@@ -2105,14 +2091,12 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     mqttPublish((char*)"activeSetPoint", number2string(*activeSetPoint));
     mqttPublish((char*)"activePreinfusion", number2string(*activePreinfusion));
     mqttPublish((char*)"activePreinfusionPause", number2string(*activePreinfusionPause));
-    #if (BLYNK_ENABLE == 1)
-      blynkSave((char*)"profile");
-      blynkSave((char*)"activeBrewTime");
-      blynkSave((char*)"activeStartTemp");
-      blynkSave((char*)"activeSetPoint");
-      blynkSave((char*)"activePreinfusion");
-      blynkSave((char*)"activePreinfusionPause");
-    #endif
+    blynkSave((char*)"profile");
+    blynkSave((char*)"activeBrewTime");
+    blynkSave((char*)"activeStartTemp");
+    blynkSave((char*)"activeSetPoint");
+    blynkSave((char*)"activePreinfusion");
+    blynkSave((char*)"activePreinfusionPause");
   }
 
   void print_settings() {
@@ -2307,10 +2291,8 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           if (!Blynk.connect(5000)) {
             if (DISABLE_SERVICES_ON_STARTUP_ERRORS) blynkDisabledTemporary = true;
             ERROR_print("Cannot connect to Blynk. Disabling...\n");
-            // displaymessage(0, "Cannt connect to Blynk", "");
             // delay(1000);
           } else {
-            // displaymessage(0, "3: Blynk connected", "sync all variables...");
             DEBUG_print("Blynk is online, get latest values\n");
             unsigned long started = millis();
             while (isBlynkWorking() && (millis() < started + 2000)) {
@@ -2332,6 +2314,9 @@ network-issues with your other WiFi-devices on your WiFi-network. */
      * userConfig.h (changed userConfig.h values have priority). Some special
      * variables like profile-dependent ones are always fetched from eeprom.
      ******************************************************/
+    #ifndef ESP32
+    EEPROM.begin(432);
+    #endif
     sync_eeprom(true, eeprom_force_read);
 
     set_profile();

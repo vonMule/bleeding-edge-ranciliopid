@@ -423,11 +423,11 @@ void showMenu(char** displaymessagetext, char** displaymessagetext2) {
     u8g2.setCursor(align_right, 3);
     u8g2.print(menuValue, 1);
   } else {
-    double menuValue;
+    float menuValue;
     if (menuConfigPosition->value->is_double_ptr) {
-      menuValue = **(double**)menuConfigPosition->value->ptr;
+      menuValue = **(float**)menuConfigPosition->value->ptr;
     } else {
-      menuValue = *(double*)menuConfigPosition->value->ptr;
+      menuValue = *(float*)menuConfigPosition->value->ptr;
     }
     if (menuValue - 100 > -FLT_EPSILON) {
           align_right = align_right_3digits;
@@ -478,13 +478,13 @@ char* camelCase(char line[])  {
 }
 */
 
-void showPowerOffCountdown(char* displaymessagetext, char* displaymessagetext2) {
   const unsigned int powerOffCountDownStart = 300;
+void showPowerOffCountdown(char* displaymessagetext, char* displaymessagetext2) {
   const unsigned int align_right_countdown_min = LCDWidth - 52;
   const unsigned int align_right_countdown_sec = LCDWidth - 52 + 20;
   static char line[30];
   powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
-  if (powerOffTimer <= powerOffCountDownStart && !brewing && displaymessagetext == '\0' && displaymessagetext2 == '\0') {  //XXX1 TEST if == \0 works
+  if (powerOffTimer <= powerOffCountDownStart && !brewing && !strlen(displaymessagetext) && !strlen(displaymessagetext2)) {
     u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
     u8g2.drawGlyph(align_right_countdown_min - 15, 37 + 7, 0x004e);
     u8g2.setFont(u8g2_font_profont22_tf);

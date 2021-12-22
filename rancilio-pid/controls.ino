@@ -97,8 +97,7 @@ controlMap* parseControlsConfig() {
     char* actionMap;
     controlMap* nextControlMap = NULL;
     while ((actionMap = strtok_r(p, ";", &p)) != NULL) {
-      // snprintf(debugLine, sizeof(debugLine), "controlsConfigActionMap=%s",
-      // actionMap); DEBUG_println(debugLine);
+      // snprintf(debugLine, sizeof(debugLine), "controlsConfigActionMap=%s", actionMap); DEBUG_println(debugLine);
 
       char* actionMapRange = NULL;
       char* actionMapAction = NULL;
@@ -121,6 +120,10 @@ controlMap* parseControlsConfig() {
       if (controlsConfigGpio >= MAX_NUM_GPIO) {
         ERROR_println("More gpio used as allowed in MAX_NUM_GPIO");
         if (!nextControlMap) nextControlMap->gpio = 0;
+        continue;
+      }
+      if (!strcmp(controlsConfigType, "toggle") && convertActionToDefine(actionMapAction) == MENU) {
+        ERROR_println("Action MENU is not supported for \"toggle\" types.");
         continue;
       }
       nextControlMap = (controlMap*)calloc(1, sizeof(struct controlMap));
@@ -246,22 +249,22 @@ menuMap* parseMenuConfig() {
     nextMenuMap->value = (menuMapValue*)calloc(1, sizeof(struct menuMapValue));
     if (strcmp(nextMenuMap->item, "SETPOINT") == 0) {
         nextMenuMap->unit = (char*)"C";
-        nextMenuMap->value->type = (char*)"double";
+        nextMenuMap->value->type = (char*)"float";
         nextMenuMap->value->ptr = &activeSetPoint;
         nextMenuMap->value->is_double_ptr = true;
     } else if (strcmp(nextMenuMap->item, "BREWTIME") == 0) {
         nextMenuMap->unit = (char*)"s";
-        nextMenuMap->value->type = (char*)"double";
+        nextMenuMap->value->type = (char*)"float";
         nextMenuMap->value->ptr = &activeBrewTime;
         nextMenuMap->value->is_double_ptr = true;
     } else if (strcmp(nextMenuMap->item, "PREINFUSION") == 0) {
         nextMenuMap->unit = (char*)"s";
-        nextMenuMap->value->type = (char*)"double";
+        nextMenuMap->value->type = (char*)"float";
         nextMenuMap->value->ptr = &activePreinfusion;
         nextMenuMap->value->is_double_ptr = true;
     } else if (strcmp(nextMenuMap->item, "PREINFUSION_PAUSE") == 0) {
         nextMenuMap->unit = (char*)"s";
-        nextMenuMap->value->type = (char*)"double";
+        nextMenuMap->value->type = (char*)"float";
         nextMenuMap->value->ptr = &activePreinfusionPause;
         nextMenuMap->value->is_double_ptr = true;
     } else if (strcmp(nextMenuMap->item, "SLEEPING") == 0) {
@@ -278,7 +281,7 @@ menuMap* parseMenuConfig() {
         nextMenuMap->value->is_double_ptr = false;
     } else if (strcmp(nextMenuMap->item, "SETPOINT_STEAM") == 0) {
         nextMenuMap->unit = (char*)"C";
-        nextMenuMap->value->type = (char*)"double";
+        nextMenuMap->value->type = (char*)"float";
         nextMenuMap->value->ptr = &setPointSteam;
         nextMenuMap->value->is_double_ptr = false;
     } else if (strcmp(nextMenuMap->item, "PROFILE") == 0) {
@@ -384,17 +387,17 @@ void menuConfigPositionModifyByStep(menuMap* menuConfigPosition, bool increase =
         mqttPublish(setting, number2string(value));
         mqttPublish(settingMQTTSet, number2string(value));
       }
-    } else if (!strcmp(menuConfigPosition->value->type, "double")) {
-      double value;
+    } else if (!strcmp(menuConfigPosition->value->type, "float")) {
+      float value;
       if (menuConfigPosition->value->is_double_ptr) {
-        value = **((double**)menuConfigPosition->value->ptr);
+        value = **((float**)menuConfigPosition->value->ptr);
       } else {
-        value = *((double*)menuConfigPosition->value->ptr);
+        value = *((float*)menuConfigPosition->value->ptr);
       }
       if (increase) {
-        value += double(menuConfigPosition->valueStep);
+        value += float(menuConfigPosition->valueStep);
       } else {
-        value -= double(menuConfigPosition->valueStep);
+        value -= float(menuConfigPosition->valueStep);
       }
       if (setting) {
         mqttPublish(setting, number2string(value));
@@ -578,8 +581,8 @@ void actionController(int action, int newState, bool publishAction, bool publish
   // actionState logic should remain in actionController() function and not the
   // helper functions
   if (newState != oldState) {
-    snprintf(debugLine, sizeof(debugLine), "actionController: Setting %s %d->%d", convertDefineToAction(action), oldState, newState);
-    DEBUG_println(debugLine);
+    //snprintf(debugLine, sizeof(debugLine), "actionController: Setting %s %d->%d", convertDefineToAction(action), oldState, newState);
+    //DEBUG_println(debugLine);
     userActivity = millis();
     if (action == HOTWATER) {
       actionController(BREWING, 0);
@@ -630,8 +633,8 @@ void actionController(int action, int newState, bool publishAction, bool publish
       menuDecAction(newState);
       //actionPublish((char*)"actions/MENUDEC", 110, newState, publishAction, publishActionBlynk);
     }
-    snprintf(debugLine, sizeof(debugLine), "actionController: Completed %s %d->%d", convertDefineToAction(action), oldState, actionState[action]);
-    DEBUG_println(debugLine);
+    //snprintf(debugLine, sizeof(debugLine), "actionController: Completed %s %d->%d", convertDefineToAction(action), oldState, actionState[action]);
+    //DEBUG_println(debugLine);
   } else {
     // snprintf(debugLine, sizeof(debugLine), "action=%s state=%d (old=%d)
     // NOCHANGE", convertDefineToAction(action), actionState[action], oldState);

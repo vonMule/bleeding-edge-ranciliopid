@@ -44,23 +44,26 @@ bool screenSaverRunning();
 void displaymessage(int, char*, char*);
 void displaymessage_helper(int, char*, char*);
 #endif
+void showScreenSaver();
+void showMenu(char**, char**);
+void showPowerOffCountdown(char*, char*);
 
 extern bool brewReady;
 extern unsigned long lastBrewReady;
 extern int sleeping;
 extern unsigned long userActivity;
 extern int activeState;
-extern double* activeSetPoint;
-extern double steamReadyTemp;
-extern double Input;
+extern float* activeSetPoint;
+extern float steamReadyTemp;
+extern float Input;
 extern int pidON;
 extern int steaming;
 extern unsigned long totalBrewTime;
 extern const int OnlyPID;
 extern unsigned int profile;
-extern double* activeBrewtime;
-extern double* activePreinfusion;
-extern double* activePreinfusionPause;
+extern float* activeBrewtime;
+extern float* activePreinfusion;
+extern float* activePreinfusionPause;
 extern unsigned long brewTimer;
 extern bool forceOffline;
 extern bool isWifiWorking();
@@ -75,3 +78,4 @@ extern const unsigned int menuOffTimer;
 extern menuMap* menuConfig;
 extern float menuValue;
 extern const char* convertDefineToReadAbleVariable(char*);
+

@@ -85,8 +85,9 @@ void cleaningAction(int state);
 void steamingAction(int state);
 void hotwaterAction(int state);
 void brewingAction(int state);
-//extern void mqttCallback1(char* topic, unsigned char* data, unsigned int length);  XXX1 remove?
-//extern void mqtt_callback_2(uint32_t* client, const char* topic, uint32_t topic_len, const char* data, uint32_t length);
+void menuAction(int state);
+void menuIncAction(int state);
+void menuDecAction(int state);
 
 int simulatedBrewSwitch = 0;
 
@@ -105,7 +106,7 @@ extern unsigned long userActivitySavedOnForcedSleeping;
 extern int sleeping;
 extern unsigned long lastBrewEnd;
 extern bool MaschineColdstartRunOnce;
-extern double steadyPowerOffsetModified;
+extern float steadyPowerOffsetModified;
 extern unsigned int menuPosition;
 extern unsigned long previousTimerMenuCheck;
 extern void blynkSave(char*);

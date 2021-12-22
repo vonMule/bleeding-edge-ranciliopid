@@ -67,6 +67,7 @@ Two cups of a double cappuccino with the new Steamfunction | [![Two cups of a do
    - added Blynk support to control ACTIONS using virtual pins
 1. MultiToggle triggers any ACTION based on multiple simultaneous hardware-button states (eg. if hotwater+steaming button is pressed then start the action CLEANING). MultiToggle can trigger up to six ACTIONS just by using the three rancilio's hardware-switches and therefore reduces the need for external control (mqtt, blynk, resistor-circuit, ..).
 1. GpioAction: When actions are activated, specific GPIOs can be triggered also. This can be used eg. to light up LEDs in Rancilio's custom modified hardware-switches.
+1. "Brew Profiles" can be used to easily set optimum brew settings for different beans.
 1. Offline Modus is fixed and enhanced. If userConfig.h's FORCE_OFFLINE is enabled, then PID fully is working without networking. Ideal in situations when there is no connectivity or you dont want to rely on it.
 1. Huge performance tunings and improvements under the hood which stabilizes the system (eg in situations of bad WIFI, hardware issues,..).
 1. MQTT support to integrate machine in smart-home solutions and to easier extract details for graphing/alerting.
@@ -123,9 +124,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
-- 3.1.0_beta3_test:
-  - TEST ONLY
-  - TODO nodemcu+mqttInternal + wiki
+- 3.1.0_beta3:
   - Add support for up to 3 "Profiles", which can be used to quickly switch between different brew setings (eg. when different beans are used).
     - An individual profile comprises of following settings:
       - Brew Temperature / setPoint
@@ -157,7 +156,10 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
       - PREINFUSION2, PREINFUSION3
       - PREINFUSION_PAUSE2, PREINFUSION_PAUSE3
   - Updated IoTMQTT Dashboard [IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json](https://github.com/medlor/bleeding-edge-ranciliopid/tree/3.1.0_beta/IoTMQTTPanel/IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json) to include Profile and Action support. [Showcase](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/IoTMQTTPanel/IoTMQTT-showcase_v3.1.0.mp4).
-  - Refactor eeprom stuff to extra file.
+  - Refactor and fix eeprom stuff.
+  - Refactor all variables from double to float.
+  - Make blynk optional on compilation.
+  - Removed burst feature.
   - Fixes:
     - Fix blynk "heater output" not being shown.
 - 3.1.0_beta2:
