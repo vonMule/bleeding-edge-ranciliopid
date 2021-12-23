@@ -1284,9 +1284,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
             // persist starttemp auto-tuning setting
             mqttPublish((char*)"starttemp/set", number2string(*activeStartTemp));
             mqttPublish((char*)"starttemp", number2string(*activeStartTemp));
-            #if (BLYNK_ENABLE == 1)
             blynkSave((char*)"starttemp");
-            #endif
             eepromForceSync = millis();
           } else {
             DEBUG_print("Auto-Tune starttemp disabled\n");
@@ -1961,8 +1959,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       steadyPowerSaved = steadyPower;
       steadyPowerMQTTDisableUpdateUntilProcessed = steadyPower;
       steadyPowerMQTTDisableUpdateUntilProcessedTime = millis();
-      mqttPublish((char*)"steadyPower/set",
-          number2string(steadyPower)); // persist value over shutdown
+      mqttPublish((char*)"steadyPower/set", number2string(steadyPower)); // persist value over shutdown
       mqttPublish((char*)"steadyPower", number2string(steadyPower));
       if (eepromForceSync == 0) {
         eepromForceSync = millis() + 600000; // reduce writes on eeprom
@@ -1970,8 +1967,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     }
     if ((steadyPowerMQTTDisableUpdateUntilProcessedTime > 0) && (millis() >= steadyPowerMQTTDisableUpdateUntilProcessedTime + 20000)) {
       ERROR_print("steadyPower setting not saved for over 20sec "
-                  "(steadyPowerMQTTDisableUpdateUntilProcessed=%0.2f)\n",
-          steadyPowerMQTTDisableUpdateUntilProcessed);
+                  "(steadyPowerMQTTDisableUpdateUntilProcessed=%0.2f)\n", steadyPowerMQTTDisableUpdateUntilProcessed);
       steadyPowerMQTTDisableUpdateUntilProcessedTime = 0;
       steadyPowerMQTTDisableUpdateUntilProcessed = 0;
     }

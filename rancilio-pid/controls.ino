@@ -420,10 +420,10 @@ void menuConfigPositionModifyByStep(menuMap* menuConfigPosition, bool increase =
         mqttPublish(settingMQTTSet, number2string(value));
       }
     }
-    eepromForceSync = millis();
-#if (BLYNK_ENABLE == 1)
-    if (setting) blynkSave(setting);
-#endif
+    if (setting) {
+      eepromForceSync = millis();
+      blynkSave(setting);
+    }
   }
 }
 

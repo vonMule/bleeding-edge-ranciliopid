@@ -8,7 +8,9 @@
 #include "controls.h"
 
 
-bool almostEqual(float a, float b) { return fabs(a - b) <= FLT_EPSILON; }
+bool almostEqual_exact(float a, float b) { return fabs(a - b) <= FLT_EPSILON; }
+bool almostEqual(float a, float b) { return fabs(a - b) <= 0.0001; }
+
 char* bool2string(bool in) {
   if (in) {
     return (char*)"1";
@@ -206,9 +208,8 @@ void mqttParse(char* topic_str, char* data_str) {
   char configVar[120];
   char cmd[64];
 
-  // DEBUG_print("mqttParse(%s, %s)\n", topic_str, data_str);
+  //DEBUG_print("mqttParse(%s, %s)\n", topic_str, data_str);
   snprintf(topic_pattern, sizeof(topic_pattern), "%s%s/%%[^\\/]/%%[^\\/]", mqttTopicPrefix, hostname);
-  // DEBUG_print("topic_pattern=%s\n",topic_pattern);
   if ((sscanf(topic_str, topic_pattern, &configVar, &cmd) != 2) || (strcmp(cmd, "set") != 0)) {
     // DEBUG_print("Ignoring topic (%s)\n", topic_str);
     return;
@@ -338,11 +339,11 @@ bool persistSetting(char* setting, float* value, char* data_str) {
     steadyPowerMQTTDisableUpdateUntilProcessedTime = 0;
   }
   if (!almostEqual(data_float, *value)) {
-    // DEBUG_print("setting %s=%s (=%0.2f) (prev=%.2f)\n", type, data_str, data_float, *value);
+    //DEBUG_print("setting %s=%s (=%0.2f) (prev=%.2f)\n", setting, data_str, data_float, *value);
     *value = data_float;
     if (strcmp(setting, "steadyPower") == 0) {
       steadyPowerSaved = *value; // prevent an additional mqtt "/set" call
-    }
+    } 
     mqttPublish(setting, data_str);
     eepromForceSync = millis();
     return true;
@@ -354,7 +355,7 @@ bool persistSetting(char* setting, int* value, char* data_str) {
   int data_int;
   sscanf(data_str, "%d", &data_int);
   if (data_int != *value) {
-    // DEBUG_print("setting %s=%s (=%d) (prev=%d)\n", type, data_str, data_int, *value);
+    // DEBUG_print("setting %s=%s (=%d) (prev=%d)\n", setting, data_str, data_int, *value);
     *value = data_int;
     mqttPublish(setting, data_str);
     eepromForceSync = millis();
