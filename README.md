@@ -124,8 +124,11 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.1.0_beta4:
+  - test version for MAX6675K with additional debug information.
+  - MAX6675K decreased refreshTempInterval from 260ms to 200ms.
 - 3.1.0_beta3:
-  - Add support for up to 3 "Profiles", which can be used to quickly switch between different brew setings (eg. when different beans are used).
+  - Add support for up to 3 "Profiles", which can be used to quickly switch between different brew settings (eg. when different beans are used).
     - An individual profile comprises of following settings:
       - Brew Temperature / setPoint
       - Brew Time 
@@ -135,7 +138,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
     - The selected profile is also shown on the display, see new setting ENABLE_PROFILE_STATUS.
     - ATTENTION: Following variable names has changed and therefore any mqtt dashboards and tools have to be adapted (eg IotMQTT/Grafana/nodered):
       - setPoint -> activeSetPoint
-      - brewtime -> brewTime
+      - brewtime -> activeBrewTime
       - starttemp -> activeStartTemp
       - preinfusion -> activePreinfusion
       - preinfusionpause -> activePreinfusionPause
@@ -155,13 +158,14 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
       - STARTTEMP2, STARTTEMP3
       - PREINFUSION2, PREINFUSION3
       - PREINFUSION_PAUSE2, PREINFUSION_PAUSE3
-  - Updated IoTMQTT Dashboard [IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json](https://github.com/medlor/bleeding-edge-ranciliopid/tree/3.1.0_beta/IoTMQTTPanel/IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json) to include Profile and Action support. [Showcase](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/IoTMQTTPanel/IoTMQTT-showcase_v3.1.0.mp4).
+  - Updated IoTMQTT Dashboard [IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/IoTMQTTPanel/IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json) to include Profile and Action support. [Showcase](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/IoTMQTTPanel/IoTMQTT-showcase_v3.1.0.mp4).
   - Refactor and fix eeprom stuff.
   - Refactor all variables from double to float.
   - Make blynk optional on compilation.
   - Removed burst feature.
   - Fixes:
     - Fix blynk "heater output" not being shown.
+    - Fix float compare function.
 - 3.1.0_beta2:
   - Initial support for Thermistor K-type with MAX6675 (Thanks to aschoelzhorn!).
   - userConfig.h:

@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.1.0_b3";
+const char* sysVersion PROGMEM = "3.1.0_b4";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -282,7 +282,7 @@ unsigned long previousTimerBlynkHandle = 0;
 unsigned long previousTimerDebugHandle = 0;
 unsigned long previousTimerPidCheck = 0;
 #if (TEMPSENSOR==3)
-const long refreshTempInterval = 260; // How often to read the temperature sensor (must be >250ms)
+const long refreshTempInterval = 200; // How often to read the temperature sensor (must be >=180ms)
 #else
 const long refreshTempInterval = 100; // How often to read the temperature sensor
 #endif
@@ -914,8 +914,11 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         int sensorStatus = checkSensor(latestTemperature, secondlatestTemperature);
         previousTimerRefreshTemp = millis();
         if (sensorStatus == 1) {  //hardware issue
-          //DEBUG_print("(%d) latestTemperature=%0.2f (%0.2f) |UnchangedHist: -4=%0.2f, -3=%0.2f, -2=%0.2f, -1=%0.2f (%d)\n",
-          //  sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0), TSIC.getBitWindow());
+          //XXX1 remove TEMPSENSOR check and comment
+          #if (TEMPSENSOR == 3)
+          DEBUG_print("(%d) latestTemperature=%0.2f (%0.2f) |UnchangedHist: -4=%0.2f, -3=%0.2f, -2=%0.2f, -1=%0.2f\n",
+            sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0));
+          #endif
           //DEBUG_print("curTemp ERR: %0.2f\n", currentTemperature);
           return;
         } else if (sensorStatus == 2 || sensorStatus == 3) {  //software issue: outlier detected(==2) or temperature jump (==3)
@@ -923,9 +926,12 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
           updateTemperatureHistory(latestTemperature);  //use currentTemp as replacement
         } else {
           updateTemperatureHistory(secondlatestTemperature);
-        } 
-        //DEBUG_print("(%d) latestTemperature=%0.2f (%0.2f) |SavedHist: -4=%0.2f, -3=%0.2f, -2=%0.2f, -1=%0.2f (%d)\n",
-        //  sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0), TSIC.getBitWindow());
+        }
+        //XXX1 remove TEMPSENSOR check and comment
+        #if (TEMPSENSOR == 3)
+        DEBUG_print("(%d) latestTemperature=%0.2f (%0.2f) |SavedHist: -4=%0.2f, -3=%0.2f, -2=%0.2f, -1=%0.2f\n",
+          sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0));
+        #endif
         Input = getAverageTemperature(5*10);
         secondlatestTemperature = latestTemperature;
       }

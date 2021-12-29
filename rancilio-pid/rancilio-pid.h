@@ -41,10 +41,6 @@
 #define TEMPSENSOR_BITWINDOW 125
 #endif
 
-#ifndef TEMPSENSOR_MAX6675K_MIN_DELAY
-#define TEMPSENSOR_MAX6675K_MIN_DELAY 260
-#endif
-
 #include <RemoteDebug.h> //https://github.com/JoaoLopesF/RemoteDebug
 extern RemoteDebug Debug;
 
