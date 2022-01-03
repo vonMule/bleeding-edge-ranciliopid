@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.1.0_b4";
+const char* sysVersion PROGMEM = "3.1.0_b5";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -2038,9 +2038,15 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     curMicrosPreviousLoop = curMicros;
   }
 
-  float readTemperatureFromSensor() {
+  float readTemperatureFromSensor() { //XXX1
 #if (TEMPSENSOR == 3)
-    return thermocouple.readCelsius();
+    //this sensor's reading flaps 0.5degrees on every read. Also calculate averages to mitigate PID issues.
+    float past_average = getAverageTemperature(3,0);
+    if (past_average == 0) {
+      return thermocouple.readCelsius();
+    } else {
+      return (3*getAverageTemperature(3,0) + thermocouple.readCelsius()) / 4.0;
+    }
 #else
     return TSIC.getTemp();
 #endif

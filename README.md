@@ -124,6 +124,8 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.1.0_beta5:
+  - latest test version for MAX6675K to mitigate issues due to inaccurate readings.
 - 3.1.0_beta4:
   - test version for MAX6675K with additional debug information.
   - MAX6675K decreased refreshTempInterval from 260ms to 200ms.
