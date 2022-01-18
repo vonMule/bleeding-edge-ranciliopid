@@ -155,7 +155,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     } else {
 #if (ICON_COLLECTION == 3)
       // text only mode
-      if (MACHINE_TYPE == "rancilio") {
+      if (strcmp(MACHINE_TYPE, "rancilio") == 0) {
         u8g2.drawXBMP(0, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
       } else {
         u8g2.drawXBMP(0, 0, general_logo_width, general_logo_height, general_logo_bits);
@@ -270,7 +270,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.drawGlyph(align_right - 11, 20 + 7, 0x047);
       }
     } else if (activeState == 4) {
-      totalBrewTime = (OnlyPID ? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
+      totalBrewTime = ( (OnlyPID || BREWTIMER_MODE == 0 )? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
       align_right = align_right_2digits_decimal;
       u8g2.setFont(u8g2_font_profont22_tf);
       u8g2.setCursor(align_right, 3);

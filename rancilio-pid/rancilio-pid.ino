@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.1.0_b5";
+const char* sysVersion PROGMEM = "3.1.0";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -914,11 +914,8 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         int sensorStatus = checkSensor(latestTemperature, secondlatestTemperature);
         previousTimerRefreshTemp = millis();
         if (sensorStatus == 1) {  //hardware issue
-          //XXX1 remove TEMPSENSOR check and comment
-          #if (TEMPSENSOR == 3)
-          DEBUG_print("(%d) latestTemperature=%0.2f (%0.2f) |UnchangedHist: -4=%0.2f, -3=%0.2f, -2=%0.2f, -1=%0.2f\n",
-            sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0));
-          #endif
+          //DEBUG_print("(%d) latestTemperature=%0.2f (%0.2f) |UnchangedHist: -4=%0.2f, -3=%0.2f, -2=%0.2f, -1=%0.2f\n",
+          //  sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0));
           //DEBUG_print("curTemp ERR: %0.2f\n", currentTemperature);
           return;
         } else if (sensorStatus == 2 || sensorStatus == 3) {  //software issue: outlier detected(==2) or temperature jump (==3)
@@ -927,11 +924,8 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         } else {
           updateTemperatureHistory(secondlatestTemperature);
         }
-        //XXX1 remove TEMPSENSOR check and comment
-        #if (TEMPSENSOR == 3)
-        DEBUG_print("(%d) latestTemperature=%0.2f (%0.2f) |SavedHist: -4=%0.2f, -3=%0.2f, -2=%0.2f, -1=%0.2f\n",
-          sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0));
-        #endif
+        //DEBUG_print("(%d) latestTemperature=%0.2f (%0.2f) |SavedHist: -4=%0.2f, -3=%0.2f, -2=%0.2f, -1=%0.2f\n",
+        //  sensorStatus, latestTemperature, secondlatestTemperature, getTemperature(3), getTemperature(2), getTemperature(1), getTemperature(0));
         Input = getAverageTemperature(5*10);
         secondlatestTemperature = latestTemperature;
       }
@@ -999,7 +993,7 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
     if (OnlyPID) { return; }
     unsigned long aktuelleZeit = millis();
     if (simulatedBrewSwitch && (brewing == 1 || waitingForBrewSwitchOff == false)) {
-      totalBrewTime = (*activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
+      totalBrewTime = ( BREWTIMER_MODE == 1 ? *activePreinfusion + *activePreinfusionPause + *activeBrewTime : *activeBrewTime ) * 1000;
 
       if (brewing == 0) {
         brewing = 1; // Attention: For OnlyPID==0 brewing must only be changed
@@ -1442,6 +1436,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
 
         /* STATE 1 (COLDSTART) DETECTION */
+        /*XXX1 READD
         if (Input <= *activeStartTemp - coldStartStep1ActivationOffset) {
           snprintf(debugLine, sizeof(debugLine), "** End of normal mode. Transition to state 1 (coldstart)");
           DEBUG_println(debugLine);
@@ -1453,6 +1448,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           activeState = 1;
           break;
         }
+        */
 
         /* STATE 4 (BREW) DETECTION */
         if (brewDetection == 1 || (brewDetectionSensitivity != 0 && brewDetection == 2)) {
@@ -2038,7 +2034,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     curMicrosPreviousLoop = curMicros;
   }
 
-  float readTemperatureFromSensor() { //XXX1
+  float readTemperatureFromSensor() {
 #if (TEMPSENSOR == 3)
     //this sensor's reading flaps 0.5degrees on every read. Also calculate averages to mitigate PID issues.
     float past_average = getAverageTemperature(3,0);

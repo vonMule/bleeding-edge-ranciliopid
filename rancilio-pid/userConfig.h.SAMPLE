@@ -21,13 +21,14 @@
 #define EMERGENCY_TEMP 135    // If temperature is higher then notifications are send via display/debug/mqtt and PID is temporary disabled.
                               // Set this to the higest temperature supported by your maschine minus a few degress. (Silvia 5E: 135)
 #define HEATER_INACTIVITY_TIMER 120  // 0=Disable. When there is no activity at the maschine for this amount of minutes, the heater should stop heating until new activity is detected.
+#define BREWTIMER_MODE 0      // 0 (default)=brewtime-countdown is equal BREWTIMEX. 1=brewtime-countdown is BREWTIMEX + PREINFUSIONX + PREINFUSION_PAUSEX
 
 #define BREWDETECTION 2               // 0 = off | 1 = on using Hardware (ONLYPID=0 or ONLYPID=1_using_ControlAction_BREWING) | 2 = on using Software (ONLYPID=1 auto-detection)
 #define BREWDETECTION_SENSITIVITY 0.6 // If temperature drops in the past 3 seconds by this number (Celcius), then a brew is detected (BREWDETECTION must be 1)
 #define BREWDETECTION_WAIT 90         // (ONLYPID=1) 50=default: Software based BrewDetection is disabled after brewing for this number (seconds)
 #define BREWDETECTION_POWER 50        // heater utiilization (in percent) during brew (BREWDETECTION must be 1)
 
-#define BREW_READY_DETECTION        0.3 // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (defaults: TEMPSENSOR==2: 0.3, TEMPSENSOR==3: 1.5)
+#define BREW_READY_DETECTION        0.3 // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (defaults: TEMPSENSOR==2: 0.3, TEMPSENSOR==3: 0.9)
 #define ENABLE_HARDWARE_LED         0   // 0=off | 1=Single LED | 2=WS2812b - LEDs at GPO pinLed will lighten when BREW_READY_DETECTION triggers or temperature>SETPOINT_STEAM
 #define ENABLE_HARDWARE_LED_OFF_WHEN_SCREENSAVER 1 // 1=yes | 0=no. If yes, disable LED when screensaver is running
 #define ENABLE_HARDWARE_LED_NUMBER  0   // 0=off | (ENABLE_HARDWARE_LED=2) Number of WS2812b-based LEDs connected
@@ -121,7 +122,7 @@
 #define ROTATE_DISPLAY 0                  // 0=Off (Default), 1=180 degree clockwise rotation
 #define DISPLAY_TEXT_STATE 1              // 1=On  (Default), 0=Off display text of Maschine-state
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter", 3:="text"
-#define DISPLAY_TEXT "Bleeding-Edge PID"  // Text is displayed on bootup (max 21 chars)
+#define DISPLAY_TEXT "Perfect-Coffee PID"  // Text is displayed on bootup (max 21 chars)
 //#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)
 #define ENABLE_PROFILE_STATUS 2           // 0 = off. 1 = always show . 2 = only show not-default profile (which is "profile 1")
 #define ENABLE_FAILURE_STATUS_ICONS 1     // 1 = on (default), 0 = off. If enabled show status icons if services are offline.

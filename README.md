@@ -124,13 +124,8 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
-- 3.1.0_beta5:
-  - latest test version for MAX6675K to mitigate issues due to inaccurate readings.
-- 3.1.0_beta4:
-  - test version for MAX6675K with additional debug information.
-  - MAX6675K decreased refreshTempInterval from 260ms to 200ms.
-- 3.1.0_beta3:
-  - Add support for up to 3 "Profiles", which can be used to quickly switch between different brew settings (eg. when different beans are used).
+- 3.1.0:
+  - NEW FEATURE: Add support for up to 3 "Profiles", which can be used to quickly switch between different brew settings (eg. when different beans are used).
     - An individual profile comprises of following settings:
       - Brew Temperature / setPoint
       - Brew Time 
@@ -148,6 +143,15 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
     - Blynk:
       - Added new virtual Pin V3 for "profile", which can be any number between 1 and 3.
       - Added [Blynk Showcase](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/blynk/blynk-showcase_v3.1.0.mp4).
+  - NEW FEATURE: Initial support for MENU which can be used to control settings using the display-case with buttons:
+    - Action "MENU" added.
+    - Actions TEMP_INC and TEMP_DEC renamed to MENU_INC and MENU_DEC respectively.
+    - Added new userConfig.h setting MENU_CONFIG which is used to configure menu settings.
+    - Following menu operations are supported (can be extended on request):
+      - SETPOINT, SETPOINTSTEAM, BREWTIME, PREINFUSION, PREINFUSION_PAUSE, PID_ON
+  - NEW FEATURE: The calculation of the "total brew time" can be adjusted with the userConfig.h setting BREWTIMER_MODE.
+     - 0: (default) brewtime-countdown is equal BREWTIMEX. 
+     - 1: brewtime-countdown is BREWTIMEX + PREINFUSIONX + PREINFUSION_PAUSEX
   - userConfig.h Changes:
     - Added:
       - ENABLE_PROFILE_STATUS
@@ -155,11 +159,14 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
       - Renamed BREWTIME to SETPOINT1
       - Renamed PREINFUSION to PREINFUSION1
       - Renamed PREINFUSION_PAUSE to PREINFUSION_PAUSE1
-    - Added:
+      - TEMPSENSOR (default=2)
       - SETPOINT2, SETPOINT3
       - STARTTEMP2, STARTTEMP3
       - PREINFUSION2, PREINFUSION3
       - PREINFUSION_PAUSE2, PREINFUSION_PAUSE3
+      - BREWTIMER_MODE
+  - Support for Thermistor K-type with MAX6675 (Thanks to aschoelzhorn for the PR and TeraK, sailhobie for support).
+    - TSIC3xx is still strongly recommended to use!
   - Updated IoTMQTT Dashboard [IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/IoTMQTTPanel/IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json) to include Profile and Action support. [Showcase](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/IoTMQTTPanel/IoTMQTT-showcase_v3.1.0.mp4).
   - Refactor and fix eeprom stuff.
   - Refactor all variables from double to float.
@@ -167,20 +174,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
   - Removed burst feature.
   - Fixes:
     - Fix blynk "heater output" not being shown.
-    - Fix float compare function.
-- 3.1.0_beta2:
-  - Initial support for Thermistor K-type with MAX6675 (Thanks to aschoelzhorn!).
-  - userConfig.h:
-    - Added:
-      TEMPSENSOR (default=2)
-- 3.1.0_beta1:
-  - Initial support for MENU which can be used to control settings using the display-case with buttons:
-    - Action "MENU" added.
-    - Actions TEMP_INC and TEMP_DEC renamed to MENU_INC and MENU_DEC respectively.
-    - Added new userConfig.h setting MENU_CONFIG which is used to configure menu settings.
-    - Following menu operations are supported (can be extended on request):
-      - SETPOINT, SETPOINTSTEAM, BREWTIME, PREINFUSION, PREINFUSION_PAUSE, PID_ON
-  - Refactor some blynk stuff.
+    - Fix float compare function.  
 - 3.0.0:
   - Project is getting renamed to "Perfect Coffee PID".
   - Improve temperature readings to reduce undesireable actions of the PID controller:
