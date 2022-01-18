@@ -3,7 +3,7 @@
 
 ## Do it yourself, open-source PID for your espresso machine  
 
-Version 3.0.0
+Version 3.1.0
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -58,14 +58,16 @@ Two cups of a double cappuccino with the new Steamfunction | [![Two cups of a do
      - VALVE     := activate Valve  (not yet)
      - CLEANING  := activate cleaning mode
      - SLEEPING  := activate sleeping mode
-     - TEMP_INC  := increase setPoint (not yet)
-     - TEMP_DEC  := decrease setPoint (not yet)
+     - MENU      := activate menu
+     - MENU_INC  := increase value shown in menu
+     - MENU_DEC  := decrease value shown in menu
    - while also supporting the switch types: toggles (eg switches) and triggers (eg push buttons)
    - added MQTT support to control ACTIONS using topics ../actions/<ACTION> with supported payloads of 0|1|-1 (off|on|switch)
      Example: "custom/Küche.Rancilio2/actions/STEAMING"
    - added Blynk support to control ACTIONS using virtual pins
 1. MultiToggle triggers any ACTION based on multiple simultaneous hardware-button states (eg. if hotwater+steaming button is pressed then start the action CLEANING). MultiToggle can trigger up to six ACTIONS just by using the three rancilio's hardware-switches and therefore reduces the need for external control (mqtt, blynk, resistor-circuit, ..).
 1. GpioAction: When actions are activated, specific GPIOs can be triggered also. This can be used eg. to light up LEDs in Rancilio's custom modified hardware-switches.
+1. "Brew Profiles" can be used to easily set optimum brew settings for different beans.
 1. Offline Modus is fixed and enhanced. If userConfig.h's FORCE_OFFLINE is enabled, then PID fully is working without networking. Ideal in situations when there is no connectivity or you dont want to rely on it.
 1. Huge performance tunings and improvements under the hood which stabilizes the system (eg in situations of bad WIFI, hardware issues,..).
 1. MQTT support to integrate machine in smart-home solutions and to easier extract details for graphing/alerting.
@@ -122,6 +124,57 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.1.0:
+  - NEW FEATURE: Add support for up to 3 "Profiles", which can be used to quickly switch between different brew settings (eg. when different beans are used).
+    - An individual profile comprises of following settings:
+      - Brew Temperature / setPoint
+      - Brew Time 
+      - Preinfusion time and pause
+      - Coldstart Temperature / startTemp
+    - Profiles can be selected by any means, eg mqtt/blynk/menu/.. . The variable for this is "profile".
+    - The selected profile is also shown on the display, see new setting ENABLE_PROFILE_STATUS.
+    - ATTENTION: Following variable names has changed and therefore any mqtt dashboards and tools have to be adapted (eg IotMQTT/Grafana/nodered):
+      - setPoint -> activeSetPoint
+      - brewtime -> activeBrewTime
+      - starttemp -> activeStartTemp
+      - preinfusion -> activePreinfusion
+      - preinfusionpause -> activePreinfusionPause
+      - Hint: Changing the value of any of variables (eg using mqtt/blynk) will update the respective setting of the currently activated profile.
+    - Blynk:
+      - Added new virtual Pin V3 for "profile", which can be any number between 1 and 3.
+      - Added [Blynk Showcase](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/blynk/blynk-showcase_v3.1.0.mp4).
+  - NEW FEATURE: Initial support for MENU which can be used to control settings using the display-case with buttons:
+    - Action "MENU" added.
+    - Actions TEMP_INC and TEMP_DEC renamed to MENU_INC and MENU_DEC respectively.
+    - Added new userConfig.h setting MENU_CONFIG which is used to configure menu settings.
+    - Following menu operations are supported (can be extended on request):
+      - SETPOINT, SETPOINTSTEAM, BREWTIME, PREINFUSION, PREINFUSION_PAUSE, PID_ON
+  - NEW FEATURE: The calculation of the "total brew time" can be adjusted with the userConfig.h setting BREWTIMER_MODE.
+     - 0: (default) brewtime-countdown is equal BREWTIMEX. 
+     - 1: brewtime-countdown is BREWTIMEX + PREINFUSIONX + PREINFUSION_PAUSEX
+  - userConfig.h Changes:
+    - Added:
+      - ENABLE_PROFILE_STATUS
+      - Renamed SETPOINT to SETPOINT1
+      - Renamed BREWTIME to SETPOINT1
+      - Renamed PREINFUSION to PREINFUSION1
+      - Renamed PREINFUSION_PAUSE to PREINFUSION_PAUSE1
+      - TEMPSENSOR (default=2)
+      - SETPOINT2, SETPOINT3
+      - STARTTEMP2, STARTTEMP3
+      - PREINFUSION2, PREINFUSION3
+      - PREINFUSION_PAUSE2, PREINFUSION_PAUSE3
+      - BREWTIMER_MODE
+  - Support for Thermistor K-type with MAX6675 (Thanks to aschoelzhorn for the PR and TeraK, sailhobie for support).
+    - TSIC3xx is still strongly recommended to use!
+  - Updated IoTMQTT Dashboard [IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/IoTMQTTPanel/IoTMQTTPanel-perfect_coffee_pid_v3.1.0_v1.json) to include Profile and Action support. [Showcase](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/IoTMQTTPanel/IoTMQTT-showcase_v3.1.0.mp4).
+  - Refactor and fix eeprom stuff.
+  - Refactor all variables from double to float.
+  - Make blynk optional on compilation.
+  - Removed burst feature.
+  - Fixes:
+    - Fix blynk "heater output" not being shown.
+    - Fix float compare function.  
 - 3.0.0:
   - Project is getting renamed to "Perfect Coffee PID".
   - Improve temperature readings to reduce undesireable actions of the PID controller:
@@ -492,6 +545,7 @@ Also to the nice people in our rancilio discord channel and the ones who contrib
 
 ## Also special thanks to the great icon artwork
 - ["washing hand"](https://thenounproject.com/matfine/collection/cleaning-icon/?i=2749704) by [Mat fine](https://thenounproject.com/matfine) from [the Noun Project](https://thenounproject.com/matfine/collection/cleaning-icon/?i=2749704) licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/legalcode)
+- ["menu"](https://thenounproject.com/icon/menu-2943760/) by [Mat fine](https://thenounproject.com/matfine) from [the Noun Project](https://thenounproject.com/icon/tasks-2943947/) licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/legalcode)
 - ["Glückliche Gesichter Emoticons"](https://pixabay.com/de/illustrations/gl%C3%BCckliche-gesichter-emoticons-5049116/) by [Annalise Batista](https://pixabay.com/de/users/annaliseart-7089643/) licensed under [Pixabay license](https://pixabay.com/de/service/terms/#license)
   
 

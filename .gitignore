@@ -2,7 +2,9 @@ userConfig.h*
 !userConfig.h.SAMPLE
 *.bak
 *.swp
+*.ino.cpp
 .vscode
 .pio/*
 .DS_Store
 com.dropbox.attrs
+pictures/icon-sets/shared/thenounproject/

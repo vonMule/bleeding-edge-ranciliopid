@@ -33,6 +33,10 @@
 #define CONTROLS_CONFIG ""
 #endif
 
+#ifndef MENU_CONFIG
+#define MENU_CONFIG ""
+#endif
+
 #ifndef TEMPSENSOR_BITWINDOW
 #define TEMPSENSOR_BITWINDOW 125
 #endif
@@ -66,30 +70,22 @@ extern RemoteDebug Debug;
 #define ALIGN_LEFT 0
 
 // returns heater utilization in percent
-double convertOutputToUtilisation(double);
-
+float convertOutputToUtilisation(double);
 // returns heater utilization in Output
-double convertUtilisationToOutput(double);
-
-double pastTemperatureChange(int);
-double pastTemperatureChange(int, bool);
-
-double getCurrentTemperature();
-
+double convertUtilisationToOutput(float);
+float pastTemperatureChange(int);
+float pastTemperatureChange(int, bool);
+float getCurrentTemperature();
+float readTemperatureFromSensor();
 bool almostEqual(float, float);
-
 void print_settings();
-
 void checkWifi();
-
 void checkWifi(bool, unsigned long);
-
 extern char debugLine[200];
-
 void maintenance();
-void sync_eeprom();
-void sync_eeprom(bool, bool);
-
 void performance_check();
+void blynkSave(char* setting);
+void set_profile();
+void set_profile(bool);
 
 #endif

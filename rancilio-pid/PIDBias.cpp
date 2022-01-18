@@ -17,15 +17,15 @@
 #include <math.h>
 #include <stdio.h>
 
-int PIDBias::signnum_c(double x) {
+int PIDBias::signnum_c(float x) {
   if (x >= 0.0)
     return 1;
   else
     return -1;
 }
 
-PIDBias::PIDBias(double* Input, double* Output, double* steadyPower, double* steadyPowerOffset, unsigned long* steadyPowerOffsetActivateTime, unsigned int* steadyPowerOffsetTime,
-    double** Setpoint, double Kp, double Ki, double Kd) {
+PIDBias::PIDBias(float* Input, double* Output, float* steadyPower, float* steadyPowerOffset, unsigned long* steadyPowerOffsetActivateTime, unsigned int* steadyPowerOffsetTime,
+    float** Setpoint, float Kp, float Ki, float Kd) {
   myOutput = Output;
   myInput = Input;
   mySetpoint = Setpoint;
@@ -52,13 +52,13 @@ int PIDBias::Compute() {
       return 2; // compute should run, but PID is disabled
     }
     steadyPowerOffsetCalculated = PIDBias::CalculateSteadyPowerOffset();
-    const double setPointBand = 0.1;
+    const float setPointBand = 0.1;
 
     lastOutput = *myOutput;
-    double input = *myInput;
-    double error = **mySetpoint - input;
-    double pastChange = pastTemperatureChange(10*10) / 2; // difference of the last 10 seconds scaled down to one compute() cycle (=5 seconds).
-    double pastChangeOverLongTime = pastTemperatureChange(20*10);  //20sec
+    float input = *myInput;
+    float error = **mySetpoint - input;
+    float pastChange = pastTemperatureChange(10*10) / 2; // difference of the last 10 seconds scaled down to one compute() cycle (=5 seconds).
+    float pastChangeOverLongTime = pastTemperatureChange(20*10);  //20sec
 
     outputP = kp * error;
     outputI = ki * error;
@@ -151,7 +151,7 @@ int PIDBias::Compute() {
     if (steadyPowerAutoTune && error > setPointBand && pastChangeOverLongTime <= 0.1 && pastChangeOverLongTime >= 0 && sumOutputI == filterSumOutputI
         && (millis() - lastTrigger > 20000)) {
       // steadyPower auto-tuning
-      double offset = 0.1;
+      float offset = 0.1;
       if (error > 1) offset = 0.15;
       if (steadyPowerOffsetCalculated >= 0.2) { offset *= 2; }
       DEBUG_print("Auto-Tune steadyPower(%0.2f += %0.2f) (not moving. either Kp, steadyPowerOffset or steadyPower too low)\n", *mySteadyPower, offset);
@@ -191,7 +191,7 @@ int PIDBias::Compute() {
 
     // if we in upper-side of side-band, (nearly) not moving at all due to stable temp but yet not near setpoint, manipulate output once
     if (error <= -setPointBand && fabs(pastChangeOverLongTime) <= 0.1 && millis() - lastTrigger2 > 30000) {
-      double factor = 1;
+      float factor = 1;
       if (error <= -0.2) {
         factor = 0;
       } else if (error <= -0.1) {
@@ -202,12 +202,6 @@ int PIDBias::Compute() {
         output *= factor;
         lastTrigger2 = millis();
       }
-    }
-
-    // temporary overwrite output when burst is triggered OR overwrite should happen
-    if (burstOutput > 0) {
-      output = burstOutput;
-      burstOutput = 0;
     }
 
     // safe-guard against getting unusually hot (eg. steadyPower too high or no water in tank
@@ -242,14 +236,14 @@ int PIDBias::Compute() {
   }
 }
 
-void PIDBias::SetTunings(double Kp, double Ki, double Kd) {
+void PIDBias::SetTunings(float Kp, float Ki, float Kd) {
   if (Kp < 0 || Ki < 0 || Kd < 0) return;
 
   dispKp = Kp;
   dispKi = Ki;
   dispKd = Kd;
 
-  double SampleTimeInSec = ((double)SampleTime) / 1000;
+  float SampleTimeInSec = ((float)SampleTime) / 1000;
   kp = Kp;
   ki = Ki * SampleTimeInSec;
   kd = Kd / SampleTimeInSec;
@@ -257,14 +251,14 @@ void PIDBias::SetTunings(double Kp, double Ki, double Kd) {
 
 void PIDBias::SetSampleTime(int NewSampleTime) {
   if (NewSampleTime > 0) {
-    double ratio = (double)NewSampleTime / (double)SampleTime;
+    float ratio = (float)NewSampleTime / (float)SampleTime;
     ki *= ratio;
     kd /= ratio;
     SampleTime = (unsigned long)NewSampleTime;
   }
 }
 
-void PIDBias::SetOutputLimits(double Min, double Max) {
+void PIDBias::SetOutputLimits(float Min, float Max) {
   if (Min > Max) return;
   outMin = Min;
   outMax = Max;
@@ -291,7 +285,6 @@ void PIDBias::SetMode(int Mode) {
 
 void PIDBias::Initialize() {
   lastOutput = *myOutput;
-  burstOutput = 0;
   sumOutputD = 0;
   sumOutputI = 0;
   lastTrigger = 0;
@@ -312,15 +305,13 @@ void PIDBias::Initialize() {
     lastOutput = outMin;
 }
 
-void PIDBias::SetBurst(double output) { burstOutput = convertUtilisationToOutput(output); }
+void PIDBias::SetSumOutputI(float sumOutputI_set) { sumOutputI = convertUtilisationToOutput(sumOutputI_set); }
 
-void PIDBias::SetSumOutputI(double sumOutputI_set) { sumOutputI = convertUtilisationToOutput(sumOutputI_set); }
+void PIDBias::SetFilterSumOutputI(float filterSumOutputI_set) { filterSumOutputI = convertUtilisationToOutput(filterSumOutputI_set); }
 
-void PIDBias::SetFilterSumOutputI(double filterSumOutputI_set) { filterSumOutputI = convertUtilisationToOutput(filterSumOutputI_set); }
+void PIDBias::SetSteadyPowerDefault(float steadyPowerDefault_set) { steadyPowerDefault = convertUtilisationToOutput(steadyPowerDefault_set); }
 
-void PIDBias::SetSteadyPowerDefault(double steadyPowerDefault_set) { steadyPowerDefault = convertUtilisationToOutput(steadyPowerDefault_set); }
-
-// void PIDBias::SetSteadyPowerOffset(double steadyPowerOffset_set)
+// void PIDBias::SetSteadyPowerOffset(float steadyPowerOffset_set)
 //{
 //    steadyPowerOffset = convertUtilisationToOutput(steadyPowerOffset_set);
 //}
@@ -335,7 +326,7 @@ void PIDBias::UpdateSteadyPowerOffset(unsigned long steadyPowerOffset_Activated_
     return;
   }
   unsigned long diff = millis() - steadyPowerOffset_Activated_in;
-  double steadyPowerOffsetPerMillisecond = *mySteadyPowerOffset / steadyPowerOffsetTime;
+  float steadyPowerOffsetPerMillisecond = *mySteadyPowerOffset / steadyPowerOffsetTime;
   *mySteadyPowerOffset -= (diff * steadyPowerOffsetPerMillisecond);
   if (*mySteadyPowerOffset < 0) {
     *mySteadyPowerOffset = 0;
@@ -343,11 +334,11 @@ void PIDBias::UpdateSteadyPowerOffset(unsigned long steadyPowerOffset_Activated_
 }
 */
 
-double PIDBias::CalculateSteadyPowerOffset() {
+float PIDBias::CalculateSteadyPowerOffset() {
   unsigned long diff = millis() - *mySteadyPowerOffset_Activated;
   if (*mySteadyPowerOffset_Activated == 0 || *mySteadyPowerOffset_Time <= 0 || ((*mySteadyPowerOffset_Activated > 0) && diff >= *mySteadyPowerOffset_Time * 1000)) { return 0; }
-  double steadyPowerOffsetPerMillisecond = *mySteadyPowerOffset / (*mySteadyPowerOffset_Time * 1000);
-  double steadyPowerOffsetCalculated = *mySteadyPowerOffset - (diff * steadyPowerOffsetPerMillisecond);
+  float steadyPowerOffsetPerMillisecond = *mySteadyPowerOffset / (*mySteadyPowerOffset_Time * 1000);
+  float steadyPowerOffsetCalculated = *mySteadyPowerOffset - (diff * steadyPowerOffsetPerMillisecond);
   if (steadyPowerOffsetCalculated < 0) {
     return 0;
   } else {
@@ -356,15 +347,15 @@ double PIDBias::CalculateSteadyPowerOffset() {
   }
 }
 
-double PIDBias::GetKp() { return dispKp; }
-double PIDBias::GetKi() { return dispKi; }
-double PIDBias::GetKd() { return dispKd; }
-double PIDBias::GetOutputP() { return outputP; }
-double PIDBias::GetOutputI() { return outputI; }
-double PIDBias::GetSumOutputI() { return sumOutputI; }
-double PIDBias::GetFilterSumOutputI() { return filterSumOutputI; }
-double PIDBias::GetOutputD() { return outputD; }
+float PIDBias::GetKp() { return dispKp; }
+float PIDBias::GetKi() { return dispKi; }
+float PIDBias::GetKd() { return dispKd; }
+float PIDBias::GetOutputP() { return outputP; }
+float PIDBias::GetOutputI() { return outputI; }
+float PIDBias::GetSumOutputI() { return sumOutputI; }
+float PIDBias::GetFilterSumOutputI() { return filterSumOutputI; }
+float PIDBias::GetOutputD() { return outputD; }
 double PIDBias::GetLastOutput() { return lastOutput; }
 int PIDBias::GetMode() { return inAuto ? AUTOMATIC : MANUAL; }
-double PIDBias::GetSteadyPowerOffset() { return *mySteadyPowerOffset; }
-double PIDBias::GetSteadyPowerOffsetCalculated() { return steadyPowerOffsetCalculated; }
+float PIDBias::GetSteadyPowerOffset() { return *mySteadyPowerOffset; }
+float PIDBias::GetSteadyPowerOffsetCalculated() { return steadyPowerOffsetCalculated; }

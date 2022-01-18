@@ -16,9 +16,10 @@
 #define PUMP 5
 #define VALVE 6
 #define CLEANING 7
-#define TEMP_INC 8
-#define TEMP_DEC 9
+#define MENU_INC 8
+#define MENU_DEC 9
 #define SLEEPING 10
+#define MENU 11
 
 #ifdef ESP32
 #include "driver/rtc_io.h"
@@ -37,6 +38,22 @@ typedef struct controlMap {
   struct controlMap* nextControlMap;
 } controlMap;
 
+typedef struct menuMapValue {
+  char* type;  // type of real value 
+  bool is_double_ptr;  //is it a ptr to a ptr pointing to the real value
+  void* ptr; // ptr to real value
+} menuMapValue;
+
+typedef struct menuMap {
+  char* type;           // CONFIG | ACTION 
+  char* item;           // CONFIG=<Support setting to change> | ACTION=<Action_Name>
+  int action;           // converted "item" to Action (default: UNDEFINED_ACTION)
+  float valueStep;      // CONFIG=<step-size> | ACTION =<1|0>
+  menuMapValue* value;  // dynamically updated on access
+  char* unit;
+  struct menuMap* nextMenuMap;
+} menuMap;
+
 unsigned long previousCheckControls = 0;
 #define FREQUENCYCHECKCONTROLS 100 // TOBIAS: change to 50 or 200? make dynamical!
 
@@ -50,6 +67,9 @@ int gpioLastAction[MAX_NUM_GPIO];
 
 controlMap* parseControlsConfig();
 void printControlsConfig(controlMap*);
+menuMap* parseMenuConfig();
+void printMenuConfig(menuMap*);
+menuMap* getMenuConfigPosition(menuMap* menuConfig, unsigned int menuPosition);  
 void checkControls(controlMap*);
 void actionController(int, int);
 void actionController(int, int, bool);
@@ -65,13 +85,15 @@ void cleaningAction(int state);
 void steamingAction(int state);
 void hotwaterAction(int state);
 void brewingAction(int state);
-void mqttCallback1(char* topic, unsigned char* data, unsigned int length);
-void mqtt_callback_2(uint32_t* client, const char* topic, uint32_t topic_len, const char* data, uint32_t length);
+void menuAction(int state);
+void menuIncAction(int state);
+void menuDecAction(int state);
 
 int simulatedBrewSwitch = 0;
 
 extern unsigned long userActivity;
 extern controlMap* controlsConfig;
+extern menuMap* menuConfig;
 extern const int OnlyPID;
 extern const int brewDetection;
 extern int brewing;
@@ -84,8 +106,10 @@ extern unsigned long userActivitySavedOnForcedSleeping;
 extern int sleeping;
 extern unsigned long lastBrewEnd;
 extern bool MaschineColdstartRunOnce;
-extern double steadyPowerOffsetModified;
-
+extern float steadyPowerOffsetModified;
+extern unsigned int menuPosition;
+extern unsigned long previousTimerMenuCheck;
+extern void blynkSave(char*);
 
 
 #endif

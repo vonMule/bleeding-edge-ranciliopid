@@ -1,5 +1,5 @@
 /********************************************************
- * Version 3.0.0
+ * Version 3.1.0
  * Config must be configured by the user
  *****************************************************/
 
@@ -10,31 +10,32 @@
  * General settings
  *****************************************************/
 #define MACHINE_TYPE "rancilio"  // supported values are "rancilio", "gaggia" and "ecm".
-
+#define TEMPSENSOR 2          // 2=TSIC306 (fully supported); 3=MAX6675K (working but untested); (1=DS19B20 not supported anymore)
+#define TEMPSENSORRECOVERY 0  // 1 = on, 2= off (default). If off, temp sensor errors will stop the heater until power cycle
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
 #define ONLYPID 1             // 1=Only PID with no Preinfussion | 0=PID + Preinfussion
-#define TEMPSENSORRECOVERY 0  // 1 = on, 2= off (default). If off, temp sensor errors will stop the heater until power cycle
 #define TRIGGERTYPE HIGH      // LOW = low trigger, HIGH = high trigger relay
 #define OTA true              // true=activate update via OTA
 #define GRAFANA 0             // 0=default(off), 1=enable grafana visualisation by Markus (simply ask him for free access)
 #define EMERGENCY_TEMP 135    // If temperature is higher then notifications are send via display/debug/mqtt and PID is temporary disabled.
                               // Set this to the higest temperature supported by your maschine minus a few degress. (Silvia 5E: 135)
 #define HEATER_INACTIVITY_TIMER 120  // 0=Disable. When there is no activity at the maschine for this amount of minutes, the heater should stop heating until new activity is detected.
+#define BREWTIMER_MODE 0      // 0 (default)=brewtime-countdown is equal BREWTIMEX. 1=brewtime-countdown is BREWTIMEX + PREINFUSIONX + PREINFUSION_PAUSEX
 
 #define BREWDETECTION 2               // 0 = off | 1 = on using Hardware (ONLYPID=0 or ONLYPID=1_using_ControlAction_BREWING) | 2 = on using Software (ONLYPID=1 auto-detection)
 #define BREWDETECTION_SENSITIVITY 0.6 // If temperature drops in the past 3 seconds by this number (Celcius), then a brew is detected (BREWDETECTION must be 1)
 #define BREWDETECTION_WAIT 90         // (ONLYPID=1) 50=default: Software based BrewDetection is disabled after brewing for this number (seconds)
 #define BREWDETECTION_POWER 50        // heater utiilization (in percent) during brew (BREWDETECTION must be 1)
 
-#define BREW_READY_DETECTION        0.3 // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (recommended value 0.3)
+#define BREW_READY_DETECTION        0.3 // 0=off | 0.x=If measured temperature of the last 60 seconds has been within this defined margin around the SET_POINT, we are able to brew. (defaults: TEMPSENSOR==2: 0.3, TEMPSENSOR==3: 0.9)
 #define ENABLE_HARDWARE_LED         0   // 0=off | 1=Single LED | 2=WS2812b - LEDs at GPO pinLed will lighten when BREW_READY_DETECTION triggers or temperature>SETPOINT_STEAM
 #define ENABLE_HARDWARE_LED_OFF_WHEN_SCREENSAVER 1 // 1=yes | 0=no. If yes, disable LED when screensaver is running
 #define ENABLE_HARDWARE_LED_NUMBER  0   // 0=off | (ENABLE_HARDWARE_LED=2) Number of WS2812b-based LEDs connected
 #define ENABLE_HARDWARE_LED_RGB_ON  LightGreen  // (ENABLE_HARDWARE_LED=2) Color name when leds should be turned on. List of Colours: https://github.com/FastLED/FastLED/wiki/Pixel-reference
 #define ENABLE_HARDWARE_LED_RGB_OFF LightPink  // (ENABLE_HARDWARE_LED=2) Color name when leds should be turned off.
 
-//#define DEBUGMODE                // to enable Debug uncomment this line. Afterwards you can connect via telnet to pot 23 to see debug logs.
+//#define DEBUGMODE                // to enable Debug uncomment this line. Afterwards you can connect via telnet to port 23 to see debug logs.
 #define ENABLE_CALIBRATION_MODE 0  // 0=off (default). 1=on. If on, PID is disabled and CALIBRATION information is logged in DEBUG log (eg. CONTROLS_CONFIG, WATER_LEVEL_SENSOR)
 
 
@@ -53,6 +54,11 @@
 #define pinHotwaterAction   5
 #define pinSteamingAction   2
 
+// Pin mapping for MAX6675 temperature sensor
+#define pinTemperatureSO  19
+#define pinTemperatureCS  2
+#define pinTemperatureCLK 18
+
 /*******
  * GPIO Pin Usage: Here you can define how the GPIO boards (analog/digital) shall be used to execute functions.
  *
@@ -66,7 +72,7 @@
  *        GPIO number: ESP8266/nodemcu: A0 = 17 && esp32: https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
  *        "toggle" keeps its state and "trigger" only shortly changes its state before it resets.
  *        ACTION_BLOCK = "<lowerBoundary>-<upperBoundary>:<ACTION>"
- *            ACTION = BREWING|HOTWATER|STEAMING|PUMP|VALVE|... (see controls.h for a full list of supported actions)
+ *            ACTION = BREWING|HOTWATER|STEAMING|MENU|... (see controls.h for a full list of supported actions)
  *
  *
  *    Examples:
@@ -89,7 +95,7 @@
  *    #define CONTROLS_CONFIG "32:INPUT_PULLUP:digital:toggle|0-0:BREWING#33:INPUT_PULLUP:digital:toggle|0-0:HOTWATER#27:INPUT_PULLUP:digital:toggle|0-0:STEAMING#"
  *
  *******/
-#define CONTROLS_CONFIG "17:INPUT:analog:toggle|700-1024:BREWING#"  //when a simple switch is connected on port A0 and this switch is used to trigger BREWING.
+#define CONTROLS_CONFIG ""
 
 #define DEBOUNCE_ANALOG_GPIO  0  // 0=off (default, no debounce check) | button press debounce time (in ms) to wait before acknowledgment of press (huge impact on performance. set as low as possible, eg 1-10ms).
 #define DEBOUNCE_DIGITAL_GPIO 30  // 30=default, 0=off (no debounce check) | button press debounce time (in ms) to wait before acknowledgment of press (set to any value, example 20-50ms).
@@ -116,14 +122,34 @@
 #define ROTATE_DISPLAY 0                  // 0=Off (Default), 1=180 degree clockwise rotation
 #define DISPLAY_TEXT_STATE 1              // 1=On  (Default), 0=Off display text of Maschine-state
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter", 3:="text"
-#define DISPLAY_TEXT "Bleeding-Edge PID"  // Text is displayed on bootup (max 21 chars)
+#define DISPLAY_TEXT "Perfect-Coffee PID"  // Text is displayed on bootup (max 21 chars)
 //#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)
+#define ENABLE_PROFILE_STATUS 2           // 0 = off. 1 = always show . 2 = only show not-default profile (which is "profile 1")
 #define ENABLE_FAILURE_STATUS_ICONS 1     // 1 = on (default), 0 = off. If enabled show status icons if services are offline.
 #define ENABLE_SCREEN_SAVER 3             // 0=Disable, 1=Enable(blank screen), 2=Enable(use BrewReady Collection Icon), 3=Enable(Use Maschine logo)
 #define ENABLE_POWER_OFF_COUNTDOWN 0      // 0 = off (default) | 1...n If maschine is inactive for this amount of seconds, we expect the maschine
                                           // to shutdown (Silvia 5E: 1800). Show countdown for the last 3 minutes.
 #define STEAM_READY_TEMP 116              // (display only) if temperature is higher then this value then the steam-ready icon is shown
                                           // (Rancilio: 116, ECM Casa Prima: 130?, ...)
+
+
+/*******
+ * Menu Settings
+ * 
+ * Ordered list of menu items which will be displayed when the "menu" action is triggered.
+ *
+ * Format of MENU_CONFIG:
+ *  MENU_CONFIG = "<MENU_CONFIG_BLOCK_1>#<MENU_CONFIG_BLOCK_2>#<unlimited number of blocks>"
+ *     MENU_CONFIG_BLOCK_X = "<TYPE>:<ITEM>:<STEP_SIZE>"
+ *        TYPE = Is either "CONFIG" or "ACTION". Depending on the ITEM.
+ *        ITEM = PROFILE|SETPOINT|SETPOINTSTEAM|BREWTIME|PREINFUSION|SLEEPING|CLEANING|... (see controls.h for a full list of supported items).
+ *        STEP_SIZE = Definition of how much the actual value is changed when INC or DEC button is pressed. Use 1 for booleans.
+ *
+ *    Example:
+ *    #define MENU_CONFIG "ACTION:SLEEPING:1#CONFIG:SETPOINT:0.5#CONFIG:BREWTIME:0.5#CONFIG:PREINFUSION_PAUSE:0.1#CONFIG:PREINFUSION:0.1#CONFIG:PID_ON:1"
+ *
+ *******/
+#define MENU_CONFIG ""
 
 
 /*******
@@ -138,16 +164,12 @@
 /*******
  * General PID values
  *******/
+#define SETPOINT_STEAM 116            // Steam Temperature SetPoint (Rancilio: 116, ECM Casa Prima: 145, ...)
 #define STEADYPOWER 4.6 // Constant power of heater to accomodate against loss of heat to environment (in %)
                         // (Rancilio Silvia 5E: 4.6 , ...)
 #define STEADYPOWER_OFFSET_TIME 850   // If brew group is very cold, we need to put additional power to the heater:
                                       // How long should this additional power be delivered (in s) (Rancilio Silvia 5E: 850, ...)
 #define STEADYPOWER_OFFSET 3.0        // How much power should be added? (in %) (Rancilio Silvia 5E: 2.9, ...)
-
-#define SETPOINT 93           // Temperature SetPoint
-#define SETPOINT_STEAM 116    // Steam Temperature SetPoint (Rancilio: 116, ECM Casa Prima: 145, ...)
-#define STARTTEMP 80.6        // If temperature is below this value then Coldstart state should be triggered
-                              // (Rancilio Silvia 5E: 80.6 , ...)
 
 // Inner Zone PID values
 #define AGGKP 80        // Kp (Rancilio Silvia 5E: 80, ...)
@@ -161,11 +183,25 @@
 
 
 /*******
- * BREW & Preinfusion settings
+ * PROFILE dependent Temperature, Brew & Preinfusion settings
  *******/
-#define BREWTIME         30   // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
-#define PREINFUSION       0   // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
-#define PREINFUSION_PAUSE 0   // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+#define SETPOINT1 93           // Temperature SetPoint
+#define STARTTEMP1 78.1        // If temperature is below this value then Coldstart state should be triggered // (Rancilio Silvia 5E: 80.6 , ...)
+#define BREWTIME1 24.1         // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
+#define PREINFUSION1 2.3       // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
+#define PREINFUSION_PAUSE1 2.2 // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+
+#define SETPOINT2 94           // Temperature SetPoint
+#define STARTTEMP2 79.1        // If temperature is below this value then Coldstart state should be triggered // (Rancilio Silvia 5E: 80.6 , ...)
+#define BREWTIME2 24.0         // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
+#define PREINFUSION2 2.6       // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
+#define PREINFUSION_PAUSE2 2.2 // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+
+#define SETPOINT3 95           // Temperature SetPoint
+#define STARTTEMP3 80          // If temperature is below this value then Coldstart state should be triggered // (Rancilio Silvia 5E: 80.6 , ...)
+#define BREWTIME3 28.1         // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
+#define PREINFUSION3 0         // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
+#define PREINFUSION_PAUSE3 0   // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
 
 
 /*******
