@@ -5,9 +5,10 @@ float weightSetpoint = WEIGHTSETPOINT;
 float calibrationValue = CALIBRATIONVALUE;
 float weightPreBrew = 0;  // value of scale before wrew started
 float weightBrew = 0;  // weight value of brew
+float currentWeight = 0.0;
 float scaleDelayValue = 2.5;  //value in gramm that takes still flows onto the scale after brew is stopped
 bool scaleFailure = false;
-const unsigned long intervalWeight = 200;   // weight scale
+const unsigned long intervalWeightMessage = 5000;   // weight scale
 unsigned long previousMillisScale;  // initialisation at the end of init()
 HX711_ADC LoadCell(HXDATPIN, HXCLKPIN);
 
@@ -16,30 +17,29 @@ HX711_ADC LoadCell(HXDATPIN, HXCLKPIN);
   getWeight
 ******************************************************/
 
-float getWeight() {
-  static boolean newDataReady = 0;
-  float weight = -1;
+void updateWeight() {
+  static boolean newDataReady = false;
   unsigned long currentMillisScale = millis();
   if (scaleFailure) {   // abort if scale is not working
-    return -1;
+    return;
   }
-  if (currentMillisScale - previousMillisScale >= intervalWeight) {
+
+  // check for new data/start next conversion:
+  if (LoadCell.update()) {
+    newDataReady = true;
+  }
+
+  // get smoothed value from the dataset:
+  if (newDataReady) {
+    currentWeight = LoadCell.getData();
+    weightBrew = currentWeight - weightPreBrew;
+    newDataReady = false;
+  }
+
+  if (currentMillisScale - previousMillisScale >= intervalWeightMessage) {
     previousMillisScale = currentMillisScale;
-    DEBUG_print("Weight: ");
-
-    // check for new data/start next conversion:
-    if (LoadCell.update()) {
-      newDataReady = true;
-    }
-
-    // get smoothed value from the dataset:
-    if (newDataReady) {
-      weight = LoadCell.getData();
-      newDataReady = 0;
-    }
-    DEBUG_print("%0.2f\n", weight);
+    DEBUG_print("weightBrew: %0.2f\n", weightBrew);
   }
-  return weight;
 }
 
 /********************************************************

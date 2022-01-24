@@ -938,19 +938,6 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       }
     }
 
-/********************************************************
- * Refresh scale weight.
- * Each time checkSensor() is called to verify the value.
- * If the value is not valid, new data is not stored.
- *****************************************************/
-  void refreshWeight() {
-    if((millis() % 100) == 0) {
-      float latestWeight = getWeight();
-      // DEBUG_print("Weight: ");
-      // DEBUG_println(latestWeight);
-    }
-  }
-
   /********************************************************
    * Cleaning mode
    ******************************************************/
@@ -1013,21 +1000,36 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
     if (OnlyPID) { return; }
     unsigned long aktuelleZeit = millis();
     if (simulatedBrewSwitch && (brewing == 1 || waitingForBrewSwitchOff == false)) {
-      totalBrewTime = ( BREWTIMER_MODE == 1 ? *activePreinfusion + *activePreinfusionPause + *activeBrewTime : *activeBrewTime ) * 1000;
 
       if (brewing == 0) {
         brewing = 1; // Attention: For OnlyPID==0 brewing must only be changed
                      // in this function! Not externally.
         brewStartTime = aktuelleZeit;
         waitingForBrewSwitchOff = true;
+#if (BREWTIMER_MODE == 2)
+        weightPreBrew = currentWeight;
+#endif
       }
       brewTimer = aktuelleZeit - brewStartTime;
 
-      if (aktuelleZeit >= lastBrewMessage + 1000) {
+#if (BREWTIMER_MODE == 0 || BREWTIMER_MODE == 1)
+      totalBrewTime = ( BREWTIMER_MODE == 1 ? *activePreinfusion + *activePreinfusionPause + *activeBrewTime : *activeBrewTime ) * 1000;
+#endif
+
+      if (aktuelleZeit >= lastBrewMessage + 1000) {   
         lastBrewMessage = aktuelleZeit;
-        DEBUG_print("brew(): brewTimer=%lu totalBrewTime=%lu\n", brewTimer / 1000, totalBrewTime / 1000);
+#if (BREWTIMER_MODE == 0 || BREWTIMER_MODE == 1)
+      DEBUG_print("brew(): brewTimer=%lu totalBrewTime=%lu\n", brewTimer / 1000, totalBrewTime / 1000);
+#elif (BREWTIMER_MODE == 2)
+      DEBUG_print("brew(): weightBrew=%0.2f weightSetpoint=%0.2f\n", weightBrew, weightSetpoint);
+#endif
       }
+
+#if (BREWTIMER_MODE == 0 || BREWTIMER_MODE == 1)
       if (brewTimer <= totalBrewTime) {
+#elif (BREWTIMER_MODE == 2)
+      if (weightBrew <= (weightSetpoint - scaleDelayValue)) {
+#endif
         if (*activePreinfusion > 0 && brewTimer <= *activePreinfusion * 1000) {
           if (brewState != 1) {
             brewState = 1;
@@ -1628,7 +1630,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   void loop() {
     refreshTemp(); // save new temperature values
 #if (BREWTIMER_MODE == 2)
-    refreshWeight(); // get new weight values
+    updateWeight(); // get new weight values
 #endif
     testEmergencyStop(); // test if Temp is to high
 
