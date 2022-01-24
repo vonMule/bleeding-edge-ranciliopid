@@ -21,7 +21,7 @@
 #define EMERGENCY_TEMP 135    // If temperature is higher then notifications are send via display/debug/mqtt and PID is temporary disabled.
                               // Set this to the higest temperature supported by your maschine minus a few degress. (Silvia 5E: 135)
 #define HEATER_INACTIVITY_TIMER 120  // 0=Disable. When there is no activity at the maschine for this amount of minutes, the heater should stop heating until new activity is detected.
-#define BREWTIMER_MODE 0      // 0 (default)=brewtime-countdown is equal BREWTIMEX. 1=brewtime-countdown is BREWTIMEX + PREINFUSIONX + PREINFUSION_PAUSEX
+#define BREWTIMER_MODE 0      // 0 (default)=brewtime-countdown is equal BREWTIMEX. 1=brewtime-countdown is BREWTIMEX + PREINFUSIONX + PREINFUSION_PAUSEX, 2=Brew by weight (with scale)
 
 #define BREWDETECTION 2               // 0 = off | 1 = on using Hardware (ONLYPID=0 or ONLYPID=1_using_ControlAction_BREWING) | 2 = on using Software (ONLYPID=1 auto-detection)
 #define BREWDETECTION_SENSITIVITY 0.6 // If temperature drops in the past 3 seconds by this number (Celcius), then a brew is detected (BREWDETECTION must be 1)
@@ -203,6 +203,14 @@
 #define PREINFUSION3 0         // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
 #define PREINFUSION_PAUSE3 0   // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
 
+/*******
+ * Scale settings
+ *******/
+
+#define WEIGHTSETPOINT      38          // Brew weight in grams
+#define CALIBRATIONVALUE    686.0       // Need to run the code in the HX711_ADC library to determine this
+#define HXDATPIN            32          // HX711 Data Pin
+#define HXCLKPIN            33          // HX711 Clock Pin
 
 /*******
  * CLEANING PROGRAM settings (ONLYPID!=0)

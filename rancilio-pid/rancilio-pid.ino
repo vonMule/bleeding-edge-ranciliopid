@@ -370,6 +370,13 @@ unsigned int isrCounterStripped = 0;
 const int isrCounterFrame = 1000;
 
 /********************************************************
+ * INITIALIZE SCALE
+ ******************************************************/
+#if (BREWTIMER_MODE == 2)
+#include "scale.h"
+#endif
+
+/********************************************************
  * CONTROLS
  ******************************************************/
 #include "controls.h"
@@ -930,6 +937,19 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         secondlatestTemperature = latestTemperature;
       }
     }
+
+/********************************************************
+ * Refresh scale weight.
+ * Each time checkSensor() is called to verify the value.
+ * If the value is not valid, new data is not stored.
+ *****************************************************/
+  void refreshWeight() {
+    if((millis() % 100) == 0) {
+      float latestWeight = getWeight();
+      // DEBUG_print("Weight: ");
+      // DEBUG_println(latestWeight);
+    }
+  }
 
   /********************************************************
    * Cleaning mode
@@ -1607,6 +1627,9 @@ network-issues with your other WiFi-devices on your WiFi-network. */
    ***********************************/
   void loop() {
     refreshTemp(); // save new temperature values
+#if (BREWTIMER_MODE == 2)
+    refreshWeight(); // get new weight values
+#endif
     testEmergencyStop(); // test if Temp is to high
 
     set_profile();
@@ -2217,6 +2240,13 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     bPID.SetOutputLimits(0, windowSize);
     bPID.SetMode(AUTOMATIC);
 
+#if (BREWTIMER_MODE == 2)
+    /********************************************************
+     * INIT SCALE
+     ******************************************************/
+    initScale();
+#endif
+
     /********************************************************
      * BLYNK & Fallback offline
      ******************************************************/
@@ -2445,5 +2475,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
   timer1_write(50000); // set interrupt time to 10ms
 #endif
+
+
     DEBUG_print("End of setup()\n");
   }

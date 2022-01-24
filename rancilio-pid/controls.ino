@@ -117,7 +117,7 @@ controlMap* parseControlsConfig() {
         if (!nextControlMap) nextControlMap->action = UNDEFINED_ACTION;
         continue;
       }
-      if (controlsConfigGpio >= MAX_NUM_GPIO) {
+      if (controlsConfigGpio > MAX_NUM_GPIO) {
         ERROR_println("More gpio used as allowed in MAX_NUM_GPIO");
         if (!nextControlMap) nextControlMap->gpio = 0;
         continue;
