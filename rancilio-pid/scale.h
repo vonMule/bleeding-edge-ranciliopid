@@ -18,6 +18,7 @@ HX711_ADC LoadCell(HXDATPIN, HXCLKPIN);
 ******************************************************/
 
 void updateWeight() {
+  //XXX1 check performance impact. optimize
   static boolean newDataReady = false;
   unsigned long currentMillisScale = millis();
   if (scaleFailure) {   // abort if scale is not working

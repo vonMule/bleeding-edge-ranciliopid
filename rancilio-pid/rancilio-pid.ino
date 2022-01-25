@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.1.0";
+const char* sysVersion PROGMEM = "3.2.0 beta 1";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -1006,6 +1006,7 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
                      // in this function! Not externally.
         brewStartTime = aktuelleZeit;
         waitingForBrewSwitchOff = true;
+//XXX1 combine code        
 #if (BREWTIMER_MODE == 2)
         weightPreBrew = currentWeight;
 #endif
@@ -1629,9 +1630,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
    ***********************************/
   void loop() {
     refreshTemp(); // save new temperature values
-#if (BREWTIMER_MODE == 2)
-    updateWeight(); // get new weight values
-#endif
     testEmergencyStop(); // test if Temp is to high
 
     set_profile();
@@ -1757,6 +1755,10 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       previousTimerDebugHandle = millis();
       Debug.handle();
     }
+
+#if (BREWTIMER_MODE == 2)
+    updateWeight(); // get new weight values
+#endif
 
 #if (1 == 0)
     performance_check();
@@ -2236,16 +2238,16 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     }
 
     /********************************************************
-     * Ini PID
+     * Init PID
      ******************************************************/
     bPID.SetSampleTime(windowSize);
     bPID.SetOutputLimits(0, windowSize);
     bPID.SetMode(AUTOMATIC);
 
-#if (BREWTIMER_MODE == 2)
     /********************************************************
      * INIT SCALE
      ******************************************************/
+#if (BREWTIMER_MODE == 2)
     initScale();
 #endif
 
@@ -2477,7 +2479,5 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
   timer1_write(50000); // set interrupt time to 10ms
 #endif
-
-
     DEBUG_print("End of setup()\n");
   }
