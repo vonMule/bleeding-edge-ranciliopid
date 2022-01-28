@@ -1,5 +1,5 @@
 /********************************************************
- * Version 3.1.0
+ * Version 3.2.0
  * Config must be configured by the user
  *****************************************************/
 
@@ -21,7 +21,8 @@
 #define EMERGENCY_TEMP 135    // If temperature is higher then notifications are send via display/debug/mqtt and PID is temporary disabled.
                               // Set this to the higest temperature supported by your maschine minus a few degress. (Silvia 5E: 135)
 #define HEATER_INACTIVITY_TIMER 120  // 0=Disable. When there is no activity at the maschine for this amount of minutes, the heater should stop heating until new activity is detected.
-#define BREWTIMER_MODE 0      // 0 (default)=brewtime-countdown is equal BREWTIMEX. 1=brewtime-countdown is BREWTIMEX + PREINFUSIONX + PREINFUSION_PAUSEX, 2=Brew by weight (with scale)
+#define BREWTIME_TIMER 0             // 0 (default)=brewtime-countdown is equal BREWTIMEX. 1=brewtime-countdown is BREWTIMEX + PREINFUSIONX + PREINFUSION_PAUSEX
+#define BREWTIME_END_DETECTION 0     // 0 (default) = brew will end based on time (requires ONLYPID=0) | 1 = brew will end based on weight (requires SCALE_SENSOR_ENABLE=1)
 
 #define BREWDETECTION 2               // 0 = off | 1 = on using Hardware (ONLYPID=0 or ONLYPID=1_using_ControlAction_BREWING) | 2 = on using Software (ONLYPID=1 auto-detection)
 #define BREWDETECTION_SENSITIVITY 0.6 // If temperature drops in the past 3 seconds by this number (Celcius), then a brew is detected (BREWDETECTION must be 1)
@@ -207,10 +208,11 @@
 /*******
  * Scale settings
  *******/
-#define WEIGHTSETPOINT      38          // Brew weight in grams
+#define SCALE_SENSOR_ENABLE  1           // 0=Off (default), 1=On  (only HX711 supported)
+#define SCALE_SENSOR_DATA_PIN            13          // HX711 Data Pin
+#define SCALE_SENSOR_CLK_PIN            12          // HX711 Clock Pin
+#define SCALE_SENSOR_WEIGHT_SETPOINT      38          // Brew weight in grams
 #define CALIBRATIONVALUE    686.0       // Need to run the code in the HX711_ADC library to determine this
-#define HXDATPIN            32          // HX711 Data Pin
-#define HXCLKPIN            33          // HX711 Clock Pin
 
 
 /*******

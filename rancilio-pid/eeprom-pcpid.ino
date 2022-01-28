@@ -361,7 +361,7 @@ if (!almostEqual(setPoint1, setPoint1_sav)) {
 }
 if (!almostEqual(setPoint2, setPoint2_sav)) {
     preferences.putDouble("setPoint2", setPoint2);
-    DEBUG_print("EEPROM: setPoint2 (%0.2f) is saved (setPoint2_sav=%02.f)\n", setPoint2, setPoint2_sav);
+    DEBUG_print("EEPROM: setPoint2 (%0.2f) is saved (setPoint2_sav=%0.2f)\n", setPoint2, setPoint2_sav);
 }
 if (!almostEqual(setPoint3, setPoint3_sav)) {
     preferences.putDouble("setPoint3", setPoint3);

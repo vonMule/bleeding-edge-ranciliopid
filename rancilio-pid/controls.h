@@ -66,6 +66,7 @@ int actionState[MAX_NUM_ACTIONS];
 int gpioLastAction[MAX_NUM_GPIO];
 
 controlMap* parseControlsConfig();
+void debugControlHardware(controlMap* controlsConfig);
 void printControlsConfig(controlMap*);
 menuMap* parseMenuConfig();
 void printMenuConfig(menuMap*);

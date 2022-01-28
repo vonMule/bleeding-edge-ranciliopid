@@ -1,12 +1,17 @@
 # TODO
 - mqtt events/ should deliver json not string.
-- String replacement (https://cpp4arduino.com/2020/02/07/how-to-format-strings-without-the-string-class.html)
-- convert all float to long.
-- Improve temperature outliner detection by using all sampled temperatures (every <100ms, instead of once a second.)
 
 
 Feature Requests:
-- brewing profile support
+- scale support with following features:
+  - eeprom support
+  - automatic calibration
+  - sleep support
+  - auto tare() at start of brew()
+  - brew handling (might become more complex if basic stuff does not work)
+  - new display layout
+  - profile support to specific "modes" + target_weight
+  - last brew statistics are shown on display (and send via MQTT) for a time
 
 
 

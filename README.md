@@ -124,6 +124,23 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.0 beta_2:
+  - ALPHA!
+  - Initial scale code is based on HX711_ADC by Olav Kallhovd (https://github.com/olkal/HX711_ADC)
+  - scale functionality refactored:
+    - Rewrite of brew() function to supports stopping brewing by time or weight (see userConfig.h BREWTIME_END_DETECTION):
+    - Use powerDown and powerUp to save energy and to reduce interrupt conflicts. scale is only active when brew() is running.
+      - Right now scale is only active when ONLYPID=0. (TODO) 
+    - Use [custom async implementation](https://github.com/medlor/HX711_ADC) while using ISR to ...
+      - reduce processing delays
+      - reduce competing interrupts between TSIC, display and scale
+      - no TSIC errors!
+    - Custom tuned scaleConfigOverwrite.h
+    - Supported only on ESP32 (feel free to port to nodemcu)
+  - userConfig.h Changes:
+    - BREWTIMER_MODE renamed to BREWTIME_TIMER
+    - Added BREWTIME_END_DETECTION
+    - Many new defines called SCALE_SENSOR_*
 - 3.2.0 beta_1:
   - Initial alpha(!!) release to add scale functionality for brewing. Thanks to [Hoondie](https://github.com/avolmensky) for the code!
 - 3.1.0:

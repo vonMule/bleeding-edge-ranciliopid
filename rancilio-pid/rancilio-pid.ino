@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.0 beta 1";
+const char* sysVersion PROGMEM = "3.2.0 beta 2";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -370,11 +370,9 @@ unsigned int isrCounterStripped = 0;
 const int isrCounterFrame = 1000;
 
 /********************************************************
- * INITIALIZE SCALE
+ * SCALE
  ******************************************************/
-#if (BREWTIMER_MODE == 2)
 #include "scale.h"
-#endif
 
 /********************************************************
  * CONTROLS
@@ -1002,63 +1000,65 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
     if (simulatedBrewSwitch && (brewing == 1 || waitingForBrewSwitchOff == false)) {
 
       if (brewing == 0) {
-        brewing = 1; // Attention: For OnlyPID==0 brewing must only be changed
-                     // in this function! Not externally.
+        brewing = 1; // Attention: For OnlyPID==0 brewing must only be changed in this function! Not externally.
+        #if (SCALE_SENSOR_ENABLE == 1)
+        DEBUG_print("%lu HX711: Powerup\n", millis());
+        LoadCell.powerUp();
+        DEBUG_print("%lu HX711: tare\n", millis());
+        LoadCell.tare();  //blocking up to SAMPLES*150ms
+        DEBUG_print("%lu HX711: tare finished.\n", millis());
+        //updateWeight();
+        #endif
         brewStartTime = aktuelleZeit;
-        waitingForBrewSwitchOff = true;
-//XXX1 combine code        
-#if (BREWTIMER_MODE == 2)
-        weightPreBrew = currentWeight;
-#endif
-      }
-      brewTimer = aktuelleZeit - brewStartTime;
+        waitingForBrewSwitchOff = true;      
 
-#if (BREWTIMER_MODE == 0 || BREWTIMER_MODE == 1)
-      totalBrewTime = ( BREWTIMER_MODE == 1 ? *activePreinfusion + *activePreinfusionPause + *activeBrewTime : *activeBrewTime ) * 1000;
-#endif
+        totalBrewTime = ( BREWTIME_TIMER == 1 ? *activePreinfusion + *activePreinfusionPause + *activeBrewTime : *activeBrewTime ) * 1000;
+        if (BREWTIME_END_DETECTION==1) totalBrewTime *= 2;  //never let it brew run longer than 2x totalBrewTime
+      }
+
+      brewTimer = aktuelleZeit - brewStartTime;
 
       if (aktuelleZeit >= lastBrewMessage + 1000) {   
         lastBrewMessage = aktuelleZeit;
-#if (BREWTIMER_MODE == 0 || BREWTIMER_MODE == 1)
-      DEBUG_print("brew(): brewTimer=%lu totalBrewTime=%lu\n", brewTimer / 1000, totalBrewTime / 1000);
-#elif (BREWTIMER_MODE == 2)
-      DEBUG_print("brew(): weightBrew=%0.2f weightSetpoint=%0.2f\n", weightBrew, weightSetpoint);
-#endif
+        DEBUG_print("brew(%d): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg)\n", BREWTIME_END_DETECTION, brewTimer / 1000, totalBrewTime / 1000, currentWeight, (float)SCALE_SENSOR_WEIGHT_SETPOINT);
       }
 
-#if (BREWTIMER_MODE == 0 || BREWTIMER_MODE == 1)
-      if (brewTimer <= totalBrewTime) {
-#elif (BREWTIMER_MODE == 2)
-      if (weightBrew <= (weightSetpoint - scaleDelayValue)) {
-#endif
+      if (
+        brewTimer <= (BREWTIME_END_DETECTION == 0 ? totalBrewTime : totalBrewTime *2) && 
+        (BREWTIME_END_DETECTION == 1 ? currentWeight <= SCALE_SENSOR_WEIGHT_SETPOINT : true)
+      ) {
         if (*activePreinfusion > 0 && brewTimer <= *activePreinfusion * 1000) {
           if (brewState != 1) {
             brewState = 1;
-            // DEBUG_println("preinfusion");
+            DEBUG_println("preinfusion");
             digitalWrite(pinRelayVentil, relayON);
             digitalWrite(pinRelayPumpe, relayON);
           }
         } else if (*activePreinfusion > 0 && brewTimer > *activePreinfusion * 1000 && brewTimer <= (*activePreinfusion + *activePreinfusionPause) * 1000) {
           if (brewState != 2) {
             brewState = 2;
-            // DEBUG_println("Pause");
+            DEBUG_println("preinfusion pause");
             digitalWrite(pinRelayVentil, relayON);
             digitalWrite(pinRelayPumpe, relayOFF);
           }
         } else if (*activePreinfusion == 0 || brewTimer > (*activePreinfusion + *activePreinfusionPause) * 1000) {
           if (brewState != 3) {
             brewState = 3;
-            // DEBUG_println("Brew");
+            DEBUG_println("brew");
             digitalWrite(pinRelayVentil, relayON);
             digitalWrite(pinRelayPumpe, relayON);
           }
         }
       } else {
         brewState = 0;
-        DEBUG_print("End brew()\n");
+        DEBUG_print("end brew()\n");
         brewing = 0;
         digitalWrite(pinRelayVentil, relayOFF);
         digitalWrite(pinRelayPumpe, relayOFF);
+        #if (SCALE_SENSOR_ENABLE)
+        LoadCell.powerDown();
+        currentWeight = 0;
+        #endif
       }
     } else if (simulatedBrewSwitch && !brewing) { // corner-case: switch=On but brewing==0
       waitingForBrewSwitchOff = true; // just to be sure
@@ -1073,11 +1073,16 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         digitalWrite(pinRelayVentil, relayOFF);
         digitalWrite(pinRelayPumpe, relayOFF);
         brewing = 0;
+        #if (SCALE_SENSOR_ENABLE)
+          LoadCell.powerDown();
+          currentWeight = 0;
+        #endif
       }
       brewTimer = 0;
       brewState = 0;
     }
   }
+
 
   /********************************************************
    * Check if Wifi is connected, if not reconnect
@@ -1756,7 +1761,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       Debug.handle();
     }
 
-#if (BREWTIMER_MODE == 2)
+#if (SCALE_SENSOR_ENABLE)
     updateWeight(); // get new weight values
 #endif
 
@@ -1783,8 +1788,8 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       clean();
     } else {
       // handle brewing if button is pressed (ONLYPID=0 for now, because
-      // ONLYPID=1_with_BREWDETECTION=1 is handled in actionControl) ideally
-      // brew() should be controlled in our state-maschine (TODO)
+      // ONLYPID=1_with_BREWDETECTION=1 is handled in actionControl).
+      // ideally brew() should be controlled in our state-maschine (TODO)
       brew();
     }
 
@@ -2233,7 +2238,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     // if simulatedBrewSwitch is already "on" on startup, then we brew should
     // not start automatically
     if (simulatedBrewSwitch) {
-      DEBUG_print("brewsitch is already on. Dont brew until it is turned off.\n");
+      ERROR_print("brewswitch is already on. Dont brew until it is turned off.\n");
       waitingForBrewSwitchOff = true;
     }
 
@@ -2247,7 +2252,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     /********************************************************
      * INIT SCALE
      ******************************************************/
-#if (BREWTIMER_MODE == 2)
+#if (SCALE_SENSOR_ENABLE)
     initScale();
 #endif
 
@@ -2449,6 +2454,9 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     /********************************************************
      * REST INIT()
      ******************************************************/
+    #if (SCALE_SENSOR_ENABLE)
+    //LoadCell.powerDown(); XXX1
+    #endif
     setHardwareLed(0);
     setGpioAction(BREWING, 0);
     setGpioAction(STEAMING, 0);

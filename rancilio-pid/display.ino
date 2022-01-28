@@ -270,7 +270,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.drawGlyph(align_right - 11, 20 + 7, 0x047);
       }
     } else if (activeState == 4) {
-      totalBrewTime = ( (OnlyPID || BREWTIMER_MODE == 0 )? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
+      totalBrewTime = ( (OnlyPID || BREWTIME_TIMER == 0 )? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
       align_right = align_right_2digits_decimal;
       u8g2.setFont(u8g2_font_profont22_tf);
       u8g2.setCursor(align_right, 3);

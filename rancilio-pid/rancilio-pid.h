@@ -87,5 +87,6 @@ void performance_check();
 void blynkSave(char* setting);
 void set_profile();
 void set_profile(bool);
+void debugWaterLevelSensor();
 
 #endif
