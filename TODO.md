@@ -4,14 +4,19 @@
 
 Feature Requests:
 - scale support with following features:
-  - eeprom support
-  - automatic calibration
-  - sleep support
-  - auto tare() at start of brew()
-  - brew handling (might become more complex if basic stuff does not work)
-  - new display layout
-  - profile support to specific "modes" + target_weight
+  - lib tests and tuning -> DONE
+  - eeprom support -> DONE
+  - automatic calibration -> CALIBRATION MODE or via MQTT?
+  - sleep support -> DONE
+  - auto tare() at start of brew() -> DONE
+  - brew handling (might become more complex if basic stuff does not work) -> not yet live tested
+  - new display layout -> DONE
+  - profile support to specific "modes" + target_weight -> DONE
+  - CONTROL support -> DONE (convert activeBrewTimeEndDetection to bool)
+  - MQTT -> DONE
+  - Blynk support -> TODO (I wont add a new client config)
   - last brew statistics are shown on display (and send via MQTT) for a time
+  - ONLYPID=1 support -> HOW? want tare-action?
 
 
 

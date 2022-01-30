@@ -22,7 +22,6 @@
                               // Set this to the higest temperature supported by your maschine minus a few degress. (Silvia 5E: 135)
 #define HEATER_INACTIVITY_TIMER 120  // 0=Disable. When there is no activity at the maschine for this amount of minutes, the heater should stop heating until new activity is detected.
 #define BREWTIME_TIMER 0             // 0 (default)=brewtime-countdown is equal BREWTIMEX. 1=brewtime-countdown is BREWTIMEX + PREINFUSIONX + PREINFUSION_PAUSEX
-#define BREWTIME_END_DETECTION 0     // 0 (default) = brew will end based on time (requires ONLYPID=0) | 1 = brew will end based on weight (requires SCALE_SENSOR_ENABLE=1)
 
 #define BREWDETECTION 2               // 0 = off | 1 = on using Hardware (ONLYPID=0 or ONLYPID=1_using_ControlAction_BREWING) | 2 = on using Software (ONLYPID=1 auto-detection)
 #define BREWDETECTION_SENSITIVITY 0.6 // If temperature drops in the past 3 seconds by this number (Celcius), then a brew is detected (BREWDETECTION must be 1)
@@ -143,7 +142,7 @@
  *  MENU_CONFIG = "<MENU_CONFIG_BLOCK_1>#<MENU_CONFIG_BLOCK_2>#<unlimited number of blocks>"
  *     MENU_CONFIG_BLOCK_X = "<TYPE>:<ITEM>:<STEP_SIZE>"
  *        TYPE = Is either "CONFIG" or "ACTION". Depending on the ITEM.
- *        ITEM = PROFILE|SETPOINT|SETPOINTSTEAM|BREWTIME|PREINFUSION|SLEEPING|CLEANING|... (see controls.h for a full list of supported items).
+ *        ITEM = PROFILE|SETPOINT|SETPOINTSTEAM|BREWTIME|PREINFUSION|SLEEPING|CLEANING|BREWTIME_END_DETECTION|SCALE_SENSOR_WEIGHT_SETPOINT|... (see controls.h for a full list of supported items).
  *        STEP_SIZE = Definition of how much the actual value is changed when INC or DEC button is pressed. Use 1 for booleans.
  *
  *    Example:
@@ -182,18 +181,24 @@
 #define BREWTIME1 24.1         // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
 #define PREINFUSION1 2.3       // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
 #define PREINFUSION_PAUSE1 2.2 // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+#define BREWTIME_END_DETECTION1 0  // 0 (default) = brew will end based on time (requires ONLYPID=0) | 1 = brew will end based on weight (requires SCALE_SENSOR_ENABLE=1)
+#define SCALE_SENSOR_WEIGHT_SETPOINT1    36  // Brew weight in grams
 
 #define SETPOINT2 94           // Temperature SetPoint
 #define STARTTEMP2 79.1        // If temperature is below this value then Coldstart state should be triggered // (Rancilio Silvia 5E: 80.6 , ...)
 #define BREWTIME2 24.0         // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
 #define PREINFUSION2 2.6       // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
 #define PREINFUSION_PAUSE2 2.2 // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+#define BREWTIME_END_DETECTION2 0  // 0 (default) = brew will end based on time (requires ONLYPID=0) | 1 = brew will end based on weight (requires SCALE_SENSOR_ENABLE=1)
+#define SCALE_SENSOR_WEIGHT_SETPOINT2    36  // Brew weight in grams
 
 #define SETPOINT3 95           // Temperature SetPoint
 #define STARTTEMP3 80          // If temperature is below this value then Coldstart state should be triggered // (Rancilio Silvia 5E: 80.6 , ...)
 #define BREWTIME3 28.1         // length of time of the brewing (in sec). Used to limit brew time via hardware (ONLYPID=0) or visually (ONLYPID=1).
 #define PREINFUSION3 0         // (ONLYPID!=1) Default=0, length of time of the pre-infusion (in sec). Set to "0" to disable pre-infusion
 #define PREINFUSION_PAUSE3 0   // (ONLYPID!=1) Default=0, length of time of the pre-infusion pause (time in between the pre-infussion and brewing) (in sec). Set to "0" to disable pre-infusion pause.
+#define BREWTIME_END_DETECTION3 0  // 0 (default) = brew will end based on time (requires ONLYPID=0) | 1 = brew will end based on weight (requires SCALE_SENSOR_ENABLE=1)
+#define SCALE_SENSOR_WEIGHT_SETPOINT3    36  // Brew weight in grams
 
 
 /*******
@@ -211,7 +216,6 @@
 #define SCALE_SENSOR_ENABLE  1           // 0=Off (default), 1=On  (only HX711 supported)
 #define SCALE_SENSOR_DATA_PIN            13          // HX711 Data Pin
 #define SCALE_SENSOR_CLK_PIN            12          // HX711 Clock Pin
-#define SCALE_SENSOR_WEIGHT_SETPOINT      38          // Brew weight in grams
 #define CALIBRATIONVALUE    686.0       // Need to run the code in the HX711_ADC library to determine this
 
 

@@ -3,14 +3,29 @@
 
 #define LIBRARY_VERSION 0.0.1
 
+#include "userConfig.h"
+
 #ifdef ESP8266
 #include <core_version.h>
 #if !defined(ARDUINO_ESP8266_RELEASE_2_6_3) && !defined(ARDUINO_ESP8266_RELEASE_2_7_3) && !defined(ARDUINO_ESP8266_RELEASE_2_7_4) && !defined(ARDUINO_ESP8266_RELEASE_2_7_5)
 #error ERROR esp8266 >3.0.0 not yet supported. Downgrade boards-manager to v2.7.4
 #endif
+#if (SCALE_SENSOR_ENABLE)
+#error ERROR Scale not supported on esp8266.
+#endif 
 #endif
 
-#include "userConfig.h"
+#if (SCALE_SENSOR_ENABLE == 0)
+#if (BREWTIME_END_DETECTION1 == 1)
+#error ERROR BREWTIME_END_DETECTION1=1 is only supported when SCALE_SENSOR_ENABLE=1.
+#endif
+#if (BREWTIME_END_DETECTION2 == 1)
+#error ERROR BREWTIME_END_DETECTION2=1 is only supported when SCALE_SENSOR_ENABLE=1.
+#endif
+#if (BREWTIME_END_DETECTION3 == 1)
+#error ERROR BREWTIME_END_DETECTION3=1 is only supported when SCALE_SENSOR_ENABLE=1.
+#endif
+#endif
 
 #if (ENABLE_CALIBRATION_MODE == 1)
 #define DEBUGMODE
@@ -27,6 +42,7 @@
 #if (MQTT_ENABLE == 2)
 #error ERROR Not supported to set MQTT_ENABLE=2 on ESP32
 #endif
+
 #endif
 
 #ifndef CONTROLS_CONFIG

@@ -111,6 +111,7 @@ extern float steadyPowerOffsetModified;
 extern unsigned int menuPosition;
 extern unsigned long previousTimerMenuCheck;
 extern void blynkSave(char*);
-
+extern unsigned int* activeBrewTimeEndDetection;
+extern float* activeScaleSensorWeightSetPoint;
 
 #endif

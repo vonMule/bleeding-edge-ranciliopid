@@ -124,6 +124,22 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.0 beta_3:
+  - ALPHA!
+  - Scale:
+    - Add asyncTare to auto-tare cup weight while (pre-infusion) is running (it should be completed before the first drops add weight).
+    - If auto tare at start of brew failes fallback to time-based brew stop timings.
+    - Add display support to show weight while brewing.
+    - Added powerOff mode while not brewing.
+    - New scale functions are now tied to Profiles:
+      - Set following settings in userConfig.h or MQTT:
+        - BREWTIME_END_DETECTIONX: if 0, stop by time else stop by weight 
+        - SCALE_SENSOR_WEIGHT_SETPOINTX = weight when to stop brewing
+    - Added MQTT support. (Blynk not yet done)
+    - Added Control support: You can also set settings via buttons.
+  - userConfig.h Changes:
+    - Renamed BREWTIME_END_DETECTION -> BREWTIME_END_DETECTIONX
+    - Renamed SCALE_SENSOR_WEIGHT_SETPOINT -> SCALE_SENSOR_WEIGHT_SETPOINTX.
 - 3.2.0 beta_2:
   - ALPHA!
   - Initial scale code is based on HX711_ADC by Olav Kallhovd (https://github.com/olkal/HX711_ADC)

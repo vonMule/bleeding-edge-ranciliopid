@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.0 beta 2";
+const char* sysVersion PROGMEM = "3.2.0 beta 3";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -222,6 +222,10 @@ float preinfusionpause1 = PREINFUSION_PAUSE1;
 float preinfusionpause2 = PREINFUSION_PAUSE2;
 float preinfusionpause3 = PREINFUSION_PAUSE3;
 float* activePreinfusionPause = &preinfusionpause1;
+unsigned int brewtimeEndDetection1 = BREWTIME_END_DETECTION1;
+unsigned int brewtimeEndDetection2 = BREWTIME_END_DETECTION2;
+unsigned int brewtimeEndDetection3 = BREWTIME_END_DETECTION3;
+unsigned int* activeBrewTimeEndDetection = &brewtimeEndDetection1;
 int brewing = 0; // Attention: "brewing" must only be changed in brew()
                  // (ONLYPID=0) or brewingAction() (ONLYPID=1)!
 bool waitingForBrewSwitchOff = false;
@@ -373,6 +377,10 @@ const int isrCounterFrame = 1000;
  * SCALE
  ******************************************************/
 #include "scale.h"
+float scaleSensorWeightSetPoint1 = SCALE_SENSOR_WEIGHT_SETPOINT1;
+float scaleSensorWeightSetPoint2 = SCALE_SENSOR_WEIGHT_SETPOINT2;
+float scaleSensorWeightSetPoint3 = SCALE_SENSOR_WEIGHT_SETPOINT3;
+float* activeScaleSensorWeightSetPoint = &scaleSensorWeightSetPoint1;
 
 /********************************************************
  * CONTROLS
@@ -1001,31 +1009,31 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
 
       if (brewing == 0) {
         brewing = 1; // Attention: For OnlyPID==0 brewing must only be changed in this function! Not externally.
-        #if (SCALE_SENSOR_ENABLE == 1)
+        #if (SCALE_SENSOR_ENABLE)
         DEBUG_print("%lu HX711: Powerup\n", millis());
-        LoadCell.powerUp();
-        DEBUG_print("%lu HX711: tare\n", millis());
-        LoadCell.tare();  //blocking up to SAMPLES*150ms
-        DEBUG_print("%lu HX711: tare finished.\n", millis());
-        //updateWeight();
+        scalePowerUp();
+        DEBUG_print("%lu HX711: tareAsync\n", millis());
+        tareAsync();
         #endif
         brewStartTime = aktuelleZeit;
-        waitingForBrewSwitchOff = true;      
-
+        waitingForBrewSwitchOff = true; 
+        
         totalBrewTime = ( BREWTIME_TIMER == 1 ? *activePreinfusion + *activePreinfusionPause + *activeBrewTime : *activeBrewTime ) * 1000;
-        if (BREWTIME_END_DETECTION==1) totalBrewTime *= 2;  //never let it brew run longer than 2x totalBrewTime
+        if (*activeBrewTimeEndDetection==1) totalBrewTime *= 2;  //never let it brew run longer than 2x totalBrewTime
       }
 
       brewTimer = aktuelleZeit - brewStartTime;
 
-      if (aktuelleZeit >= lastBrewMessage + 1000) {   
+      if (aktuelleZeit >= lastBrewMessage + 1000) {
         lastBrewMessage = aktuelleZeit;
-        DEBUG_print("brew(%d): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg)\n", BREWTIME_END_DETECTION, brewTimer / 1000, totalBrewTime / 1000, currentWeight, (float)SCALE_SENSOR_WEIGHT_SETPOINT);
+        //DEBUG_print("brew(%d): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg, tareCompleted=%d)\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, LoadCell.getTareAsyncStatus());
+        DEBUG_print("X brew(%u): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg) to=%d,%d,%d\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), scaleTareSuccess);
       }
+      //DEBUG_print("X brew(%d): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg) to=%d,%d,%d\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), scaleTareSuccess;
 
       if (
-        brewTimer <= (BREWTIME_END_DETECTION == 0 ? totalBrewTime : totalBrewTime *2) && 
-        (BREWTIME_END_DETECTION == 1 ? currentWeight <= SCALE_SENSOR_WEIGHT_SETPOINT : true)
+        (brewTimer <= (*activeBrewTimeEndDetection == 0 || !getTareAsyncStatus() ) ? totalBrewTime : totalBrewTime *2) && 
+        ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? currentWeight <= *activeScaleSensorWeightSetPoint : true)
       ) {
         if (*activePreinfusion > 0 && brewTimer <= *activePreinfusion * 1000) {
           if (brewState != 1) {
@@ -1056,7 +1064,7 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         digitalWrite(pinRelayVentil, relayOFF);
         digitalWrite(pinRelayPumpe, relayOFF);
         #if (SCALE_SENSOR_ENABLE)
-        LoadCell.powerDown();
+        scalePowerDown();
         currentWeight = 0;
         #endif
       }
@@ -1074,8 +1082,8 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         digitalWrite(pinRelayPumpe, relayOFF);
         brewing = 0;
         #if (SCALE_SENSOR_ENABLE)
-          LoadCell.powerDown();
-          currentWeight = 0;
+        scalePowerDown();
+        currentWeight = 0;
         #endif
       }
       brewTimer = 0;
@@ -2096,6 +2104,8 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         activeBrewTime = &brewtime2;
         activePreinfusion = &preinfusion2;
         activePreinfusionPause = &preinfusionpause2;
+        activeBrewTimeEndDetection = &brewtimeEndDetection2;
+        activeScaleSensorWeightSetPoint = &scaleSensorWeightSetPoint2;
         activeProfile = profile;
         break;
       case 3:
@@ -2104,6 +2114,8 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         activeBrewTime = &brewtime3;
         activePreinfusion = &preinfusion3;
         activePreinfusionPause = &preinfusionpause3;
+        activeBrewTimeEndDetection = &brewtimeEndDetection3;
+        activeScaleSensorWeightSetPoint = &scaleSensorWeightSetPoint3;
         activeProfile = profile;
         break;
       default:
@@ -2112,6 +2124,8 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         activeBrewTime = &brewtime1;
         activePreinfusion = &preinfusion1;
         activePreinfusionPause = &preinfusionpause1;
+        activeBrewTimeEndDetection = &brewtimeEndDetection1;
+        activeScaleSensorWeightSetPoint = &scaleSensorWeightSetPoint1;
         activeProfile = profile = 1;
         break;
     }
@@ -2121,18 +2135,24 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     mqttPublish((char*)"activeSetPoint/set", number2string(*activeSetPoint));
     mqttPublish((char*)"activePreinfusion/set", number2string(*activePreinfusion));
     mqttPublish((char*)"activePreinfusionPause/set", number2string(*activePreinfusionPause));
+    mqttPublish((char*)"activeBrewTimeEndDetection/set", number2string(*activeBrewTimeEndDetection));
+    mqttPublish((char*)"activeScaleSensorWeightSetPoint/set", number2string(*activeScaleSensorWeightSetPoint));
     mqttPublish((char*)"profile", number2string(activeProfile));
     mqttPublish((char*)"activeBrewTime", number2string(*activeBrewTime));
     mqttPublish((char*)"activeStartTemp", number2string(*activeStartTemp));
     mqttPublish((char*)"activeSetPoint", number2string(*activeSetPoint));
     mqttPublish((char*)"activePreinfusion", number2string(*activePreinfusion));
     mqttPublish((char*)"activePreinfusionPause", number2string(*activePreinfusionPause));
+    mqttPublish((char*)"activeBrewTimeEndDetection", number2string(*activeBrewTimeEndDetection));
+    mqttPublish((char*)"activeScaleSensorWeightSetPoint", number2string(*activeScaleSensorWeightSetPoint));
     blynkSave((char*)"profile");
     blynkSave((char*)"activeBrewTime");
     blynkSave((char*)"activeStartTemp");
     blynkSave((char*)"activeSetPoint");
     blynkSave((char*)"activePreinfusion");
     blynkSave((char*)"activePreinfusionPause");
+    blynkSave((char*)"activeBrewTimeEndDetection");  //XXX1 blynk todo
+    blynkSave((char*)"activeScaleSensorWeightSetPoint");
   }
 
   void print_settings() {
@@ -2145,6 +2165,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     DEBUG_print("brewDetection: %d | brewDetectionSensitivity: %0.2f | brewDetectionPower: %0.2f\n",
         brewDetection, brewDetectionSensitivity, brewDetectionPower);
     DEBUG_print("activeBrewTime: %0.2f | activePreinfusion: %0.2f | activePreinfusionPause: %0.2f\n", *activeBrewTime, *activePreinfusion, *activePreinfusionPause);
+    DEBUG_print("activeBrewTimeEndDetection: %d | activeScaleSensorWeightSetPoint: %0.2f\n", *activeBrewTimeEndDetection, *activeScaleSensorWeightSetPoint);
     DEBUG_print("cleaningCycles: %d | cleaningInterval: %d | cleaningPause: %d\n", cleaningCycles, cleaningInterval, cleaningPause);
     DEBUG_print("steadyPower: %0.2f | steadyPowerOffset: %0.2f | steadyPowerOffsetTime: %u\n",
         steadyPower, steadyPowerOffset, steadyPowerOffsetTime);
@@ -2455,7 +2476,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
      * REST INIT()
      ******************************************************/
     #if (SCALE_SENSOR_ENABLE)
-    //LoadCell.powerDown(); XXX1
+    scalePowerDown();
     #endif
     setHardwareLed(0);
     setGpioAction(BREWING, 0);

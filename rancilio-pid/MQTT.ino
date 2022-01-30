@@ -329,6 +329,18 @@ void mqttParse(char* topic_str, char* data_str) {
     }
     return;
   }
+  if (strcmp(configVar, "activeBrewTimeEndDetection") == 0) {
+    if (persistSetting((char*)"activeBrewTimeEndDetection", activeBrewTimeEndDetection, data_str)) {
+      blynkSave((char*)"activeBrewTimeEndDetection");
+    }
+    return;
+  }
+  if (strcmp(configVar, "activeScaleSensorWeightSetPoint") == 0) {
+    if (persistSetting((char*)"activeScaleSensorWeightSetPoint", activeScaleSensorWeightSetPoint, data_str)) {
+      blynkSave((char*)"activeScaleSensorWeightSetPoint");
+    }
+    return;
+  }
 }
 
 bool persistSetting(char* setting, float* value, char* data_str) {
@@ -396,4 +408,6 @@ void mqttPublishSettings() {
   mqttPublish((char*)"steadyPowerOffset/set", number2string(steadyPowerOffset));
   mqttPublish((char*)"steadyPowerOffsetTime/set", number2string(steadyPowerOffsetTime));
   mqttPublish((char*)"steadyPower/set", number2string(steadyPower)); // this should be last in list
+  mqttPublish((char*)"activeBrewTimeEndDetection/set", number2string(*activeBrewTimeEndDetection));
+  mqttPublish((char*)"activeScaleSensorWeightSetPoint/set", number2string(*activeScaleSensorWeightSetPoint));
 }
