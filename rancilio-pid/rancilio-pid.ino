@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.0 beta 3";
+const char* sysVersion PROGMEM = "3.2.0 beta 4";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -315,7 +315,8 @@ float marginOfFluctuation = 0; // 0 = disable functionality
 char* blynkReadyLedColor = (char*)"#000000";
 unsigned long lastCheckBrewReady = 0;
 unsigned long lastBrewReady = 0;
-unsigned long lastBrewEnd = 0; // used to determime the time it takes to reach brewReady==true
+unsigned long lastBrewEnd = 0; // used to determime the time it takes to reach brewReady==true and also for brewStatisticsTimer
+unsigned int brewStatisticsTimer = 8000; //how many ms to show the brewStatistics
 unsigned int powerOffTimer = 0;
 bool brewReady = false;
 unsigned long eepromSaveTimer = 28 * 60 * 1000UL; // save every 28min
@@ -491,6 +492,8 @@ BLYNK_WRITE(V50) { setPointSteam = param.asFloat(); }
 BLYNK_READ(V51) { blynkSave((char*)"cleaningCycles"); }
 BLYNK_READ(V52) { blynkSave((char*)"cleaningInterval"); }
 BLYNK_READ(V53) { blynkSave((char*)"cleaningPause"); }
+BLYNK_WRITE(V64) { if ((millis() - blynkConnectTime > 10000 )) *activeBrewTimeEndDetection = (unsigned int) param.asInt(); }
+BLYNK_WRITE(V65) { if ((millis() - blynkConnectTime > 10000 )) *activeScaleSensorWeightSetPoint = param.asFloat(); }
 BLYNK_WRITE(V101) {
   int val = param.asInt();
   if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
@@ -567,6 +570,8 @@ void blynkSave(char* setting) {
   else if (!strcmp(setting, "cleaningCycles")) { Blynk.virtualWrite(V61, cleaningCycles); }
   else if (!strcmp(setting, "cleaningInterval")) { Blynk.virtualWrite(V62, cleaningInterval); }
   else if (!strcmp(setting, "cleaningPause")) { Blynk.virtualWrite(V63, cleaningPause); }
+  else if (!strcmp(setting, "activeBrewTimeEndDetection")) { Blynk.virtualWrite(V64, String(*activeBrewTimeEndDetection, 1)); }
+  else if (!strcmp(setting, "activeScaleSensorWeightSetPoint")) { Blynk.virtualWrite(V65, String(*activeScaleSensorWeightSetPoint, 1)); }
   else {
     ERROR_print("blynkSave(%s) not supported.\n", setting);
   }
@@ -1026,14 +1031,18 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
 
       if (aktuelleZeit >= lastBrewMessage + 1000) {
         lastBrewMessage = aktuelleZeit;
-        //DEBUG_print("brew(%d): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg, tareCompleted=%d)\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, LoadCell.getTareAsyncStatus());
-        DEBUG_print("X brew(%u): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg) to=%d,%d,%d\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), scaleTareSuccess);
+        //DEBUG_print("brew(%d): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg, tareCompleted=%d)\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, getTareAsyncStatus());
+        DEBUG_print("X brew(%u): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg) to=%d,%d,%d\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), getTareAsyncStatus());
       }
-      //DEBUG_print("X brew(%d): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg) to=%d,%d,%d\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), scaleTareSuccess;
+      //DEBUG_print("X brew(%d): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg) to=%d,%d,%d\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), getTareAsyncStatus();
 
+      //activeBrewTimeEndDetection=1 && getTareAsyncStatus=true : brew*2 && weight  OK<  
+      //activeBrewTimeEndDetection=0 && getTareAsyncStatus=false: brew && true  OK
+      //activeBrewTimeEndDetection=1 && getTareAsyncStatus=false: brew && true  OK
+      //activeBrewTimeEndDetection=0 && getTareAsyncStatus=true : brew && true  OK
       if (
-        (brewTimer <= (*activeBrewTimeEndDetection == 0 || !getTareAsyncStatus() ) ? totalBrewTime : totalBrewTime *2) && 
-        ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? currentWeight <= *activeScaleSensorWeightSetPoint : true)
+        (brewTimer <= ((*activeBrewTimeEndDetection == 0 || !getTareAsyncStatus() ) ? totalBrewTime : (totalBrewTime *2)) ) && 
+        ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (currentWeight <= *activeScaleSensorWeightSetPoint) : true)
       ) {
         if (*activePreinfusion > 0 && brewTimer <= *activePreinfusion * 1000) {
           if (brewState != 1) {
@@ -1065,14 +1074,14 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         digitalWrite(pinRelayPumpe, relayOFF);
         #if (SCALE_SENSOR_ENABLE)
         scalePowerDown();
-        currentWeight = 0;
+        //currentWeight = 0;
         #endif
       }
     } else if (simulatedBrewSwitch && !brewing) { // corner-case: switch=On but brewing==0
       waitingForBrewSwitchOff = true; // just to be sure
       // digitalWrite(pinRelayVentil, relayOFF);  //already handled by brewing
       // var digitalWrite(pinRelayPumpe, relayOFF);
-      brewTimer = 0;
+      //brewTimer = 0;
       brewState = 0;
     } else if (!simulatedBrewSwitch) {
       if (waitingForBrewSwitchOff) { DEBUG_print("simulatedBrewSwitch=off\n"); }
@@ -1083,10 +1092,10 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         brewing = 0;
         #if (SCALE_SENSOR_ENABLE)
         scalePowerDown();
-        currentWeight = 0;
+        //currentWeight = 0;
         #endif
       }
-      brewTimer = 0;
+      //brewTimer = 0;
       brewState = 0;
     }
   }
@@ -1346,10 +1355,12 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(true); // dont change mode during cleaning
           mqttPublish((char*)"brewDetected", (char*)"0");
+          snprintf(debugLine, sizeof(debugLine), "Brew statistics: %0.2fg in %0.2fs with profile %u", currentWeight, brewTimer/1000.0, profile);
+          mqttPublish((char*)"events", (char*)debugLine);
           bPID.SetSumOutputI(0);
+          lastBrewEnd = millis();  //used to detect time from brew until brewReady but also for "time+weight display show" timer
           timerBrewDetection = 0;
-          activeState = 2;
-          lastBrewEnd = millis();
+          activeState = 2; 
         }
         break;
       }

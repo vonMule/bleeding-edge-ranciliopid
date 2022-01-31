@@ -81,4 +81,5 @@ extern menuMap* menuConfig;
 extern float menuValue;
 extern const char* convertDefineToReadAbleVariable(char*);
 extern float currentWeight;
+extern unsigned int brewStatisticsTimer;
 

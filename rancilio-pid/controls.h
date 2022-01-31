@@ -106,6 +106,7 @@ extern PIDBias bPID;
 extern unsigned long userActivitySavedOnForcedSleeping;
 extern int sleeping;
 extern unsigned long lastBrewEnd;
+extern unsigned int brewStatisticsTimer;
 extern bool MaschineColdstartRunOnce;
 extern float steadyPowerOffsetModified;
 extern unsigned int menuPosition;

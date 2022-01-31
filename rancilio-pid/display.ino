@@ -141,6 +141,8 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     const unsigned int align_right_3digits = LCDWidth - 56 - 12;
     const unsigned int align_right_2digits_decimal = LCDWidth - 56 + 28;
 
+    bool showLastBrewStatistics = ( (brewTimer > 0) && (currentWeight != 0) && (lastBrewEnd + brewStatisticsTimer > millis()) ) ? true : false;
+
     // boot logo
     if (activeState == 0) {
       if (strcmp(MACHINE_TYPE, "rancilio") == 0) {
@@ -238,7 +240,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     }
 
     // display current and target temperature
-    if (activeState > 0 && activeState != 4) {
+    if (activeState > 0 && activeState != 4 && !showLastBrewStatistics) {
       if (Input - 100 > -FLT_EPSILON) {
         align_right = align_right_3digits;
       } else {
@@ -269,7 +271,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
         u8g2.drawGlyph(align_right - 11, 20 + 6, 0x047);
       }
-    } else if (activeState == 4) {  //brew
+    } else if (activeState == 4 || showLastBrewStatistics) {  //brew
       totalBrewTime = ( (OnlyPID || BREWTIME_TIMER == 0 )? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
       unsigned int align_right_left_value = LCDWidth - 56 - 5;  //XXX1
       unsigned int align_right_right_value = LCDWidth - 56 + 28;  //XXX1

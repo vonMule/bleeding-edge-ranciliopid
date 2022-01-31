@@ -124,6 +124,13 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.0 beta_4:
+  - ALPHA!
+  - Fix: BREWTIME_END_DETECTIONX=0 did not automatically end the brew anymore.
+  - Scale:
+    - Blynk supported: V64 := activeBrewTimeEndDetection , V65 := activeScaleSensorWeightSetPoint
+    - Show brewStatistics on display for 8sec after brew finishes.
+    - Send brewStatistics to mqtt events: "Brew statistics: 35.55g in 11.05s with profile 1"
 - 3.2.0 beta_3:
   - ALPHA!
   - Scale:

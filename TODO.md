@@ -14,8 +14,8 @@ Feature Requests:
   - profile support to specific "modes" + target_weight -> DONE
   - CONTROL support -> DONE (convert activeBrewTimeEndDetection to bool)
   - MQTT -> DONE
-  - Blynk support -> TODO (I wont add a new client config)
-  - last brew statistics are shown on display (and send via MQTT) for a time
+  - Blynk support -> DONE (I wont add a new client config)
+  - last brew statistics are shown on display (and send via MQTT) for a time -> DONE
   - ONLYPID=1 support -> HOW? want tare-action?
 
 

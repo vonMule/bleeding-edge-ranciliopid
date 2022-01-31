@@ -19,11 +19,11 @@ void tareAsync() {
 void scalePowerDown() {
   scaleRunning = false;
   LoadCell.powerDown();
-  currentWeight = 0;
 }
 
 void scalePowerUp() {
   scaleRunning = true;
+  currentWeight = 0;
   LoadCell.powerUp();
 }
 
