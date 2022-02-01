@@ -36,7 +36,7 @@
 #define ENABLE_HARDWARE_LED_RGB_OFF LightPink  // (ENABLE_HARDWARE_LED=2) Color name when leds should be turned off.
 
 //#define DEBUGMODE                // to enable Debug uncomment this line. Afterwards you can connect via telnet to port 23 to see debug logs.
-#define ENABLE_CALIBRATION_MODE 0  // 0=off (default). 1=on. If on, PID is disabled and CALIBRATION information is logged in DEBUG log (eg. CONTROLS_CONFIG, WATER_LEVEL_SENSOR)
+#define ENABLE_CALIBRATION_MODE 0 // 0=off (default). 1=on. If on, PID is disabled and CALIBRATION information is logged in DEBUG log (eg. CONTROLS_CONFIG, WATER_LEVEL_SENSOR, SCALE_SENSOR)
 
 
 /*******
@@ -213,10 +213,11 @@
 /*******
  * Scale settings
  *******/
-#define SCALE_SENSOR_ENABLE  1           // 0=Off (default), 1=On  (only HX711 supported)
-#define SCALE_SENSOR_DATA_PIN            13          // HX711 Data Pin
-#define SCALE_SENSOR_CLK_PIN            12          // HX711 Clock Pin
-#define CALIBRATIONVALUE    686.0       // Need to run the code in the HX711_ADC library to determine this
+#define SCALE_SENSOR_ENABLE                1      // 0=Off (default), 1=On  (only HX711 supported)
+#define SCALE_SENSOR_DATA_PIN              13     // HX711 Data Pin
+#define SCALE_SENSOR_CLK_PIN               12     // HX711 Clock Pin
+#define SCALE_SENSOR_CALIBRATION_WEIGHT    200.0  // any known weight which is used for calibration (in gramm)
+#define SCALE_SENSOR_CALIBRATION_FACTOR    1.0    // manually determined calibration factor (initial 1.0)
 
 
 /*******

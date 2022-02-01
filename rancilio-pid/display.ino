@@ -141,7 +141,8 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     const unsigned int align_right_3digits = LCDWidth - 56 - 12;
     const unsigned int align_right_2digits_decimal = LCDWidth - 56 + 28;
 
-    bool showLastBrewStatistics = ( (brewTimer > 0) && (currentWeight != 0) && (lastBrewEnd + brewStatisticsTimer > millis()) ) ? true : false;
+    bool showLastBrewStatistics = ( (brewTimer > 0) && (currentWeight != 0) && 
+     (millis() <= brewStatisticsTimer + brewStatisticsAdditionalDisplayTime) ) ? true : false;
 
     // boot logo
     if (activeState == 0) {

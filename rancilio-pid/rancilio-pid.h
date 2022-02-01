@@ -105,4 +105,6 @@ void set_profile();
 void set_profile(bool);
 void debugWaterLevelSensor();
 
+extern void scaleCalibration();
+
 #endif

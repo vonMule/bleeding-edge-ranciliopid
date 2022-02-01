@@ -10,6 +10,27 @@ HX711_ADC LoadCell(SCALE_SENSOR_DATA_PIN, SCALE_SENSOR_CLK_PIN);
 /********************************************************
    helper functions
 ******************************************************/
+
+void scaleCalibration() {
+  static unsigned long lastCalibration = 10000;
+  if ( millis() >= lastCalibration + 2500) {
+    lastCalibration = millis();
+
+    if (!scaleRunning) {
+      scalePowerUp();
+      tareAsync();
+    } else if (scaleTareSuccess) {
+      float newCalibrationValue = LoadCell.getNewCalibration2((float)SCALE_SENSOR_CALIBRATION_WEIGHT);
+      DEBUG_print("Scale is tared to zero: You can now put your weight of %0.2fg on the scale: currentWeight=%0.2f. Calculated SCALE_SENSOR_CALIBRATION_FACTOR=%0.2f\n", (float)SCALE_SENSOR_CALIBRATION_WEIGHT, currentWeight, newCalibrationValue);   
+      if ((currentWeight > 10) && (newCalibrationValue > 50) && (abs(LoadCell.getCalFactor() - newCalibrationValue) >= 5)) { 
+        DEBUG_print("Scale calibration setting saved.\n");
+        LoadCell.getNewCalibration((float)SCALE_SENSOR_CALIBRATION_WEIGHT);
+        //TODO: save to eeprom and create "auto-calibration" ACTION
+      }
+    }
+  }
+}
+
 void tareAsync() {
   LoadCell.tareNoDelay();
   scaleTareSuccess = false;
@@ -17,6 +38,7 @@ void tareAsync() {
 }
 
 void scalePowerDown() {
+  if (!scaleRunning) return;
   scaleRunning = false;
   LoadCell.powerDown();
 }
@@ -42,7 +64,7 @@ void updateWeight() {
   }
 
   unsigned long currentMillisScale = millis();
-  if (currentMillisScale - previousMillisScale >= intervalWeightMessage) {
+  if (currentMillisScale - previousMillisScale >= intervalWeightMessage) {  //XXX1 remove this whole debug block
     previousMillisScale = currentMillisScale;
     DEBUG_print("currentWeight: %0.2f (index=%d, SamplesInUse=%d, getSignalTimeoutFlag=%d)\n", currentWeight, LoadCell.getReadIndex(), LoadCell.getSamplesInUse(), LoadCell.getSignalTimeoutFlag());
   }
@@ -76,7 +98,7 @@ void initScale() {
     }
     else {
       DEBUG_print("HX711 initialized (#%u)\n", i);
-      LoadCell.setCalFactor(CALIBRATIONVALUE); // set calibration factor (float)
+      LoadCell.setCalFactor(SCALE_SENSOR_CALIBRATION_FACTOR); // set calibration factor (float)
       #ifdef ESP32
       //CPU pinning does not have an effect (TSIC). Why?
       xTaskCreatePinnedToCore(attachISR_ESP32_SCALE,"attachISR_ESP32_SCALE",2000,NULL,1,NULL,1); //freeRTOS

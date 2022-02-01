@@ -106,7 +106,7 @@ extern PIDBias bPID;
 extern unsigned long userActivitySavedOnForcedSleeping;
 extern int sleeping;
 extern unsigned long lastBrewEnd;
-extern unsigned int brewStatisticsTimer;
+extern unsigned int brewStatisticsAdditionalDisplayTime;
 extern bool MaschineColdstartRunOnce;
 extern float steadyPowerOffsetModified;
 extern unsigned int menuPosition;
@@ -114,5 +114,7 @@ extern unsigned long previousTimerMenuCheck;
 extern void blynkSave(char*);
 extern unsigned int* activeBrewTimeEndDetection;
 extern float* activeScaleSensorWeightSetPoint;
+extern unsigned long brewTimer;
+extern float currentWeight;
 
 #endif

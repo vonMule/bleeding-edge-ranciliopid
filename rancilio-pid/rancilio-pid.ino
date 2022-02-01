@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.0 beta 4";
+const char* sysVersion PROGMEM = "3.2.0 beta 5";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -315,8 +315,10 @@ float marginOfFluctuation = 0; // 0 = disable functionality
 char* blynkReadyLedColor = (char*)"#000000";
 unsigned long lastCheckBrewReady = 0;
 unsigned long lastBrewReady = 0;
-unsigned long lastBrewEnd = 0; // used to determime the time it takes to reach brewReady==true and also for brewStatisticsTimer
-unsigned int brewStatisticsTimer = 8000; //how many ms to show the brewStatistics
+unsigned long lastBrewEnd = 0; // used to determime the time it takes to reach brewReady==true
+unsigned long brewStatisticsTimer = 0;
+unsigned long brewStatisticsAdditionalWeightTime = 2000;  //how many ms after brew() ends to still measure weight
+unsigned int brewStatisticsAdditionalDisplayTime = 12000; //how many ms after brew() ends to show the brewStatistics 
 unsigned int powerOffTimer = 0;
 bool brewReady = false;
 unsigned long eepromSaveTimer = 28 * 60 * 1000UL; // save every 28min
@@ -1028,8 +1030,9 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       }
 
       brewTimer = aktuelleZeit - brewStartTime;
-
+      
       if (aktuelleZeit >= lastBrewMessage + 1000) {
+        brewStatisticsTimer = millis();  //refresh timer
         lastBrewMessage = aktuelleZeit;
         //DEBUG_print("brew(%d): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg, tareCompleted=%d)\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, getTareAsyncStatus());
         DEBUG_print("X brew(%u): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg) to=%d,%d,%d\n", *activeBrewTimeEndDetection, brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), getTareAsyncStatus());
@@ -1072,10 +1075,10 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         brewing = 0;
         digitalWrite(pinRelayVentil, relayOFF);
         digitalWrite(pinRelayPumpe, relayOFF);
-        #if (SCALE_SENSOR_ENABLE)
-        scalePowerDown();
+        //#if (SCALE_SENSOR_ENABLE)
+        //scalePowerDown();
         //currentWeight = 0;
-        #endif
+        //#endif
       }
     } else if (simulatedBrewSwitch && !brewing) { // corner-case: switch=On but brewing==0
       waitingForBrewSwitchOff = true; // just to be sure
@@ -1090,10 +1093,10 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         digitalWrite(pinRelayVentil, relayOFF);
         digitalWrite(pinRelayPumpe, relayOFF);
         brewing = 0;
-        #if (SCALE_SENSOR_ENABLE)
-        scalePowerDown();
+        //#if (SCALE_SENSOR_ENABLE)
+        //scalePowerDown();
         //currentWeight = 0;
-        #endif
+        //#endif
       }
       //brewTimer = 0;
       brewState = 0;
@@ -1358,7 +1361,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           snprintf(debugLine, sizeof(debugLine), "Brew statistics: %0.2fg in %0.2fs with profile %u", currentWeight, brewTimer/1000.0, profile);
           mqttPublish((char*)"events", (char*)debugLine);
           bPID.SetSumOutputI(0);
-          lastBrewEnd = millis();  //used to detect time from brew until brewReady but also for "time+weight display show" timer
+          lastBrewEnd = millis();  //used to detect time from brew until brewReady
           timerBrewDetection = 0;
           activeState = 2; 
         }
@@ -1483,7 +1486,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
 
         /* STATE 1 (COLDSTART) DETECTION */
-        /*XXX1 READD
         if (Input <= *activeStartTemp - coldStartStep1ActivationOffset) {
           snprintf(debugLine, sizeof(debugLine), "** End of normal mode. Transition to state 1 (coldstart)");
           DEBUG_println(debugLine);
@@ -1495,7 +1497,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           activeState = 1;
           break;
         }
-        */
 
         /* STATE 4 (BREW) DETECTION */
         if (brewDetection == 1 || (brewDetectionSensitivity != 0 && brewDetection == 2)) {
@@ -1794,6 +1795,9 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       lastCheckGpio = millis();
       debugControlHardware(controlsConfig);
       debugWaterLevelSensor();
+      #if (SCALE_SENSOR_ENABLE)
+      scaleCalibration();
+      #endif
       displaymessage(0, (char*)"Calibrating", (char*)"check logs");
     }
     return;
@@ -1812,8 +1816,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       brew();
     }
 
-    // check if PID should run or not. If not, set to manuel and force output to
-    // zero
+    // check if PID should run or not. If not, set to manuel and force output to zero
     if (millis() > previousTimerPidCheck + 300) {
       previousTimerPidCheck = millis();
       if (pidON == 0 && pidMode == 1) {
@@ -1840,6 +1843,13 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         if (millis() > userActivity + heaterInactivityTimer) { actionController(SLEEPING, 1, true); }
       }
     }
+
+    // powerDown scale seconds after brew happened
+    #if (SCALE_SENSOR_ENABLE)
+    if (!brewing && (millis() > brewStatisticsTimer + brewStatisticsAdditionalWeightTime) ) {
+        scalePowerDown(); 
+    }
+    #endif
 
     // Sicherheitsabfrage
     if (!sensorMalfunction && !emergencyStop && Input > 0) {
@@ -2162,7 +2172,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     blynkSave((char*)"activeSetPoint");
     blynkSave((char*)"activePreinfusion");
     blynkSave((char*)"activePreinfusionPause");
-    blynkSave((char*)"activeBrewTimeEndDetection");  //XXX1 blynk todo
+    blynkSave((char*)"activeBrewTimeEndDetection");
     blynkSave((char*)"activeScaleSensorWeightSetPoint");
   }
 

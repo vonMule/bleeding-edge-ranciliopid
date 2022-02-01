@@ -933,7 +933,7 @@ void sleepingAction(int state) {
   sleeping = state;
   DEBUG_print("running sleepingAction(%d)\n", state);
   if (!state) {
-    lastBrewEnd = millis() - brewStatisticsTimer - 1;
+    lastBrewEnd = millis();
     // reset some special auto-tuning variables
     MaschineColdstartRunOnce = false;
     steadyPowerOffsetModified = steadyPowerOffset;

@@ -124,12 +124,24 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.0 beta_5:
+  - ALPHA!
+  - Fix: Readded coldstart which I have disabled for testing.
+  - Scale:
+    - After brew is finished weight is measured fore an additional 2 seconds (to include dripping in the total weight).
+    - Implemented manual calibration feature:
+      - Howto: 
+        - Set ENABLE_CALIBRATION_MODE=1, start machine without any weight on the scale, 
+          after around 20s put a known weight (SCALE_SENSOR_CALIBRATION_WEIGHT) on the scale.
+          The DEBUGLOG will print the calculated SCALE_SENSOR_CALIBRATION_FACTOR in the log.
+  - Userconfig.h Changes:
+    - Added SCALE_SENSOR_CALIBRATION_WEIGHT, SCALE_SENSOR_CALIBRATION_FACTOR
 - 3.2.0 beta_4:
   - ALPHA!
   - Fix: BREWTIME_END_DETECTIONX=0 did not automatically end the brew anymore.
   - Scale:
     - Blynk supported: V64 := activeBrewTimeEndDetection , V65 := activeScaleSensorWeightSetPoint
-    - Show brewStatistics on display for 8sec after brew finishes.
+    - Show brewStatistics on display for 12 sec after brew finishes.
     - Send brewStatistics to mqtt events: "Brew statistics: 35.55g in 11.05s with profile 1"
 - 3.2.0 beta_3:
   - ALPHA!
