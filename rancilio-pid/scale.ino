@@ -20,11 +20,11 @@ void scaleCalibration() {
       scalePowerUp();
       tareAsync();
     } else if (scaleTareSuccess) {
-      float newCalibrationValue = LoadCell.getNewCalibration2((float)SCALE_SENSOR_CALIBRATION_WEIGHT);
+      float newCalibrationValue = LoadCell.getNewCalibration((float)SCALE_SENSOR_CALIBRATION_WEIGHT);
       DEBUG_print("Scale is tared to zero: You can now put your weight of %0.2fg on the scale: currentWeight=%0.2f. Calculated SCALE_SENSOR_CALIBRATION_FACTOR=%0.2f\n", (float)SCALE_SENSOR_CALIBRATION_WEIGHT, currentWeight, newCalibrationValue);   
       if ((currentWeight > 10) && (newCalibrationValue > 50) && (abs(LoadCell.getCalFactor() - newCalibrationValue) >= 5)) { 
         DEBUG_print("Scale calibration setting saved.\n");
-        LoadCell.getNewCalibration((float)SCALE_SENSOR_CALIBRATION_WEIGHT);
+        LoadCell.setNewCalibration((float)SCALE_SENSOR_CALIBRATION_WEIGHT);
         //TODO: save to eeprom and create "auto-calibration" ACTION
       }
     }
