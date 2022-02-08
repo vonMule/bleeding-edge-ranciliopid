@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.1.0";
+const char* sysVersion PROGMEM = "3.1.1";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -1436,7 +1436,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
 
         /* STATE 1 (COLDSTART) DETECTION */
-        /*XXX1 READD
         if (Input <= *activeStartTemp - coldStartStep1ActivationOffset) {
           snprintf(debugLine, sizeof(debugLine), "** End of normal mode. Transition to state 1 (coldstart)");
           DEBUG_println(debugLine);
@@ -1448,7 +1447,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           activeState = 1;
           break;
         }
-        */
 
         /* STATE 4 (BREW) DETECTION */
         if (brewDetection == 1 || (brewDetectionSensitivity != 0 && brewDetection == 2)) {
