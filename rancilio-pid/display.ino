@@ -274,8 +274,8 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
       }
     } else if (activeState == 4 || showLastBrewStatistics) {  //brew
       totalBrewTime = ( (OnlyPID || BREWTIME_TIMER == 0 )? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
-      unsigned int align_right_left_value = LCDWidth - 56 - 5;  //XXX1
-      unsigned int align_right_right_value = LCDWidth - 56 + 28;  //XXX1
+      unsigned int align_right_left_value = LCDWidth - 56 - 5;
+      unsigned int align_right_right_value = LCDWidth - 56 + 28;
       u8g2.setFont(u8g2_font_profont22_tf);
       u8g2.setCursor(align_right_left_value, 3);
       if (brewTimer < 10000) u8g2.print("0");
@@ -283,8 +283,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
       u8g2.print(brewTimer / 1000);
 
       u8g2.setFont(u8g2_font_open_iconic_arrow_1x_t);
-      u8g2.drawGlyph(align_right_right_value - 8, 3 + 6, 0x04e); //0x047
-      //u8g2.print(" ");
+      u8g2.drawGlyph(align_right_right_value - 8, 3 + 6, 0x04e);
       u8g2.setFont(u8g2_font_profont22_tf);
       u8g2.setCursor(align_right_right_value, 3);
       u8g2.print(totalBrewTime / 1000);
@@ -301,8 +300,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.print(weight<0?0:weight, 0);
 
         u8g2.setFont(u8g2_font_open_iconic_arrow_1x_t);
-        u8g2.drawGlyph(align_right_right_value - 8, 20 + 6, 0x04e); //0x047
-        //u8g2.print(" ");
+        u8g2.drawGlyph(align_right_right_value - 8, 20 + 6, 0x04e);
         u8g2.setFont(u8g2_font_profont22_tf);
         u8g2.setCursor(align_right_right_value, 20);
         u8g2.print(*activeScaleSensorWeightSetPoint, 0);
@@ -313,7 +311,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
       //u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
       u8g2.setFont(u8g2_font_open_iconic_thing_1x_t);
       if (*activeBrewTimeEndDetection == 0) {
-        u8g2.drawGlyph(align_right_left_value - 11, 3 + 6, 0x04f); //0x047
+        u8g2.drawGlyph(align_right_left_value - 11, 3 + 6, 0x04f);
       } else {
         u8g2.drawGlyph(align_right_left_value - 11, 20 + 6, 0x04f);
       }

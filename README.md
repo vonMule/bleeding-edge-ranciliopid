@@ -124,6 +124,13 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.0 beta_7:
+  - BETA:
+  - Scale: 
+    - Fix detection when HX711 is not connected or doesnt work on tare. 
+    - Fix maximum additional seconds to brew() when weight not reached (per default we wait additional 10sec).
+    - Updated circuit-diagrams to add HX711.
+  - arduino IDE: Added library/HX711_ADC_fix which has to be manually copied to your arduino library path. (see wiki)
 - 3.2.0 beta_6:
   - ALPHA!
   - Scale: Fix missing getNewCalibration() 

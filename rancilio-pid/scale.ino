@@ -19,7 +19,7 @@ void scaleCalibration() {
     if (!scaleRunning) {
       scalePowerUp();
       tareAsync();
-    } else if (scaleTareSuccess) {
+    } else if (getTareAsyncStatus()) {
       float newCalibrationValue = LoadCell.getNewCalibration((float)SCALE_SENSOR_CALIBRATION_WEIGHT);
       DEBUG_print("Scale is tared to zero: You can now put your weight of %0.2fg on the scale: currentWeight=%0.2f. Calculated SCALE_SENSOR_CALIBRATION_FACTOR=%0.2f\n", (float)SCALE_SENSOR_CALIBRATION_WEIGHT, currentWeight, newCalibrationValue);   
       if ((currentWeight > 10) && (newCalibrationValue > 50) && (abs(LoadCell.getCalFactor() - newCalibrationValue) >= 5)) { 
@@ -93,7 +93,8 @@ void initScale() {
   for (int i=0; i<3;i++) {
     LoadCell.begin();
     LoadCell.start(stabilizingtime, _tare);
-    if (LoadCell.getTareTimeoutFlag()) {
+    //DEBUG_print("currentWeight: %0.2f (index=%d, getTareTimeoutFlag=%d, getSignalTimeoutFlag=%d)\n", currentWeight, LoadCell.getReadIndex(), LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag());
+    if (LoadCell.getTareTimeoutFlag() || LoadCell.getSignalTimeoutFlag()) {
       ERROR_print("HX711 cannot be initialized (#%u)\n", i);
     }
     else {

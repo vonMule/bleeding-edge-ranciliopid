@@ -4,7 +4,7 @@
   "name": "bleeding_edge-full_control",
   "content": "",
   "created_at": "2021-03-14 09:06:39",
-  "updated_at": "2021-09-04 16:38:44",
+  "updated_at": "2022-02-05 22:15:04",
   "stick": "",
   "documents": [
     {
@@ -12,7 +12,7 @@
       "title": "Sheet_1",
       "description": "",
       "docType": "1",
-      "master": "",
+      "master": "f398b0e8b64d551e02d618c2d47d3bec",
       "thumb": "/images/thumb-default.png",
       "components": {
         "e3b0794f376741f2aa27b624d0af17c7": 4,
@@ -29,7 +29,8 @@
         "5bec1d8463b94c119f6c2d3c826ae59c": 6,
         "c24ca9cee2ab44d69d0621215a97dc1f": 1,
         "b0248eb51e084227889f2cb84eab79c4": 1,
-        "834270b04df04adbaf8068590c1d41e8": 1
+        "834270b04df04adbaf8068590c1d41e8": 1,
+        "822526aca3aa42d9803440f03d90205b": 1
       },
       "BOM": [
         [
@@ -38,6 +39,20 @@
           "Package",
           "Components",
           "CustomPara"
+        ],
+        [
+          "Switch",
+          4,
+          "KEY-TH_4P-L12.0-W12.0-P5.00-LS13.4",
+          "BREW,POWER,STEAM,WATER",
+          {
+            "BOM_Supplier": "",
+            "BOM_Manufacturer": "rancilio",
+            "BOM_Manufacturer Part": "Rancilio Switch",
+            "BOM_Supplier Part": "C14121",
+            "puuid": "edd89808420c4d5095e6c8f9436f843a",
+            "uuid": "e3b0794f376741f2aa27b624d0af17c7"
+          }
         ],
         [
           "SSH1106_1.3",
@@ -51,14 +66,52 @@
           }
         ],
         [
+          "WROOM BREAKOUT BOARD",
+          1,
+          "",
+          "ESP32",
+          {
+            "BOM_Manufacturer": "",
+            "BOM_Manufacturer Part": "",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "puuid": "",
+            "uuid": "a718c1f9e6b441439cd8617f44e2f76d"
+          }
+        ],
+        [
+          "230V",
+          1,
+          "NONE",
+          "HEATER_LAMP",
+          {
+            "BOM_Manufacturer Part": "Light",
+            "puuid": "",
+            "uuid": "d9b1be5071bf4880bd0cf34d3760c55e"
+          }
+        ],
+        [
           "LED_3.3V",
           4,
           "LED-5MM",
-          "LED4,LED3,LED2,LED1",
+          "LED1,LED2,LED3,LED4",
           {
             "BOM_Manufacturer Part": "",
             "puuid": "8bfcf85a78c2410c8b725f485026a5e3",
             "uuid": "5bec1d8463b94c119f6c2d3c826ae59c"
+          }
+        ],
+        [
+          "230VAC",
+          1,
+          "NONE",
+          "OUTLET/PLUG",
+          {
+            "BOM_Manufacturer Part": "230VAC",
+            "BOM_Supplier Part": "undefined",
+            "BOM_Supplier": "sss",
+            "puuid": "",
+            "uuid": "a47f7d575269415ba58f20512b9e76c4"
           }
         ],
         [
@@ -84,6 +137,20 @@
           }
         ],
         [
+          "230VAC - 5VDC",
+          1,
+          "230VAC - 5VDC",
+          "POWER_SUPPLY",
+          {
+            "BOM_Manufacturer": "",
+            "BOM_Manufacturer Part": "",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "puuid": "145a0ea2bdb645249af2a8fa25750e47",
+            "uuid": "c431bebfe38c47068c68d2f4a35cd7c7"
+          }
+        ],
+        [
           "Water",
           1,
           "VIBE-MOTOR-10MM",
@@ -97,29 +164,40 @@
           }
         ],
         [
-          "t>140°C, NC",
+          "Heater",
           1,
-          "NONE",
-          "U6",
+          "0805",
+          "R1",
           {
-            "BOM_Manufacturer Part": "Thermostat",
             "BOM_Supplier Part": "",
-            "BOM_Supplier": "TME",
-            "puuid": "",
-            "uuid": "87ffa5f9cd14437e92c8dc3db8a24975"
+            "BOM_Supplier": "Automation Direct",
+            "BOM_Manufacturer Part": "",
+            "puuid": "0d14e6c62b14419a891d7c175b7eca4f",
+            "uuid": "67219f32bfa64b19b44b6006622213ed"
           }
         ],
         [
-          "t>160°C, NC",
+          "330Ohm",
           1,
-          "NONE",
-          "U11",
+          "R805",
+          "RESISTOR1",
           {
-            "BOM_Manufacturer Part": "Thermostat",
+            "BOM_Manufacturer Part": "",
+            "puuid": "a5beb97903aa495e9938059075f05138",
+            "uuid": "834270b04df04adbaf8068590c1d41e8"
+          }
+        ],
+        [
+          "1k",
+          1,
+          "R0603",
+          "RESISTOR_CIRCUIT_FOR_ADC",
+          {
             "BOM_Supplier Part": "",
-            "BOM_Supplier": "TME",
-            "puuid": "",
-            "uuid": "87ffa5f9cd14437e92c8dc3db8a24975"
+            "BOM_Supplier": "",
+            "BOM_Manufacturer Part": "",
+            "puuid": "1bf59dff03ec4233aa077dc7cf0e92a1",
+            "uuid": "b0248eb51e084227889f2cb84eab79c4"
           }
         ],
         [
@@ -137,16 +215,44 @@
           }
         ],
         [
-          "Heater",
+          "Solid State Relay",
           1,
-          "0805",
-          "R1",
+          "NONE",
+          "U1",
           {
-            "BOM_Supplier Part": "",
-            "BOM_Supplier": "Automation Direct",
+            "BOM_Manufacturer": "",
             "BOM_Manufacturer Part": "",
-            "puuid": "0d14e6c62b14419a891d7c175b7eca4f",
-            "uuid": "67219f32bfa64b19b44b6006622213ed"
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "puuid": "",
+            "uuid": "c24ca9cee2ab44d69d0621215a97dc1f"
+          }
+        ],
+        [
+          "HX711 Load Cell Amplifier HX711 Breakout",
+          1,
+          "HX711 LOAD CELL AMPLIFIER HX711 BREAKOUT",
+          "U2",
+          {
+            "BOM_Manufacturer": "",
+            "BOM_Manufacturer Part": "",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "",
+            "puuid": "c250ca502e84492e92551a811f5c04b4",
+            "uuid": "822526aca3aa42d9803440f03d90205b"
+          }
+        ],
+        [
+          "t>140°C, NC",
+          1,
+          "NONE",
+          "U6",
+          {
+            "BOM_Manufacturer Part": "Thermostat",
+            "BOM_Supplier Part": "",
+            "BOM_Supplier": "TME",
+            "puuid": "",
+            "uuid": "87ffa5f9cd14437e92c8dc3db8a24975"
           }
         ],
         [
@@ -164,120 +270,29 @@
           }
         ],
         [
-          "330Ohm",
-          1,
-          "R805",
-          "RESISTOR1",
-          {
-            "BOM_Manufacturer Part": "",
-            "puuid": "a5beb97903aa495e9938059075f05138",
-            "uuid": "834270b04df04adbaf8068590c1d41e8"
-          }
-        ],
-        [
-          "230VAC",
+          "t>160°C, NC",
           1,
           "NONE",
-          "OUTLET/PLUG",
+          "U11",
           {
-            "BOM_Manufacturer Part": "230VAC",
-            "BOM_Supplier Part": "undefined",
-            "BOM_Supplier": "sss",
-            "puuid": "",
-            "uuid": "a47f7d575269415ba58f20512b9e76c4"
-          }
-        ],
-        [
-          "WROOM BREAKOUT BOARD",
-          1,
-          "",
-          "ESP32",
-          {
-            "BOM_Manufacturer": "",
-            "BOM_Manufacturer Part": "",
+            "BOM_Manufacturer Part": "Thermostat",
             "BOM_Supplier Part": "",
-            "BOM_Supplier": "",
+            "BOM_Supplier": "TME",
             "puuid": "",
-            "uuid": "a718c1f9e6b441439cd8617f44e2f76d"
-          }
-        ],
-        [
-          "1k",
-          1,
-          "R0603",
-          "RESISTOR_CIRCUIT_FOR_ADC",
-          {
-            "BOM_Supplier Part": "",
-            "BOM_Supplier": "",
-            "BOM_Manufacturer Part": "",
-            "puuid": "1bf59dff03ec4233aa077dc7cf0e92a1",
-            "uuid": "b0248eb51e084227889f2cb84eab79c4"
-          }
-        ],
-        [
-          "Solid State Relay",
-          1,
-          "NONE",
-          "U1",
-          {
-            "BOM_Manufacturer": "",
-            "BOM_Manufacturer Part": "",
-            "BOM_Supplier Part": "",
-            "BOM_Supplier": "",
-            "puuid": "",
-            "uuid": "c24ca9cee2ab44d69d0621215a97dc1f"
-          }
-        ],
-        [
-          "230VAC - 5VDC",
-          1,
-          "230VAC - 5VDC",
-          "POWER_SUPPLY",
-          {
-            "BOM_Manufacturer": "",
-            "BOM_Manufacturer Part": "",
-            "BOM_Supplier Part": "",
-            "BOM_Supplier": "",
-            "puuid": "145a0ea2bdb645249af2a8fa25750e47",
-            "uuid": "c431bebfe38c47068c68d2f4a35cd7c7"
-          }
-        ],
-        [
-          "230V",
-          1,
-          "NONE",
-          "HEATER_LAMP",
-          {
-            "BOM_Manufacturer Part": "Light",
-            "puuid": "",
-            "uuid": "d9b1be5071bf4880bd0cf34d3760c55e"
-          }
-        ],
-        [
-          "Switch",
-          4,
-          "KEY-TH_4P-L12.0-W12.0-P5.00-LS13.4",
-          "BREW,WATER,STEAM,POWER",
-          {
-            "BOM_Supplier": "",
-            "BOM_Manufacturer": "rancilio",
-            "BOM_Manufacturer Part": "Rancilio Switch",
-            "BOM_Supplier Part": "C14121",
-            "puuid": "edd89808420c4d5095e6c8f9436f843a",
-            "uuid": "e3b0794f376741f2aa27b624d0af17c7"
+            "uuid": "87ffa5f9cd14437e92c8dc3db8a24975"
           }
         ]
       ],
-      "updateTime": 1630766324,
+      "updateTime": 1644095704,
       "createTime": 1615709199,
       "histories": [],
       "created_at": "2021-03-14 09:06:39",
-      "updated_at": "2021-09-04 16:38:44"
+      "updated_at": "2022-02-05 22:15:04"
     }
   ],
   "sort": [],
   "title": "bleeding_edge-full_control",
   "foldername": "bleeding_edge-full_control",
   "schfilename": "bleeding_edge-full_control.json",
-  "schfilemtime": 1630766324292
+  "schfilemtime": 1644095704155
 }

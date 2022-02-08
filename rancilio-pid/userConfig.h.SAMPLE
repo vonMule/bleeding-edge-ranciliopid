@@ -213,7 +213,7 @@
 /*******
  * Scale settings
  *******/
-#define SCALE_SENSOR_ENABLE                1      // 0=Off (default), 1=On  (only HX711 supported)
+#define SCALE_SENSOR_ENABLE                0      // 0=Off (default), 1=On  (only HX711 supported)
 #define SCALE_SENSOR_DATA_PIN              13     // HX711 Data Pin
 #define SCALE_SENSOR_CLK_PIN               12     // HX711 Clock Pin
 #define SCALE_SENSOR_CALIBRATION_WEIGHT    200.0  // any known weight which is used for calibration (in gramm)

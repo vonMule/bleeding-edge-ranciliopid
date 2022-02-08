@@ -17,7 +17,8 @@ Feature Requests:
   - Blynk support -> DONE (I wont add a new client config)
   - last brew statistics are shown on display (and send via MQTT) for a time -> DONE
   - ONLYPID=1 support -> HOW? need tare- ACTION/CONTROL !
-
+  - TODO wiki updaten + einkaufsliste
+  - Option to show last brew statistics on display line3 for up to 5min.
 
 
 # TODO Tests
