@@ -124,6 +124,17 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.0 beta_8:
+  - Setup guide in [Wiki](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Scale-Setup)
+  - [3D Scale Case made by Hoodie](https://www.thingiverse.com/thing:5226789) (Many thanks Hoodie!).
+  - Feature: Display shows detailed brew statistics in statusLine for a couple of seconds.
+  - Fix brew statistics to include dipping after brew ends.
+  - Feature: Initial support to automatic tuning of target-weight to adapt to dipping effects after brew ends.
+  - Feature: Added FlowRate calculations to better aim for target-weight. 
+  - On bootup show in display scale initialization errors.
+  - Fix maximum additional seconds to brew() to wait 10s and not 10ms.
+  - brew() is only called at most every 1ms.
+  - Changed scaleConfigOverwrite.h's SAMPLES from 1 to 4.
 - 3.2.0 beta_7:
   - BETA:
   - Scale: 

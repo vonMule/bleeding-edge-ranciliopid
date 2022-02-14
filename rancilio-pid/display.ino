@@ -65,7 +65,7 @@ char* outputSimpleState() {
 void setDisplayTextState(int activeState, char* displaymessagetext, char* displaymessagetext2) {
 #if (DISPLAY_TEXT_STATE == 1)
   if (menuPosition != 0) return;
-  if (strlen(displaymessagetext) > 0 || screenSaverOn || activeState == 4) { // dont show state in certain situations
+  if (strlen(displaymessagetext) > 0 || strlen(displaymessagetext2) > 0 || screenSaverOn || activeState == 4) { // dont show state in certain situations
     snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
     snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);
   } else {

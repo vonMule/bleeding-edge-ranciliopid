@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.0 beta 7";
+const char* sysVersion PROGMEM = "3.2.0 beta 8";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -230,6 +230,7 @@ int brewing = 0; // Attention: "brewing" must only be changed in brew()
                  // (ONLYPID=0) or brewingAction() (ONLYPID=1)!
 bool waitingForBrewSwitchOff = false;
 int brewState = 0;
+unsigned long lastBrewCheck = 0;
 unsigned long totalBrewTime = 0;
 unsigned long brewTimer = 0;
 unsigned long brewStartTime = 0;
@@ -275,8 +276,8 @@ unsigned int activeProfile = profile;  // profile set
 bool emergencyStop = false; // protect system when temperature is too high or sensor defect
 int pidON = 1; // 1 = control loop in closed loop
 int relayON, relayOFF; // used for relay trigger type. Do not change!
-char displayMessageLine1[21];
-char displayMessageLine2[21];
+char displayMessageLine1[21] = "\0";
+char displayMessageLine2[21] = "\0";
 unsigned long userActivity = 0;
 unsigned long userActivitySavedOnForcedSleeping = 0;
 unsigned long previousTimerRefreshTemp; // initialisation at the end of init()
@@ -318,7 +319,7 @@ unsigned long lastBrewReady = 0;
 unsigned long lastBrewEnd = 0; // used to determime the time it takes to reach brewReady==true
 unsigned long brewStatisticsTimer = 0;
 unsigned long brewStatisticsAdditionalWeightTime = 2000;  //how many ms after brew() ends to still measure weight
-unsigned int brewStatisticsAdditionalDisplayTime = 12000; //how many ms after brew() ends to show the brewStatistics 
+unsigned int brewStatisticsAdditionalDisplayTime = 12000; //how many ms after brew() ends to show the brewStatistics
 unsigned int powerOffTimer = 0;
 bool brewReady = false;
 unsigned long eepromSaveTimer = 28 * 60 * 1000UL; // save every 28min
@@ -384,6 +385,11 @@ float scaleSensorWeightSetPoint1 = SCALE_SENSOR_WEIGHT_SETPOINT1;
 float scaleSensorWeightSetPoint2 = SCALE_SENSOR_WEIGHT_SETPOINT2;
 float scaleSensorWeightSetPoint3 = SCALE_SENSOR_WEIGHT_SETPOINT3;
 float* activeScaleSensorWeightSetPoint = &scaleSensorWeightSetPoint1;
+const int brewtimeMaxAdditionalTimeWhenWeightNotReached = 10; //in sec 
+float scaleSensorWeightOffset = SCALE_SENSOR_WEIGHT_OFFSET;  //automatic determined weight (gram) of dipping after brew has mechanically stopped
+float scaleSensorWeightOffsetAtStop = 0;
+unsigned long previousTimerScaleStatistics = 0;
+unsigned long scaleSensorCheckTimer = 10000;
 
 /********************************************************
  * CONTROLS
@@ -1010,10 +1016,9 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
    * PreInfusion, Brew , if not Only PID
    ******************************************************/
   void brew() {
-    if (OnlyPID) { return; }
-    unsigned long aktuelleZeit = millis();
+    if (OnlyPID || (millis() < lastBrewCheck + 1) ) { return; }
+    lastBrewCheck = millis();
     if (simulatedBrewSwitch && (brewing == 1 || waitingForBrewSwitchOff == false)) {
-      const int brewtime_max_additional_time_when_weight_not_reached = 10; //in sec 
 
       if (brewing == 0) {
         brewing = 1; // Attention: For OnlyPID==0 brewing must only be changed in this function! Not externally.
@@ -1021,25 +1026,29 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         DEBUG_print("%lu HX711: Powerup\n", millis());
         scalePowerUp();
         DEBUG_print("%lu HX711: tareAsync\n", millis());
-        tareAsync();
+        tareAsync();  //XXX1 tare is set to 0 but after 2 loops we have an weight offset of around 0.05g (due to timing issues or vibrations-> try using the 2nd read for determine tareOffset?)
         #endif
-        brewStartTime = aktuelleZeit;
-        waitingForBrewSwitchOff = true; 
-        
+        brewStartTime = millis();
         totalBrewTime = ( BREWTIME_TIMER == 1 ? *activePreinfusion + *activePreinfusionPause + *activeBrewTime : *activeBrewTime ) * 1000;
+        flowRateEndTime = millis() + totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000);
+        waitingForBrewSwitchOff = true; 
+        scaleSensorWeightOffsetAtStop = 0;
       }
-
-      brewTimer = aktuelleZeit - brewStartTime;
+      brewTimer = millis() - brewStartTime;
       
-      if (aktuelleZeit >= lastBrewMessage + 1000) {
+      if (millis() >= lastBrewMessage + 1000) { //XXX1 set back to 1000
         brewStatisticsTimer = millis();  //refresh timer
-        lastBrewMessage = aktuelleZeit;
-        DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg) to=%d,%d,%d\n", (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), getTareAsyncStatus());
+        lastBrewMessage = millis();
+        DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.3fg/%0.2fg) (flowRateTimer=%lums flowRate=%0.2fg/s) to=%d,%d,%d\n", 
+          (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
+          (flowRateEndTime - millis()), flowRate,
+          LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), getTareAsyncStatus());
       }
 
       if (
-        (brewTimer <= ((*activeBrewTimeEndDetection == 0 || !getTareAsyncStatus() ) ? totalBrewTime : (totalBrewTime + brewtime_max_additional_time_when_weight_not_reached)) ) && 
-        ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (currentWeight <= *activeScaleSensorWeightSetPoint) : true)
+        (brewTimer <= ((*activeBrewTimeEndDetection == 0 || !getTareAsyncStatus() ) ? totalBrewTime : (totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000))) ) && 
+        ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (currentWeight + scaleSensorWeightOffset < *activeScaleSensorWeightSetPoint) : true) 
+        && ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (millis() <= flowRateEndTime) : true)
       ) {
         if (*activePreinfusion > 0 && brewTimer <= *activePreinfusion * 1000) {
           if (brewState != 1) {
@@ -1069,6 +1078,12 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         brewing = 0;
         digitalWrite(pinRelayVentil, relayOFF);
         digitalWrite(pinRelayPumpe, relayOFF);
+        DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg) (flowRateTimer=%ldms) to=%d,%d,%d END**\n", 
+          (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
+          flowRateEndTime - millis(),
+          LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), getTareAsyncStatus()); //XXX1 remove
+        flowRateEndTime = millis();  //dont restart brew due to weight flapping
+        scaleSensorWeightOffsetAtStop = currentWeight ;
       }
     } else if (simulatedBrewSwitch && !brewing) { // corner-case: switch=On but brewing==0
       waitingForBrewSwitchOff = true; // just to be sure
@@ -1342,9 +1357,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(true); // dont change mode during cleaning
           mqttPublish((char*)"brewDetected", (char*)"0");
-          snprintf(debugLine, sizeof(debugLine), "Brew statistics: %0.2fg in %0.2fs with profile %u", currentWeight, brewTimer/1000.0, profile);
-          DEBUG_println(debugLine);
-          mqttPublish((char*)"events", (char*)debugLine);
           bPID.SetSumOutputI(0);
           lastBrewEnd = millis();  //used to detect time from brew until brewReady
           timerBrewDetection = 0;
@@ -1829,10 +1841,28 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       }
     }
 
-    // powerDown scale seconds after brew happened
+    // powerDown scale + automatic calculation of scaleSensorWeightOffset + output brew statistics x seconds after brew happened
     #if (SCALE_SENSOR_ENABLE)
     if (!brewing && (millis() > brewStatisticsTimer + brewStatisticsAdditionalWeightTime) ) {
-        scalePowerDown(); 
+        if (scaleRunning) {
+          if (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus() && (brewTimer <= (totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000))) ) {
+            float weightOffset = *activeScaleSensorWeightSetPoint - currentWeight;
+            float scaleSensorWeightOffsetMax = 3;
+            float scaleSensorWeightOffsetMin = 0.05;
+            DEBUG_print("* Auto-tune scaleSensorWeightOffset=%0.2f (+/- %0.2f)\n", scaleSensorWeightOffset, weightOffset);  //XXX1 remove
+            if (abs(weightOffset) >= 0.05 && abs(weightOffset) <= scaleSensorWeightOffsetMax) {
+              scaleSensorWeightOffset -= weightOffset;
+              DEBUG_print("Auto-tune scaleSensorWeightOffset=%0.2f (+/- %0.2f)\n", scaleSensorWeightOffset, weightOffset);
+              if (scaleSensorWeightOffset >= scaleSensorWeightOffsetMax) scaleSensorWeightOffset = scaleSensorWeightOffsetMax;
+              else if (scaleSensorWeightOffset <= scaleSensorWeightOffsetMin) scaleSensorWeightOffset = scaleSensorWeightOffsetMin;
+              eepromForceSync = millis();
+            }
+          }
+          snprintf(debugLine, sizeof(debugLine), "Brew statistics: %0.2fg in %0.2fs with profile %u", currentWeight, brewTimer/1000.0, profile);
+          DEBUG_println(debugLine);
+          mqttPublish((char*)"events", (char*)debugLine);
+          scalePowerDown(); 
+        }
     }
     #endif
 
@@ -2035,19 +2065,39 @@ network-issues with your other WiFi-devices on your WiFi-network. */
    * WATER LEVEL SENSOR & MAINTENANCE
    ***********************************/
   void maintenance() {
+    static int maintenanceOperation = 0;  // which maintenance operation is currently processed? the others shall not run
 #if (WATER_LEVEL_SENSOR_ENABLE)
-    if (millis() >= previousTimerWaterLevelCheck + waterSensorCheckTimer) {
+    if ((maintenanceOperation == 0 || maintenanceOperation == 1) && (millis() >= previousTimerWaterLevelCheck + waterSensorCheckTimer)) {
       previousTimerWaterLevelCheck = millis();
-      unsigned int water_level_measured = waterSensor.readRangeContinuousMillimeters();
+      unsigned int waterLevelMeasured = waterSensor.readRangeContinuousMillimeters();
       if (waterSensor.timeoutOccurred()) {
         ERROR_println("Water level sensor: TIMEOUT");
         snprintf(displayMessageLine1, sizeof(displayMessageLine1), "Water sensor defect");
-      } else if (water_level_measured >= WATER_LEVEL_SENSOR_LOW_THRESHOLD) {
-        DEBUG_print("Water level is low: %u mm (low_threshold: %u)\n", water_level_measured, WATER_LEVEL_SENSOR_LOW_THRESHOLD);
+        maintenanceOperation = 1;
+      } else if (waterLevelMeasured >= WATER_LEVEL_SENSOR_LOW_THRESHOLD) {
+        DEBUG_print("Water level is low: %u mm (low_threshold: %u)\n", waterLevelMeasured, WATER_LEVEL_SENSOR_LOW_THRESHOLD);
         snprintf(displayMessageLine1, sizeof(displayMessageLine1), "Water is low!");
-      } else {
+        maintenanceOperation = 1;
+      } else if (maintenanceOperation == 1) {
         displayMessageLine1[0] = '\0';
+        maintenanceOperation = 0;
       }
+    }
+#endif
+#if (SCALE_SENSOR_ENABLE)
+    if ((maintenanceOperation == 0 || maintenanceOperation == 2) && (millis() >= previousTimerScaleStatistics + scaleSensorCheckTimer)) {
+      previousTimerScaleStatistics = millis();
+      if ( (brewTimer > 0) && (currentWeight != 0) && 
+          (millis() >= brewStatisticsTimer + brewStatisticsAdditionalWeightTime) &&
+          (millis() <= brewStatisticsTimer + brewStatisticsAdditionalDisplayTime * 2) ) {
+            maintenanceOperation = 2;
+            snprintf(displayMessageLine1, sizeof(displayMessageLine1), "%0.2fg in %0.2fs", currentWeight, brewTimer/1000.0);
+            snprintf(displayMessageLine2, sizeof(displayMessageLine2), "%0.2fg/s", 1000*currentWeight/brewTimer);
+      } else if (maintenanceOperation == 2) {
+        displayMessageLine1[0] = '\0';
+        displayMessageLine2[0] = '\0';
+        maintenanceOperation = 0;
+      } 
     }
 #endif
   }
@@ -2055,11 +2105,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   void debugWaterLevelSensor() {
 #if (WATER_LEVEL_SENSOR_ENABLE)
     unsigned long start = millis();
-    unsigned int water_level_measured = waterSensor.readRangeContinuousMillimeters();
+    unsigned int waterLevelMeasured = waterSensor.readRangeContinuousMillimeters();
     if (waterSensor.timeoutOccurred()) {
       ERROR_println("WATER_LEVEL_SENSOR: TIMEOUT");
     } else
-      DEBUG_print("WATER_LEVEL_SENSOR: %u mm (low_threshold: %u) (took: %lu ms)\n", water_level_measured, WATER_LEVEL_SENSOR_LOW_THRESHOLD, millis() - start);
+      DEBUG_print("WATER_LEVEL_SENSOR: %u mm (low_threshold: %u) (took: %lu ms)\n", waterLevelMeasured, WATER_LEVEL_SENSOR_LOW_THRESHOLD, millis() - start);
 #endif
   }
 
@@ -2296,7 +2346,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           blynkDisabledTemporary = true;
           lastWifiConnectionAttempt = millis();
         }
-        displaymessage(0, (char*)"Cant connect to Wifi", (char*)"");
+        displaymessage(0, (char*)"Cannot connect to Wifi", (char*)"");
         delay(1000);
       } else {
         DEBUG_print("IP address: %s\n", WiFi.localIP().toString().c_str());
@@ -2319,7 +2369,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         if (!mqttReconnect(true)) {
           if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
           ERROR_print("Cannot connect to MQTT. Disabling...\n");
-          // displaymessage(0, "Cannt connect to MQTT", "");
+          // displaymessage(0, "Cannot connect to MQTT", "");
           // delay(1000);
         } else {
           const bool useRetainedSettingsFromMQTT = true;
@@ -2350,7 +2400,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       } else {
         if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
         ERROR_print("Cannot create MQTT service. Disabling...\n");
-        // displaymessage(0, "Cannt create MQTT service", "");
+        // displaymessage(0, "Cannot create MQTT service", "");
         // delay(1000);
       }
 #endif

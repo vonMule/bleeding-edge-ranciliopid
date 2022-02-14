@@ -87,6 +87,7 @@ if (force_read && (current_version == expectedEepromVersion)) {
     scaleSensorWeightSetPoint1 = preferences.getDouble("scalWeight1", 35.0);
     scaleSensorWeightSetPoint2 = preferences.getDouble("scalWeight2", 35.0);
     scaleSensorWeightSetPoint3 = preferences.getDouble("scalWeight3", 35.0);
+    scaleSensorWeightOffset = preferences.getDouble("scalWeightOf", 1.1);
 }
 
 // if blynk vars are not read previously, get latest values from EEPROM
@@ -128,6 +129,7 @@ unsigned int brewtimeEndDetection3_sav = 0;
 float scaleSensorWeightSetPoint1_sav = 0;
 float scaleSensorWeightSetPoint2_sav = 0;
 float scaleSensorWeightSetPoint3_sav = 0;
+float scaleSensorWeightOffset_sav = 0;
 
 if (current_version == expectedEepromVersion) {
     profile_sav = preferences.getUInt("profile", 1);
@@ -168,6 +170,7 @@ if (current_version == expectedEepromVersion) {
     scaleSensorWeightSetPoint1_sav = preferences.getDouble("scalWeight1", 35.0);
     scaleSensorWeightSetPoint2_sav = preferences.getDouble("scalWeight2", 35.0);
     scaleSensorWeightSetPoint3_sav = preferences.getDouble("scalWeight3", 35.0);
+    scaleSensorWeightOffset_sav = preferences.getDouble("scalWeightOf", 1.1);
 }
 
 // get saved userConfig.h values
@@ -208,6 +211,7 @@ unsigned int brewtimeEndDetection3_cfg = 0;
 float scaleSensorWeightSetPoint1_cfg = 0;
 float scaleSensorWeightSetPoint2_cfg = 0;
 float scaleSensorWeightSetPoint3_cfg = 0;
+float scaleSensorWeightOffset_cfg = 0;
 
 //profile_cfg = preferences.getUInt("profile_cfg", 0.0);
 aggKp_cfg = preferences.getDouble("aggKp_cfg", 0.0);
@@ -243,6 +247,7 @@ brewtimeEndDetection3_cfg = preferences.getUInt("bEDetect3_cfg", 0);
 scaleSensorWeightSetPoint1_cfg = preferences.getDouble("scalWeight1_cfg", 35.0);
 scaleSensorWeightSetPoint2_cfg = preferences.getDouble("scalWeight2_cfg", 35.0);
 scaleSensorWeightSetPoint3_cfg = preferences.getDouble("scalWeight3_cfg", 35.0);
+scaleSensorWeightOffset_cfg = preferences.getDouble("scalWeightOf", 1.1);
 // clCycles_cfg = preferences.getInt("clCycles_cfg");
 // clInt_cfg = preferences.getInt("clInt_cfg");
 // clPause_cfg = preferences.getInt("clPause_cfg");
@@ -397,6 +402,11 @@ if (!almostEqual(SCALE_SENSOR_WEIGHT_SETPOINT3, scaleSensorWeightSetPoint3_cfg))
     preferences.putDouble("scalWeight3_cfg", scaleSensorWeightSetPoint3);
     DEBUG_print("EEPROM: scaleSensorWeightSetPoint3 (%0.2f) is read from userConfig.h\n", scaleSensorWeightSetPoint3);
 }
+if (!almostEqual(SCALE_SENSOR_WEIGHT_OFFSET, scaleSensorWeightOffset_cfg)) {
+    scaleSensorWeightOffset = SCALE_SENSOR_WEIGHT_OFFSET;
+    preferences.putDouble("scalWeightOf", scaleSensorWeightOffset);
+    DEBUG_print("EEPROM: scaleSensorWeightOffset (%0.2f) is read from userConfig.h\n", scaleSensorWeightOffset);
+}
 
 // if (!almostEqual(CLEANING_CYCLES, clCycles_cfg)) { cleaningCycles = CLEANING_CYCLES;
 // preferences.putInt("clCycles_cfg", cleaningCycles); } if
@@ -543,6 +553,10 @@ if (!almostEqual(scaleSensorWeightSetPoint2, scaleSensorWeightSetPoint2_sav)) {
 if (!almostEqual(scaleSensorWeightSetPoint3, scaleSensorWeightSetPoint3_sav)) {
     preferences.putDouble("scalWeight3", scaleSensorWeightSetPoint3);
     DEBUG_print("EEPROM: scaleSensorWeightSetPoint3 (%0.2f) is saved\n", scaleSensorWeightSetPoint3);
+}
+if (!almostEqual(scaleSensorWeightOffset, scaleSensorWeightOffset_sav)) {
+    preferences.putDouble("scalWeightOf", scaleSensorWeightOffset);
+    DEBUG_print("EEPROM: scaleSensorWeightOffset (%0.2f) is saved\n", scaleSensorWeightOffset);
 }
 // if (!almostEqual( cleaningCycles, clCycles_sav)) { preferences.putInt("clCycles",
 // cleaningCycles); Blynk.virtualWrite(V61, cleaningCycles); } if (

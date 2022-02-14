@@ -1,3 +1,7 @@
+/********************************************************
+ * Perfect Coffee PID
+ * https://github.com/medlor/bleeding-edge-ranciliopid
+ *****************************************************/
 #include "scale.h"
 
 bool getTareAsyncStatus() {
@@ -35,6 +39,8 @@ void tareAsync() {
   LoadCell.tareNoDelay();
   scaleTareSuccess = false;
   currentWeight = 0;  //reset to 0 when waiting for tare()
+  flowRate = 0.0;
+  flowRateEndTime = millis() + 30000;
 }
 
 void scalePowerDown() {
@@ -52,15 +58,48 @@ void scalePowerUp() {
 void updateWeight() {
   if (!scaleRunning) return;
   //check if tareAsync() has triggered a tare() and read status of tare()
+  //scaleTareSuccess = true; //XXX3 remove
   if (!scaleTareSuccess && LoadCell.getTareStatus()) {
         scaleTareSuccess = true;
+        flowRateSampleTime = millis() - 100;
   }
 
   // get (smoothed) value from the dataset
   if (LoadCell.updateAsync()) {
     //only getData() when tare has completed
-    if (scaleTareSuccess) currentWeight = LoadCell.getData();
-    //DEBUG_print("* currentWeight: %0.2f (index=%d, SamplesInUse=%d, getSignalTimeoutFlag=%d)\n", currentWeight, LoadCell.getReadIndex(), LoadCell.getSamplesInUse(), LoadCell.getSignalTimeoutFlag());
+    if (scaleTareSuccess) {
+
+      float previousWeight = currentWeight;
+      currentWeight = LoadCell.getData();
+      float diffWeight = currentWeight - previousWeight;
+      float remainingWeight = *activeScaleSensorWeightSetPoint - scaleSensorWeightOffset - currentWeight ;
+
+      unsigned long prevFlowRateSampleTime = flowRateSampleTime;
+      flowRateSampleTime = millis();
+      unsigned long diffFlowRateSampleTime = flowRateSampleTime - prevFlowRateSampleTime;
+      if (diffFlowRateSampleTime > 110 || diffFlowRateSampleTime <= 11) {  //regular refresh on 10SPS every 90ms
+        ERROR_print("flowRateSampleTime anomaly: %lums\n", diffFlowRateSampleTime);
+        return;  //ignore sample //XXX3 readd
+      }
+      //diffFlowRateSampleTime = 100.0; //XXX3 remove
+
+      float currentFlowRate = ( diffWeight * 1000.0 / diffFlowRateSampleTime) ;  //inaccuracy up tp 0.15g/s
+      flowRate = (flowRate * (1-flowRateFactor) ) + (currentFlowRate * flowRateFactor); // smoothed gram/s
+      if (flowRate <= 0.1) flowRate = 0.1;  //just be sure to never have negative flowRate
+      
+      if (abs(flowRate) <= 0.1) {
+        //DEBUG_print("flowRate low: %0.2fg/s\n", flowRate);
+        flowRateEndTime = millis() + 30000;  //during pre-infusion or after brew() we need special handling
+      } else if (remainingWeight > 0) {
+        int offsetTime = 0;
+        flowRateEndTime = millis() + (unsigned long)((remainingWeight / flowRate) * 1000) - offsetTime; //in how many ms is the weight reached
+      } else {
+        flowRateEndTime = millis();  //weight already reached
+      }
+
+      //DEBUG_print("updateWeight(%lums): weight=%0.3fg/Diff=%0.2fg/Offset=%0.2f currentFlowRate=%0.2fg/s flowRate=%0.2fg/s flowRateEndTime=%lums\n", 
+      //  diffFlowRateSampleTime, currentWeight, diffWeight, scaleSensorWeightOffset, currentFlowRate, flowRate, (flowRateEndTime - millis()));
+    }
   }
 
   unsigned long currentMillisScale = millis();
@@ -96,6 +135,7 @@ void initScale() {
     //DEBUG_print("currentWeight: %0.2f (index=%d, getTareTimeoutFlag=%d, getSignalTimeoutFlag=%d)\n", currentWeight, LoadCell.getReadIndex(), LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag());
     if (LoadCell.getTareTimeoutFlag() || LoadCell.getSignalTimeoutFlag()) {
       ERROR_print("HX711 cannot be initialized (#%u)\n", i);
+      displaymessage(0, (char*)"Scale sensor defect", (char*)"");
     }
     else {
       DEBUG_print("HX711 initialized (#%u)\n", i);
@@ -109,7 +149,7 @@ void initScale() {
       break;
     }
     delay(200);
-  }  
+  }
 }
 
 void IRAM_ATTR dataReadyISR(void * arg) {

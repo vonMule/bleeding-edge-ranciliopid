@@ -26,6 +26,9 @@
 #error ERROR BREWTIME_END_DETECTION3=1 is only supported when SCALE_SENSOR_ENABLE=1.
 #endif
 #endif
+#ifndef SCALE_SENSOR_WEIGHT_OFFSET
+#define SCALE_SENSOR_WEIGHT_OFFSET 1.0
+#endif
 
 #if (ENABLE_CALIBRATION_MODE == 1)
 #define DEBUGMODE
