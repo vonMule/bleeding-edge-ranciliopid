@@ -20,8 +20,6 @@ float flowRate = 0.0;       // gram/second
 float flowRateFactor = 0.5;  //moving average factor
 unsigned long flowRateSampleTime = 0;
 unsigned long flowRateEndTime = 0;
-const unsigned long intervalWeightMessage = 10000;
-unsigned long previousMillisScale;
 
 void initScale();
 void tareAsync();

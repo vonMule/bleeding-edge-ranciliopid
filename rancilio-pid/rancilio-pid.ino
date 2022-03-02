@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.0 beta 8";
+const char* sysVersion PROGMEM = "3.2.0 beta 9";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -386,10 +386,13 @@ float scaleSensorWeightSetPoint2 = SCALE_SENSOR_WEIGHT_SETPOINT2;
 float scaleSensorWeightSetPoint3 = SCALE_SENSOR_WEIGHT_SETPOINT3;
 float* activeScaleSensorWeightSetPoint = &scaleSensorWeightSetPoint1;
 const int brewtimeMaxAdditionalTimeWhenWeightNotReached = 10; //in sec 
-float scaleSensorWeightOffset = SCALE_SENSOR_WEIGHT_OFFSET;  //automatic determined weight (gram) of dipping after brew has mechanically stopped
+float scaleSensorWeightOffset = 1.5;  //automatic determined weight (gram) of dipping after brew has mechanically stopped
+float scaleSensorWeightOffsetFactor = 0.3;
+float scaleSensorWeightOffsetMax = 3;
+float scaleSensorWeightOffsetMin = 0.05;
 float scaleSensorWeightOffsetAtStop = 0;
 unsigned long previousTimerScaleStatistics = 0;
-unsigned long scaleSensorCheckTimer = 10000;
+unsigned long scaleSensorCheckTimer = 2000;
 
 /********************************************************
  * CONTROLS
@@ -814,7 +817,7 @@ float temperature_simulate_steam() {
   // if ( now <= 20000 ) return 102;
   // if ( now <= 26000 ) return 99;
   // if ( now <= 33000 ) return 96;
-  // if (now <= 45000) return setPoint;  //TOBIAS remove
+  // if (now <= 45000) return setPoint;
   if (now <= 20000) return 114;
   if (now <= 26000) return 117;
   if (now <= 29000) return 120;
@@ -1023,10 +1026,11 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       if (brewing == 0) {
         brewing = 1; // Attention: For OnlyPID==0 brewing must only be changed in this function! Not externally.
         #if (SCALE_SENSOR_ENABLE)
-        DEBUG_print("%lu HX711: Powerup\n", millis());
+        DEBUG_print("HX711: Powerup\n");
         scalePowerUp();
-        DEBUG_print("%lu HX711: tareAsync\n", millis());
-        tareAsync();  //XXX1 tare is set to 0 but after 2 loops we have an weight offset of around 0.05g (due to timing issues or vibrations-> try using the 2nd read for determine tareOffset?)
+        //TODO tare is set to 0 but after 2 loops we have an weight offset of around 0.05g 
+        //(looks like a minor bug in the hx771 lib when SAMPLES are low)
+        tareAsync();
         #endif
         brewStartTime = millis();
         totalBrewTime = ( BREWTIME_TIMER == 1 ? *activePreinfusion + *activePreinfusionPause + *activeBrewTime : *activeBrewTime ) * 1000;
@@ -1036,18 +1040,17 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       }
       brewTimer = millis() - brewStartTime;
       
-      if (millis() >= lastBrewMessage + 1000) { //XXX1 set back to 1000
+      if (millis() >= lastBrewMessage + 1000) {
         brewStatisticsTimer = millis();  //refresh timer
         lastBrewMessage = millis();
-        DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.3fg/%0.2fg) (flowRateTimer=%lums flowRate=%0.2fg/s) to=%d,%d,%d\n", 
+        DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.3fg/%0.2fg) (flowRateTimer=%ldms flowRate=%0.2fg/s)\n", 
           (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
-          (flowRateEndTime - millis()), flowRate,
-          LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), getTareAsyncStatus());
+          (flowRateEndTime - millis()), flowRate);
       }
 
       if (
         (brewTimer <= ((*activeBrewTimeEndDetection == 0 || !getTareAsyncStatus() ) ? totalBrewTime : (totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000))) ) && 
-        ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (currentWeight + scaleSensorWeightOffset < *activeScaleSensorWeightSetPoint) : true) 
+        ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (currentWeight + scaleSensorWeightOffset < *activeScaleSensorWeightSetPoint) : true)
         && ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (millis() <= flowRateEndTime) : true)
       ) {
         if (*activePreinfusion > 0 && brewTimer <= *activePreinfusion * 1000) {
@@ -1078,10 +1081,9 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         brewing = 0;
         digitalWrite(pinRelayVentil, relayOFF);
         digitalWrite(pinRelayPumpe, relayOFF);
-        DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.2fg/%0.2fg) (flowRateTimer=%ldms) to=%d,%d,%d END**\n", 
+        DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.3fg/%0.2fg) (flowRateTimer=%ldms flowRate=%0.2fg/s)\n", 
           (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
-          flowRateEndTime - millis(),
-          LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag(), getTareAsyncStatus()); //XXX1 remove
+          (flowRateEndTime - millis()), flowRate);
         flowRateEndTime = millis();  //dont restart brew due to weight flapping
         scaleSensorWeightOffsetAtStop = currentWeight ;
       }
@@ -1844,21 +1846,23 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     // powerDown scale + automatic calculation of scaleSensorWeightOffset + output brew statistics x seconds after brew happened
     #if (SCALE_SENSOR_ENABLE)
     if (!brewing && (millis() > brewStatisticsTimer + brewStatisticsAdditionalWeightTime) ) {
-        if (scaleRunning) {
+        if (scaleRunning && (*activeBrewTimeEndDetection == 1) && scaleSensorWeightOffsetAtStop != 0) {
           if (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus() && (brewTimer <= (totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000))) ) {
-            float weightOffset = *activeScaleSensorWeightSetPoint - currentWeight;
-            float scaleSensorWeightOffsetMax = 3;
-            float scaleSensorWeightOffsetMin = 0.05;
-            DEBUG_print("* Auto-tune scaleSensorWeightOffset=%0.2f (+/- %0.2f)\n", scaleSensorWeightOffset, weightOffset);  //XXX1 remove
-            if (abs(weightOffset) >= 0.05 && abs(weightOffset) <= scaleSensorWeightOffsetMax) {
-              scaleSensorWeightOffset -= weightOffset;
-              DEBUG_print("Auto-tune scaleSensorWeightOffset=%0.2f (+/- %0.2f)\n", scaleSensorWeightOffset, weightOffset);
+            float scaleSensorWeightOffsetCurrent = (*activeScaleSensorWeightSetPoint - currentWeight) * -1;
+            float scaleSensorWeightOffsetCurrentRelative = (*activeScaleSensorWeightSetPoint - currentWeight - scaleSensorWeightOffset) * -1;
+
+            if (abs(scaleSensorWeightOffsetCurrent) >= 0.05 && abs(scaleSensorWeightOffsetCurrent) <= scaleSensorWeightOffsetMax) {
+              float scaleSensorWeightOffsetPrev = scaleSensorWeightOffset;
+              scaleSensorWeightOffset = (scaleSensorWeightOffsetPrev * (1-scaleSensorWeightOffsetFactor)) + scaleSensorWeightOffsetCurrentRelative * scaleSensorWeightOffsetFactor;
+
               if (scaleSensorWeightOffset >= scaleSensorWeightOffsetMax) scaleSensorWeightOffset = scaleSensorWeightOffsetMax;
               else if (scaleSensorWeightOffset <= scaleSensorWeightOffsetMin) scaleSensorWeightOffset = scaleSensorWeightOffsetMin;
+
+              DEBUG_print("Auto-tune scaleSensorWeightOffset=%0.2fg (OffsetPrev=%0.2fg diff=%0.2fg)\n", scaleSensorWeightOffset, scaleSensorWeightOffsetPrev, scaleSensorWeightOffsetCurrentRelative);
               eepromForceSync = millis();
             }
           }
-          snprintf(debugLine, sizeof(debugLine), "Brew statistics: %0.2fg in %0.2fs with profile %u", currentWeight, brewTimer/1000.0, profile);
+          snprintf(debugLine, sizeof(debugLine), "Brew statistics: %0.2fg in %0.2fs (%0.2fg/s) with profile %u", currentWeight, brewTimer/1000.0, 1000*currentWeight/brewTimer, profile);
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", (char*)debugLine);
           scalePowerDown(); 
@@ -2085,7 +2089,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     }
 #endif
 #if (SCALE_SENSOR_ENABLE)
-    if ((maintenanceOperation == 0 || maintenanceOperation == 2) && (millis() >= previousTimerScaleStatistics + scaleSensorCheckTimer)) {
+    if ((maintenanceOperation == 0 || maintenanceOperation == 2) && 
+       (millis() >= previousTimerScaleStatistics + scaleSensorCheckTimer) && 
+       (millis() >= brewStatisticsTimer + brewStatisticsAdditionalWeightTime) &&
+       (millis() <= brewStatisticsTimer + brewStatisticsAdditionalDisplayTime * (2+2))
+    ) {
       previousTimerScaleStatistics = millis();
       if ( (brewTimer > 0) && (currentWeight != 0) && 
           (millis() >= brewStatisticsTimer + brewStatisticsAdditionalWeightTime) &&
@@ -2309,13 +2317,14 @@ network-issues with your other WiFi-devices on your WiFi-network. */
 
     controlsConfig = parseControlsConfig();
     configureControlsHardware(controlsConfig);
+    checkControls(controlsConfig);  // to get switch states at startup
 
     menuConfig = parseMenuConfig();
-
+    
     // if simulatedBrewSwitch is already "on" on startup, then we brew should
     // not start automatically
     if (simulatedBrewSwitch) {
-      ERROR_print("brewswitch is already on. Dont brew until it is turned off.\n");
+      ERROR_print("Brewswitch is already turned on after poweron. Dont brew until it is turned off.\n");
       waitingForBrewSwitchOff = true;
     }
 

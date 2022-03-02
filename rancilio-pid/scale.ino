@@ -58,7 +58,6 @@ void scalePowerUp() {
 void updateWeight() {
   if (!scaleRunning) return;
   //check if tareAsync() has triggered a tare() and read status of tare()
-  //scaleTareSuccess = true; //XXX3 remove
   if (!scaleTareSuccess && LoadCell.getTareStatus()) {
         scaleTareSuccess = true;
         flowRateSampleTime = millis() - 100;
@@ -79,16 +78,14 @@ void updateWeight() {
       unsigned long diffFlowRateSampleTime = flowRateSampleTime - prevFlowRateSampleTime;
       if (diffFlowRateSampleTime > 110 || diffFlowRateSampleTime <= 11) {  //regular refresh on 10SPS every 90ms
         ERROR_print("flowRateSampleTime anomaly: %lums\n", diffFlowRateSampleTime);
-        return;  //ignore sample //XXX3 readd
+        return;
       }
-      //diffFlowRateSampleTime = 100.0; //XXX3 remove
 
       float currentFlowRate = ( diffWeight * 1000.0 / diffFlowRateSampleTime) ;  //inaccuracy up tp 0.15g/s
       flowRate = (flowRate * (1-flowRateFactor) ) + (currentFlowRate * flowRateFactor); // smoothed gram/s
       if (flowRate <= 0.1) flowRate = 0.1;  //just be sure to never have negative flowRate
       
       if (abs(flowRate) <= 0.1) {
-        //DEBUG_print("flowRate low: %0.2fg/s\n", flowRate);
         flowRateEndTime = millis() + 30000;  //during pre-infusion or after brew() we need special handling
       } else if (remainingWeight > 0) {
         int offsetTime = 0;
@@ -97,21 +94,20 @@ void updateWeight() {
         flowRateEndTime = millis();  //weight already reached
       }
 
-      //DEBUG_print("updateWeight(%lums): weight=%0.3fg/Diff=%0.2fg/Offset=%0.2f currentFlowRate=%0.2fg/s flowRate=%0.2fg/s flowRateEndTime=%lums\n", 
+      //DEBUG_print("updateWeight(%lums): weight=%0.3fg Diff=%0.2fg Offset=%0.2f currentFlowRate=%0.2fg/s flowRate=%0.2fg/s flowRateEndTime=%lums\n", 
       //  diffFlowRateSampleTime, currentWeight, diffWeight, scaleSensorWeightOffset, currentFlowRate, flowRate, (flowRateEndTime - millis()));
     }
   }
 
-  unsigned long currentMillisScale = millis();
-  if (currentMillisScale - previousMillisScale >= intervalWeightMessage) {  //XXX1 remove this whole debug block
-    previousMillisScale = currentMillisScale;
-    DEBUG_print("currentWeight: %0.2f (index=%d, SamplesInUse=%d, getSignalTimeoutFlag=%d)\n", currentWeight, LoadCell.getReadIndex(), LoadCell.getSamplesInUse(), LoadCell.getSignalTimeoutFlag());
-  }
 }
 
 /********************************************************
    Initialize scale
 ******************************************************/
+void IRAM_ATTR dataReadyISR(void * arg) {
+  LoadCell.dataWaitingAsync();
+}
+
 static void attachISR_ESP32_SCALE(void *arg){					//attach ISR in freeRTOS because arduino can't attachInterrupt() inside of template class
   //DEBUG_print("attachISR_ESP32_2()\n");
   gpio_config_t gpioConfig;
@@ -150,10 +146,6 @@ void initScale() {
     }
     delay(200);
   }
-}
-
-void IRAM_ATTR dataReadyISR(void * arg) {
-  LoadCell.dataWaitingAsync();
 }
 
 #endif

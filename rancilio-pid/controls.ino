@@ -470,7 +470,7 @@ void configureControlsHardware(controlMap* controlsConfig) {
       if (ptr->gpioCheck == NULL) ptr->gpioCheck = createGpioCheck(ptr->gpio, ptr->portMode);
       if (ptr->gpioCheck != NULL) {
         beginGpioCheck(ptr->gpio, ptr->gpioCheck);
-        DEBUG_print("configureControlsHardware(): gpio=%d finished\n", ptr->gpio);
+        DEBUG_print("configureControlsHardware(): gpio=%d running\n", ptr->gpio);
       } else {
         ERROR_print("configureControlsHardware(): gpio=%d error\n", ptr->gpio);
       }
@@ -759,7 +759,7 @@ void checkControls(controlMap* controlsConfig) {
           }
         }
 #endif
-      } else {
+      } else {  //digital pin
         if (ptr->gpioCheck != NULL) {
           unsigned char counter = counterGpioCheck(ptr->gpio, ptr->gpioCheck);  //counter >0 when gpio interrupt had fired
           //if (counter >0) { DEBUG_print("GPIO=%d: COUNTER=%u\n", ptr->gpio, counter); }

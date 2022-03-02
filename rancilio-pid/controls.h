@@ -55,7 +55,7 @@ typedef struct menuMap {
 } menuMap;
 
 unsigned long previousCheckControls = 0;
-#define FREQUENCYCHECKCONTROLS 100 // TOBIAS: change to 50 or 200? make dynamical!
+#define FREQUENCYCHECKCONTROLS 100 // XXX: change to 50 or 200? make dynamical!
 
 // actionState contain the status (on/off/..) of each actions
 #define MAX_NUM_ACTIONS 20

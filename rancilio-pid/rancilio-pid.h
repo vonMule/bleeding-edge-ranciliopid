@@ -15,6 +15,10 @@
 #endif 
 #endif
 
+#if (ESP_ARDUINO_VERSION_MAJOR >= 2)
+#error ERROR esp32 >2 not yet supported on ArduinoIde. Downgrade boards-manager to v1.0.6 or use Platformio.
+#endif 
+
 #if (SCALE_SENSOR_ENABLE == 0)
 #if (BREWTIME_END_DETECTION1 == 1)
 #error ERROR BREWTIME_END_DETECTION1=1 is only supported when SCALE_SENSOR_ENABLE=1.
@@ -25,9 +29,6 @@
 #if (BREWTIME_END_DETECTION3 == 1)
 #error ERROR BREWTIME_END_DETECTION3=1 is only supported when SCALE_SENSOR_ENABLE=1.
 #endif
-#endif
-#ifndef SCALE_SENSOR_WEIGHT_OFFSET
-#define SCALE_SENSOR_WEIGHT_OFFSET 1.0
 #endif
 
 #if (ENABLE_CALIBRATION_MODE == 1)

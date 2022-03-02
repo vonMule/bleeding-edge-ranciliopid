@@ -68,6 +68,7 @@ Two cups of a double cappuccino with the new Steamfunction | [![Two cups of a do
 1. MultiToggle triggers any ACTION based on multiple simultaneous hardware-button states (eg. if hotwater+steaming button is pressed then start the action CLEANING). MultiToggle can trigger up to six ACTIONS just by using the three rancilio's hardware-switches and therefore reduces the need for external control (mqtt, blynk, resistor-circuit, ..).
 1. GpioAction: When actions are activated, specific GPIOs can be triggered also. This can be used eg. to light up LEDs in Rancilio's custom modified hardware-switches.
 1. "Brew Profiles" can be used to easily set optimum brew settings for different beans.
+1. Scale support to optionally brew by weight (in addition to by time).
 1. Offline Modus is fixed and enhanced. If userConfig.h's FORCE_OFFLINE is enabled, then PID fully is working without networking. Ideal in situations when there is no connectivity or you dont want to rely on it.
 1. Huge performance tunings and improvements under the hood which stabilizes the system (eg in situations of bad WIFI, hardware issues,..).
 1. MQTT support to integrate machine in smart-home solutions and to easier extract details for graphing/alerting.
@@ -124,83 +125,54 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
-- 3.2.0 beta_8:
-  - Setup guide in [Wiki](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Scale-Setup)
-  - [3D Scale Case made by Hoodie](https://www.thingiverse.com/thing:5226789) (Many thanks Hoodie!).
-  - Feature: Display shows detailed brew statistics in statusLine for a couple of seconds.
-  - Fix brew statistics to include dipping after brew ends.
-  - Feature: Initial support to automatic tuning of target-weight to adapt to dipping effects after brew ends.
-  - Feature: Added FlowRate calculations to better aim for target-weight. 
-  - On bootup show in display scale initialization errors.
-  - Fix maximum additional seconds to brew() to wait 10s and not 10ms.
-  - brew() is only called at most every 1ms.
-  - Changed scaleConfigOverwrite.h's SAMPLES from 1 to 4.
-- 3.2.0 beta_7:
-  - BETA:
-  - Scale: 
-    - Fix detection when HX711 is not connected or doesnt work on tare. 
-    - Fix maximum additional seconds to brew() when weight not reached (per default we wait additional 10sec).
-    - Updated circuit-diagrams to add HX711.
-  - arduino IDE: Added library/HX711_ADC_fix which has to be manually copied to your arduino library path. (see wiki)
-- 3.2.0 beta_6:
-  - ALPHA!
-  - Scale: Fix missing getNewCalibration() 
-- 3.2.0 beta_5:
-  - ALPHA!
-  - Fix: Readded coldstart which I have disabled for testing.
-  - Scale:
-    - After brew is finished weight is measured fore an additional 2 seconds (to include dripping in the total weight).
+- 3.2.0:
+  - NEW FEATURE (ESP32 & ONLYPID=0): Add *SCALE* functionality for brewing based on a PR by [Hoondie](https://github.com/avolmensky) (Many thanks Hoondie!).
+    - Rewrite of brew() function to supports stopping brewing by time or weight (see userConfig.h BREWTIME_END_DETECTION):    
+    - Setup guide in [Wiki](https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Scale-Setup)
+      - 3D printer models:
+        - [3D Scale Case made by Hoondie](https://www.thingiverse.com/thing:5226789) (Many thanks Hoondie!).
+        - [PerfectCoffeePid Scale Case](https://github.com/medlor/bleeding-edge-ranciliopid/tree/master/3d-models/PerfectCoffeePid-Scale). 
+    - Display shows actual weight while brewing and additionally brewStatistics/flowRate a couple of seconds after brew (all themes are supported).
+    - Automatic tuning of target-weight offset to adapt to dipping effects after brew ends.
+  - Refactoring und noticeable further features:
     - Implemented manual calibration feature:
       - Howto: 
         - Set ENABLE_CALIBRATION_MODE=1, start machine without any weight on the scale, 
-          after around 20s put a known weight (SCALE_SENSOR_CALIBRATION_WEIGHT) on the scale.
-          The DEBUGLOG will print the calculated SCALE_SENSOR_CALIBRATION_FACTOR in the log.
-  - Userconfig.h Changes:
-    - Added SCALE_SENSOR_CALIBRATION_WEIGHT, SCALE_SENSOR_CALIBRATION_FACTOR
-- 3.2.0 beta_4:
-  - ALPHA!
-  - Fix: BREWTIME_END_DETECTIONX=0 did not automatically end the brew anymore.
-  - Scale:
-    - Blynk supported: V64 := activeBrewTimeEndDetection , V65 := activeScaleSensorWeightSetPoint
-    - Show brewStatistics on display for 12 sec after brew finishes.
-    - Send brewStatistics to mqtt events: "Brew statistics: 35.55g in 11.05s with profile 1"
-- 3.2.0 beta_3:
-  - ALPHA!
-  - Scale:
-    - Add asyncTare to auto-tare cup weight while (pre-infusion) is running (it should be completed before the first drops add weight).
-    - If auto tare at start of brew failes fallback to time-based brew stop timings.
-    - Add display support to show weight while brewing.
-    - Added powerOff mode while not brewing.
-    - New scale functions are now tied to Profiles:
-      - Set following settings in userConfig.h or MQTT:
+          after around 20s put a known weight (which is set in SCALE_SENSOR_CALIBRATION_WEIGHT) on the scale.
+          The LOG will show the calculated SCALE_SENSOR_CALIBRATION_FACTOR which has to be added to the userConfig.h .
+    - Send brewStatistics to display, mqtt events and LOG: "Brew statistics: 37.36g in 29.78s (1.25g/s) with profile 1".
+      - FlowRate also included in output.
+      - Display shows brewStatistics after brew for a couple of seconds.
+    - Use powerOff and powerUp to save energy and to reduce interrupt conflicts. HX711 is only enabled when brew is running. 
+    - 3rd party library for the HX711_ADC by Olav Kallhovd (https://github.com/olkal/HX711_ADC) adapted to our needs (Many thanks Olav!):
+      - [custom async implementation](https://github.com/medlor/HX711_ADC) while using ISR to ...
+        - reduce processing delays
+        - reduce competing interrupts between TSIC, display and scale
+        - no TSIC errors!
+    - Auto-tare weight (async; without delay) at start of brew.
+    - After brew is finished weight is measured for an additional 2 seconds (to include drops after the pump has stopped).
+    - If HX711 cannot be initialized on start of brew, fallback to time-based brewing.
+    - New scale settings are now tied to "Profiles":
+      - Set following settings in userConfig.h / MQTT / "CONTROLS_CONFIG" / Blynk (V64 := activeBrewTimeEndDetection , V65 := activeScaleSensorWeightSetPoint):
         - BREWTIME_END_DETECTIONX: if 0, stop by time else stop by weight 
         - SCALE_SENSOR_WEIGHT_SETPOINTX = weight when to stop brewing
-    - Added MQTT support. (Blynk not yet done)
-    - Added Control support: You can also set settings via buttons.
-  - userConfig.h Changes:
-    - Renamed BREWTIME_END_DETECTION -> BREWTIME_END_DETECTIONX
-    - Renamed SCALE_SENSOR_WEIGHT_SETPOINT -> SCALE_SENSOR_WEIGHT_SETPOINTX.
-- 3.2.0 beta_2:
-  - ALPHA!
-  - Initial scale code is based on HX711_ADC by Olav Kallhovd (https://github.com/olkal/HX711_ADC)
-  - scale functionality refactored:
-    - Rewrite of brew() function to supports stopping brewing by time or weight (see userConfig.h BREWTIME_END_DETECTION):
-    - Use powerDown and powerUp to save energy and to reduce interrupt conflicts. scale is only active when brew() is running.
-      - Right now scale is only active when ONLYPID=0. (TODO) 
-    - Use [custom async implementation](https://github.com/medlor/HX711_ADC) while using ISR to ...
-      - reduce processing delays
-      - reduce competing interrupts between TSIC, display and scale
-      - no TSIC errors!
-    - Custom tuned scaleConfigOverwrite.h
-    - Supported only on ESP32 (feel free to port to nodemcu)
+    - Custom scaleConfigOverwrite.h
+    - ArduinoIDE: Added library/HX711_ADC_fix which has to be manually copied to your arduino library path. (see wiki)
+    - ArduinoIDE: Successfully compiles (in addition to Platformio).
+  - ArduinoIDE: "library/RemoteDebug" minor compile fix.
+  - ArduinoIDE: Add check to force esp32 board version 1.0.6.
+  - brew() is only called at most every 1ms.
+  - Fix: If you have an analog toggle configured for BREWING and dont turn it off before power-off, 
+      then brewing will no longer automatically start on power-on.
   - userConfig.h Changes:
     - BREWTIMER_MODE renamed to BREWTIME_TIMER
-    - Added BREWTIME_END_DETECTION
     - Many new defines called SCALE_SENSOR_*
-- 3.2.0 beta_1:
-  - Initial alpha(!!) release to add scale functionality for brewing. Thanks to [Hoondie](https://github.com/avolmensky) for the code!
+    - Added BREWTIME_END_DETECTIONX
+    - Added SCALE_SENSOR_WEIGHT_SETPOINTX.
+    - Added SCALE_SENSOR_CALIBRATION_WEIGHT, SCALE_SENSOR_CALIBRATION_FACTOR
+    - Updated circuit-diagrams to add HX711.
 - 3.1.0:
-  - NEW FEATURE: Add support for up to 3 "Profiles", which can be used to quickly switch between different brew settings (eg. when different beans are used).
+  - NEW FEATURE: Add support for up to 3 "*Profiles*", which can be used to quickly switch between different brew settings (eg. when different beans are used).
     - An individual profile comprises of following settings:
       - Brew Temperature / setPoint
       - Brew Time 
