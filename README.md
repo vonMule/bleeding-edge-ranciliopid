@@ -171,6 +171,8 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
     - Added SCALE_SENSOR_WEIGHT_SETPOINTX.
     - Added SCALE_SENSOR_CALIBRATION_WEIGHT, SCALE_SENSOR_CALIBRATION_FACTOR
     - Updated circuit-diagrams to add HX711.
+- 3.1.1:
+  - Fix: Coldstart working again.
 - 3.1.0:
   - NEW FEATURE: Add support for up to 3 "*Profiles*", which can be used to quickly switch between different brew settings (eg. when different beans are used).
     - An individual profile comprises of following settings:
