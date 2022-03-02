@@ -65,7 +65,7 @@ char* outputSimpleState() {
 void setDisplayTextState(int activeState, char* displaymessagetext, char* displaymessagetext2) {
 #if (DISPLAY_TEXT_STATE == 1)
   if (menuPosition != 0) return;
-  if (strlen(displaymessagetext) > 0 || screenSaverOn || activeState == 4) { // dont show state in certain situations
+  if (strlen(displaymessagetext) > 0 || strlen(displaymessagetext2) > 0 || screenSaverOn || activeState == 4) { // dont show state in certain situations
     snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
     snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);
   } else {
@@ -140,6 +140,9 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     const unsigned int align_right_2digits = LCDWidth - 56;
     const unsigned int align_right_3digits = LCDWidth - 56 - 12;
     const unsigned int align_right_2digits_decimal = LCDWidth - 56 + 28;
+
+    bool showLastBrewStatistics = ( (brewTimer > 0) && (currentWeight != 0) && 
+     (millis() <= brewStatisticsTimer + brewStatisticsAdditionalDisplayTime) ) ? true : false;
 
     // boot logo
     if (activeState == 0) {
@@ -238,7 +241,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     }
 
     // display current and target temperature
-    if (activeState > 0 && activeState != 4) {
+    if (activeState > 0 && activeState != 4 && !showLastBrewStatistics) {
       if (Input - 100 > -FLT_EPSILON) {
         align_right = align_right_3digits;
       } else {
@@ -251,7 +254,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
       u8g2.print((char)176);
       u8g2.println("C");
       u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
-      u8g2.drawGlyph(align_right - 11, 3 + 7, 0x0046);
+      u8g2.drawGlyph(align_right - 11, 3 + 6, 0x0046);
 
       // if (Input <= *activeSetPoint + 5 || activeState == 6) { //only show setpoint if we are not steaming
       if (!steaming) {
@@ -267,28 +270,50 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.print((char)176);
         u8g2.println("C");
         u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
-        u8g2.drawGlyph(align_right - 11, 20 + 7, 0x047);
+        u8g2.drawGlyph(align_right - 11, 20 + 6, 0x047);
       }
-    } else if (activeState == 4) {
-      totalBrewTime = ( (OnlyPID || BREWTIMER_MODE == 0 )? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
-      align_right = align_right_2digits_decimal;
+    } else if (activeState == 4 || showLastBrewStatistics) {  //brew
+      totalBrewTime = ( (OnlyPID || BREWTIME_TIMER == 0 )? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
+      unsigned int align_right_left_value = LCDWidth - 56 - 5;
+      unsigned int align_right_right_value = LCDWidth - 56 + 28;
       u8g2.setFont(u8g2_font_profont22_tf);
-      u8g2.setCursor(align_right, 3);
+      u8g2.setCursor(align_right_left_value, 3);
       if (brewTimer < 10000) u8g2.print("0");
       // TODO: Use print(u8x8_u8toa(value, digits)) or print(u8x8_u16toa(value, digits)) to print numbers with constant width (numbers are prefixed with 0 if required).
       u8g2.print(brewTimer / 1000);
+
+      u8g2.setFont(u8g2_font_open_iconic_arrow_1x_t);
+      u8g2.drawGlyph(align_right_right_value - 8, 3 + 6, 0x04e);
+      u8g2.setFont(u8g2_font_profont22_tf);
+      u8g2.setCursor(align_right_right_value, 3);
+      u8g2.print(totalBrewTime / 1000);
+
       u8g2.setFont(u8g2_font_profont10_tf);
       u8g2.println("s");
-      if (totalBrewTime > 0) {
-        u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
-        u8g2.drawGlyph(align_right - 11, 3 + 7, 0x0046);
+
+      if (SCALE_SENSOR_ENABLE) {
         u8g2.setFont(u8g2_font_profont22_tf);
-        u8g2.setCursor(align_right, 20);
-        u8g2.print(totalBrewTime / 1000);
+        u8g2.setCursor(align_right_left_value, 20);
+        int weight = (int) currentWeight;
+        //if (weight <0) weight = 0;
+        if (weight < 10) u8g2.print("0");
+        u8g2.print(weight<0?0:weight, 0);
+
+        u8g2.setFont(u8g2_font_open_iconic_arrow_1x_t);
+        u8g2.drawGlyph(align_right_right_value - 8, 20 + 6, 0x04e);
+        u8g2.setFont(u8g2_font_profont22_tf);
+        u8g2.setCursor(align_right_right_value, 20);
+        u8g2.print(*activeScaleSensorWeightSetPoint, 0);
+
         u8g2.setFont(u8g2_font_profont10_tf);
-        u8g2.println("s");
-        u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
-        u8g2.drawGlyph(align_right - 11, 20 + 7, 0x047);
+        u8g2.println("g");
+      }
+      //u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
+      u8g2.setFont(u8g2_font_open_iconic_thing_1x_t);
+      if (*activeBrewTimeEndDetection == 0) {
+        u8g2.drawGlyph(align_right_left_value - 11, 3 + 6, 0x04f);
+      } else {
+        u8g2.drawGlyph(align_right_left_value - 11, 20 + 6, 0x04f);
       }
     }
   }
@@ -486,7 +511,7 @@ void showPowerOffCountdown(char* displaymessagetext, char* displaymessagetext2) 
   powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
   if (powerOffTimer <= powerOffCountDownStart && !brewing && !strlen(displaymessagetext) && !strlen(displaymessagetext2)) {
     u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
-    u8g2.drawGlyph(align_right_countdown_min - 15, 37 + 7, 0x004e);
+    u8g2.drawGlyph(align_right_countdown_min - 15, 37 + 6, 0x004e);
     u8g2.setFont(u8g2_font_profont22_tf);
     u8g2.setCursor(align_right_countdown_min, 37);
     snprintf(line, sizeof(line), "%d", int(powerOffTimer / 60));

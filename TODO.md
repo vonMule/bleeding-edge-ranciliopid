@@ -1,13 +1,26 @@
 # TODO
 - mqtt events/ should deliver json not string.
-- String replacement (https://cpp4arduino.com/2020/02/07/how-to-format-strings-without-the-string-class.html)
-- convert all float to long.
-- Improve temperature outliner detection by using all sampled temperatures (every <100ms, instead of once a second.)
 
 
 Feature Requests:
-- brewing profile support
-
+- scale support with following features:
+  - lib tests and tuning -> DONE
+  - eeprom support -> DONE
+  - scale calibration -> manual:DONE  - automatic:TODO
+  - sleep support -> DONE
+  - auto tare() at start of brew() -> DONE
+  - brew handling (might become more complex if basic stuff does not work) -> not yet live tested
+  - new display layout -> DONE
+  - profile support to specific "modes" + target_weight -> DONE
+  - CONTROL support -> DONE (convert activeBrewTimeEndDetection to bool)
+  - MQTT -> DONE
+  - Blynk support -> DONE (I wont add a new client config)
+  - last brew statistics are shown on display (and send via MQTT) for a time -> DONE
+  - ONLYPID=1 support -> HOW? need tare- ACTION/CONTROL !
+  - wiki updaten + einkaufsliste -> DONE
+  - Option to show last brew statistics on display line3 for up to 5min. -> DONE
+  - Add icon TODO
+  - Add scale pictures
 
 
 # TODO Tests

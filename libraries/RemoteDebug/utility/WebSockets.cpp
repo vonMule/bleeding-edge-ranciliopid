@@ -39,7 +39,18 @@ extern "C" {
 #ifdef ESP8266
 #include <Hash.h>
 #elif defined(ESP32)
+
+//PERFECT COFFEE PID
+//#if (ESP_ARDUINO_VERSION_MAJOR >= 2)
+//#error ERROR esp32 >2 not yet supported on ArduinoIde. Downgrade boards-manager to v1.0.6 or use Platformio.
+//#endif 
 #include <hwcrypto/sha.h>
+#if __has_include("esp32/sha.hh") && __has_include(<esp32/sha.h>)
+#include <esp32/sha.h>
+#else
+#include <hwcrypto/sha.h>
+#endif
+
 #else
 
 extern "C" {

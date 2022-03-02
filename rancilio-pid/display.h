@@ -64,6 +64,8 @@ extern unsigned int profile;
 extern float* activeBrewtime;
 extern float* activePreinfusion;
 extern float* activePreinfusionPause;
+extern unsigned int* activeBrewTimeEndDetection;
+extern float* activeScaleSensorWeightSetPoint;
 extern unsigned long brewTimer;
 extern bool forceOffline;
 extern bool isWifiWorking();
@@ -78,4 +80,7 @@ extern const unsigned int menuOffTimer;
 extern menuMap* menuConfig;
 extern float menuValue;
 extern const char* convertDefineToReadAbleVariable(char*);
+extern float currentWeight;
+extern unsigned int brewStatisticsAdditionalDisplayTime;
+extern unsigned long brewStatisticsTimer;
 

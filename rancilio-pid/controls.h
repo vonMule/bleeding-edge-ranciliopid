@@ -55,7 +55,7 @@ typedef struct menuMap {
 } menuMap;
 
 unsigned long previousCheckControls = 0;
-#define FREQUENCYCHECKCONTROLS 100 // TOBIAS: change to 50 or 200? make dynamical!
+#define FREQUENCYCHECKCONTROLS 100 // XXX: change to 50 or 200? make dynamical!
 
 // actionState contain the status (on/off/..) of each actions
 #define MAX_NUM_ACTIONS 20
@@ -66,6 +66,7 @@ int actionState[MAX_NUM_ACTIONS];
 int gpioLastAction[MAX_NUM_GPIO];
 
 controlMap* parseControlsConfig();
+void debugControlHardware(controlMap* controlsConfig);
 void printControlsConfig(controlMap*);
 menuMap* parseMenuConfig();
 void printMenuConfig(menuMap*);
@@ -105,11 +106,15 @@ extern PIDBias bPID;
 extern unsigned long userActivitySavedOnForcedSleeping;
 extern int sleeping;
 extern unsigned long lastBrewEnd;
+extern unsigned int brewStatisticsAdditionalDisplayTime;
 extern bool MaschineColdstartRunOnce;
 extern float steadyPowerOffsetModified;
 extern unsigned int menuPosition;
 extern unsigned long previousTimerMenuCheck;
 extern void blynkSave(char*);
-
+extern unsigned int* activeBrewTimeEndDetection;
+extern float* activeScaleSensorWeightSetPoint;
+extern unsigned long brewTimer;
+extern float currentWeight;
 
 #endif

@@ -117,7 +117,7 @@ controlMap* parseControlsConfig() {
         if (!nextControlMap) nextControlMap->action = UNDEFINED_ACTION;
         continue;
       }
-      if (controlsConfigGpio >= MAX_NUM_GPIO) {
+      if (controlsConfigGpio > MAX_NUM_GPIO) {
         ERROR_println("More gpio used as allowed in MAX_NUM_GPIO");
         if (!nextControlMap) nextControlMap->gpio = 0;
         continue;
@@ -289,6 +289,15 @@ menuMap* parseMenuConfig() {
         nextMenuMap->value->type = (char*)"int";
         nextMenuMap->value->ptr = &profile;
         nextMenuMap->value->is_double_ptr = false;
+    } else if (strcmp(nextMenuMap->item, "BREWTIME_END_DETECTION") == 0) {
+        nextMenuMap->value->type = (char*)"int";
+        nextMenuMap->value->ptr = &activeBrewTimeEndDetection;
+        nextMenuMap->value->is_double_ptr = true;
+    } else if (strcmp(nextMenuMap->item, "SCALE_SENSOR_WEIGHT_SETPOINT") == 0) {
+        nextMenuMap->unit = (char*)"g";
+        nextMenuMap->value->type = (char*)"float";
+        nextMenuMap->value->ptr = &activeScaleSensorWeightSetPoint;
+        nextMenuMap->value->is_double_ptr = true;
     } else {
       ERROR_print("menuConfig defined %s but is not a supported setting\n", nextMenuMap->item);
       continue;
@@ -345,22 +354,26 @@ const char* convertDefineToVariable(char *str) {
   if (!strcmp(str, "PREINFUSION")) return "activePreinfusion";
   if (!strcmp(str, "PREINFUSION_PAUSE")) return "activePreinfusionPause";
   if (!strcmp(str, "PID_ON")) return "pidON";
-  if (!strcmp(str, "PROFILE")) return "profile"; 
+  if (!strcmp(str, "PROFILE")) return "profile";
+  if (!strcmp(str, "BREWTIME_END_DETECTION")) return "activeBrewTimeEndDetection"; 
+  if (!strcmp(str, "SCALE_SENSOR_WEIGHT_SETPOINT")) return "activeScaleSensorWeightSetPoint"; 
   ERROR_print("convertDefineToVariable(%s) not supported", str);
   return NULL;
 }
 
 const char* convertDefineToReadAbleVariable(char *str) {
   if (!strcmp(str, "SETPOINT")) return "Brew Temperature";
-  if (!strcmp(str, "SETPOINTSTEAM")) return "Steaming Temperature";
+  if (!strcmp(str, "SETPOINTSTEAM")) return "Steaming Temp.";
   if (!strcmp(str, "BREWTIME")) return "Brew Duration";
   if (!strcmp(str, "PREINFUSION")) return "Preinfusion Duration";
-  if (!strcmp(str, "PREINFUSION_PAUSE")) return "Preinfusion Pause";
+  if (!strcmp(str, "PREINFUSION_PAUSE")) return "Preinf. Pause";
   if (!strcmp(str, "PID_ON")) return "Heating";
   if (!strcmp(str, "SLEEPING")) return "Sleeping";
   if (!strcmp(str, "STEAMING")) return "Steaming";
   if (!strcmp(str, "CLEANING")) return "Cleaning";
   if (!strcmp(str, "PROFILE")) return "Profile";
+  if (!strcmp(str, "BREWTIME_END_DETECTION")) return "Brew by Weight";
+  if (!strcmp(str, "SCALE_SENSOR_WEIGHT_SETPOINT")) return "Brew Weight";
   return str;
 }
 
@@ -457,7 +470,7 @@ void configureControlsHardware(controlMap* controlsConfig) {
       if (ptr->gpioCheck == NULL) ptr->gpioCheck = createGpioCheck(ptr->gpio, ptr->portMode);
       if (ptr->gpioCheck != NULL) {
         beginGpioCheck(ptr->gpio, ptr->gpioCheck);
-        DEBUG_print("configureControlsHardware(): gpio=%d finished\n", ptr->gpio);
+        DEBUG_print("configureControlsHardware(): gpio=%d running\n", ptr->gpio);
       } else {
         ERROR_print("configureControlsHardware(): gpio=%d error\n", ptr->gpio);
       }
@@ -746,7 +759,7 @@ void checkControls(controlMap* controlsConfig) {
           }
         }
 #endif
-      } else {
+      } else {  //digital pin
         if (ptr->gpioCheck != NULL) {
           unsigned char counter = counterGpioCheck(ptr->gpio, ptr->gpioCheck);  //counter >0 when gpio interrupt had fired
           //if (counter >0) { DEBUG_print("GPIO=%d: COUNTER=%u\n", ptr->gpio, counter); }

@@ -16,7 +16,7 @@ Preferences preferences;
 void sync_eeprom();
 void sync_eeprom(bool startup_read, bool force_read);
 
-#define expectedEepromVersion 7 // EEPROM values are saved according to this versions layout. Increase
+#define expectedEepromVersion 9 // EEPROM values are saved according to this versions layout. Increase
                                 // if a new layout is implemented.
 
 extern bool forceOffline;
@@ -74,5 +74,12 @@ extern unsigned long steadyPowerMQTTDisableUpdateUntilProcessedTime;
 extern float steadyPowerSaved;
 extern unsigned long eepromForceSync;
 extern void blynkSave(char*);
+extern unsigned int brewtimeEndDetection1;
+extern unsigned int brewtimeEndDetection2;
+extern unsigned int brewtimeEndDetection3;
+extern float scaleSensorWeightSetPoint1;
+extern float scaleSensorWeightSetPoint2;
+extern float scaleSensorWeightSetPoint3;
+extern float scaleSensorWeightOffset;
 
 #endif
