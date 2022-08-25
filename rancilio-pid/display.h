@@ -15,6 +15,9 @@ const int Display = DISPLAY_HARDWARE;
 #endif
 #include <U8g2lib.h>
 #include <Wire.h>
+#if (DISPLAY_HARDWARE == 3)
+#include <SPI.h>
+#endif
 
 #ifdef ESP32
 static int activeStateBuffer;
@@ -25,11 +28,16 @@ static char displaymessagetext2Buffer[30];
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-#if (DISPLAY == 1)
+#if (DISPLAY_HARDWARE == 1)
 // Attention: refresh takes around 42ms (esp32: 26ms)!
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE); // e.g. 1.3"
-#else
+#elif (DISPLAY_HARDWARE == 2)
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE); // e.g. 0.96"
+#else
+// 23-MOSI 18-CLK
+#define OLED_CS             5
+#define OLED_DC             2
+U8G2_SH1106_128X64_NONAME_F_4W_HW_SPI u8g2(U8G2_R0, OLED_CS, OLED_DC, /* reset=*/U8X8_PIN_NONE); // e.g. 1.3"
 #endif
 unsigned long previousMillisDisplay = 0; // initialisation at the end of init()
 const long intervalDisplay = 1000; // Update für Display

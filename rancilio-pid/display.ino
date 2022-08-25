@@ -6,7 +6,11 @@
 
 void u8g2_init(void) {
 #ifdef ESP32
+#if (DISPLAY_HARDWARE == 3)
+  u8g2.setBusClock(600000);
+#else
   u8g2.setBusClock(2000000);
+#endif
 #endif
   u8g2.begin();
   u8g2_prepare();
