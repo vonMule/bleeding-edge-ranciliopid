@@ -118,7 +118,8 @@
 /*******
  * Display Settings
  *******/
-#define DISPLAY_HARDWARE 0                // 0=Deaktiviert, 1=SH1106_128X64, 2=SSD1306_128X64
+#define DISPLAY_HARDWARE 0                // 0=Deaktiviert, 1=SH1106_128X64_I2C, 2=SSD1306_128X64_I2C, 3=SH1106_126x64_SPI
+                                          // for 3 (SH1106 SPI) use P23=MOSI P18=CLK P5=OLED_CS P2=OLED_DC (see display.h)
 #define ROTATE_DISPLAY 0                  // 0=Off (Default), 1=180 degree clockwise rotation
 #define DISPLAY_TEXT_STATE 1              // 1=On  (Default), 0=Off display text of Maschine-state
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter", 3:="text"
