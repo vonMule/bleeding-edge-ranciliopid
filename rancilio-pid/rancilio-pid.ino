@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.1 beta1";
+const char* sysVersion PROGMEM = "3.2.1 beta2";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
