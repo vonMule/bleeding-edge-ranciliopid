@@ -34,7 +34,7 @@ typedef struct controlMap {
   int upperBoundary;
   int value;
   int action;
-  char* gpioCheck;
+  GpioCheck* gpioCheck;
   struct controlMap* nextControlMap;
 } controlMap;
 

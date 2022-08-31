@@ -195,7 +195,7 @@ int PIDBias::Compute() {
       if (error <= -0.2) {
         factor = 0;
       } else if (error <= -0.1) {
-        factor = 0.1;
+        factor = 0.3;
       }
       if (factor != 1) {
         DEBUG_print("Overwrite output (%0.2f *= %0.2f) (not moving)\n", convertOutputToUtilisation(output), factor);

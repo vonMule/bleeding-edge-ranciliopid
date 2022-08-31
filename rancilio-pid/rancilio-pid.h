@@ -7,17 +7,19 @@
 
 #ifdef ESP8266
 #include <core_version.h>
-#if !defined(ARDUINO_ESP8266_RELEASE_2_6_3) && !defined(ARDUINO_ESP8266_RELEASE_2_7_3) && !defined(ARDUINO_ESP8266_RELEASE_2_7_4) && !defined(ARDUINO_ESP8266_RELEASE_2_7_5)
-#error ERROR esp8266 >3.0.0 not yet supported. Downgrade boards-manager to v2.7.4
+#if defined(ARDUINO_ESP8266_RELEASE_2_6_3) || defined(ARDUINO_ESP8266_RELEASE_2_7_3) || defined(ARDUINO_ESP8266_RELEASE_2_7_4) || defined(ARDUINO_ESP8266_RELEASE_2_7_5)
+#error ERROR Only esp8266 >=3.0.2 supported. 
 #endif
 #if (SCALE_SENSOR_ENABLE)
 #error ERROR Scale not supported on esp8266.
 #endif 
 #endif
 
-#if (ESP_ARDUINO_VERSION_MAJOR >= 2)
-#error ERROR esp32 >2 not yet supported on ArduinoIde. Downgrade boards-manager to v1.0.6 or use Platformio.
+#if ESP32
+#if ( defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR < 2) )
+#error ERROR esp32 <2 no longer supported. Upgrade boards-manager to v2.0.4+ or use Platformio.
 #endif 
+#endif
 
 #if (SCALE_SENSOR_ENABLE == 0)
 #if (BREWTIME_END_DETECTION1 == 1)

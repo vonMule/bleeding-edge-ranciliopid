@@ -22,6 +22,15 @@ Feature Requests:
   - Add icon TODO
   - Add scale pictures
 
+- External capacitive display support
+  - need a simple custom protocol to exchange data + actions
+  - main code must be adapted to to support the protocol data  (at least 4 times per second)
+  - exchange can be either serial line (2pins) or bluetooth (latency to be validated)
+  - encasing needed for new cap. display (https://de.aliexpress.com/item/1005001432093856.html?spm=a2g0o.cart.0.0.c1d03c00Xg9FRx&mp=1&gatewayAdapt=glo2deu)
+  - external power-supply
+  - custom code must be written for the "display-side" which also understands the protocol (esp32)
+  - New device shall also be used as replacement of current standard display (this requires show of temperature/menus/ and so on...)
+
 
 # TODO Tests
 
