@@ -903,9 +903,9 @@ void hotwaterAction(int state) {
   // Function switches the pump on to dispense hot water
   if (OnlyPID) return;
   if (state == 1) {
-    digitalWrite(pinRelayPumpe, relayON);
+    digitalWrite(pinRelayPumpe, pumpRelayON);
   } else if (state == 0) {
-    digitalWrite(pinRelayPumpe, relayOFF);
+    digitalWrite(pinRelayPumpe, pumpRelayOFF);
   }
   DEBUG_print("running hotwaterAction(%d)\n", state);
   setGpioAction(HOTWATER, state);
