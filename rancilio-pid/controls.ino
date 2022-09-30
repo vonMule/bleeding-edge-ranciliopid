@@ -290,7 +290,7 @@ menuMap* parseMenuConfig() {
         nextMenuMap->value->ptr = &profile;
         nextMenuMap->value->is_double_ptr = false;
     } else if (strcmp(nextMenuMap->item, "BREWTIME_END_DETECTION") == 0) {
-        nextMenuMap->value->type = (char*)"int";
+        nextMenuMap->value->type = (char*)"bool";
         nextMenuMap->value->ptr = &activeBrewTimeEndDetection;
         nextMenuMap->value->is_double_ptr = true;
     } else if (strcmp(nextMenuMap->item, "SCALE_SENSOR_WEIGHT_SETPOINT") == 0) {
@@ -467,9 +467,9 @@ void configureControlsHardware(controlMap* controlsConfig) {
       pinMode(ptr->gpio, convertPortModeToDefine(ptr->portMode));
     } else {
       //pinMode(ptr->gpio, convertPortModeToDefine(ptr->portMode));
-      if (ptr->gpioCheck == NULL) ptr->gpioCheck = createGpioCheck(ptr->gpio, ptr->portMode);
+      if (ptr->gpioCheck == NULL) ptr->gpioCheck = new GpioCheck(ptr->gpio, ptr->portMode, DEBOUNCE_DIGITAL_GPIO);
       if (ptr->gpioCheck != NULL) {
-        beginGpioCheck(ptr->gpio, ptr->gpioCheck);
+        (ptr->gpioCheck)->begin();
         DEBUG_print("configureControlsHardware(): gpio=%d running\n", ptr->gpio);
       } else {
         ERROR_print("configureControlsHardware(): gpio=%d error\n", ptr->gpio);
@@ -761,7 +761,7 @@ void checkControls(controlMap* controlsConfig) {
 #endif
       } else {  //digital pin
         if (ptr->gpioCheck != NULL) {
-          unsigned char counter = counterGpioCheck(ptr->gpio, ptr->gpioCheck);  //counter >0 when gpio interrupt had fired
+          unsigned char counter = (ptr->gpioCheck)->getCounter(); //counter >0 when gpio interrupt had fired
           //if (counter >0) { DEBUG_print("GPIO=%d: COUNTER=%u\n", ptr->gpio, counter); }
           if (counter==0) { continue; }
         }

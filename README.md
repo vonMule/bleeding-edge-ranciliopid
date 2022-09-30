@@ -3,7 +3,7 @@
 
 ## Do it yourself, open-source PID for your espresso machine  
 
-Version 3.2.0
+Version 3.2.1 beta
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -125,6 +125,25 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.1 beta 2:
+  - Feature: Add support for SH1106 in SPI mode. Thanks piontec!
+  - Fix: SSD1306 support should also work again. Thanks piontec!
+- 3.2.1 beta 1:
+  - Added IoTMQTTPanel-perfect_coffee_pid_v3.2.0_v1.json to support the "new" scale settings.
+  - Fix: Changed BREWTIME_END_DETECTION to type "bool" to improve handling of improper configuration.
+  - Upgrade ZACWire to v2.0.0. Thanks Adrian/lebuni.
+  - Refactored GpioCheck accordingly.
+  - Updated ESP boardmanager and library dependencies to latest official version:
+    - Platformio:
+      - esp32: Upgrade espressif32 from v3 to v5
+      - FastLED to v3.5.0
+      - esp8266: Upgrade espressif8266 from v2 to v4
+      - esp8266: Update to latest uMQTTBroker
+    - ArduinoIDE:
+      - Upgrade Boardmanager from 
+        - ESP32:v1.0.6 to v2.0.4 
+        - ESP8266:v2.7.4 to 3.0.2
+      - Important: Update all manually installed libs like RemoteDebug and ZACWire (see Wiki)!
 - 3.2.0:
   - NEW FEATURE (ESP32 & ONLYPID=0): Add *SCALE* functionality for brewing based on a PR by [Hoondie](https://github.com/avolmensky) (Many thanks Hoondie!).
     - Rewrite of brew() function to supports stopping brewing by time or weight (see userConfig.h BREWTIME_END_DETECTION):    

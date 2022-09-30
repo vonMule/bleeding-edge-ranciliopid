@@ -97,7 +97,7 @@ class RemoteDebugWS: public Print
 
 	void disconnect();
 
-	bool isConnected();
+	boolean isConnected();
 
 	void handle();
 

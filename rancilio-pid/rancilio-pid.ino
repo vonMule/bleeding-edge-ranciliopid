@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.0";
+const char* sysVersion PROGMEM = "3.2.1 beta2";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -361,13 +361,13 @@ unsigned long previousTimerWaterLevelCheck = 0;
 #else // TSIC306 default sensor
   #define TEMPSENSOR_NAME "TSIC306"
   #include <ZACwire.h>
-#if (!defined(ZACWIRE_VERSION) || (defined(ZACWIRE_VERSION) && ZACWIRE_VERSION <= 133L))
-#error ERROR ZACwire library version must be >= 1.3.4
+#if (!defined(ZACWIRE_VERSION) || (defined(ZACWIRE_VERSION) && ZACWIRE_VERSION < 200L))
+#error ERROR ZACwire library version must be >= 2.0.0
 #endif
     #ifdef ESP32
-ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
+ZACwire TSIC(pinTemperature, 306, true);
     #else
-ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
+ZACwire TSIC(pinTemperature, 306, true);
     #endif
 #endif    
 
@@ -423,7 +423,7 @@ void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info){
 }
 
 void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
-  ERROR_print("WiFi lost connection. (IP=%s) Reason: %u\n", WiFi.localIP().toString().c_str(), info.disconnected.reason);
+  ERROR_print("WiFi lost connection. (IP=%s)\n", WiFi.localIP().toString().c_str());
 }
 #endif
 
@@ -1044,14 +1044,14 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         brewStatisticsTimer = millis();  //refresh timer
         lastBrewMessage = millis();
         DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.3fg/%0.2fg) (flowRateTimer=%ldms flowRate=%0.2fg/s)\n", 
-          (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
+          (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
           (flowRateEndTime - millis()), flowRate);
       }
 
       if (
         (brewTimer <= ((*activeBrewTimeEndDetection == 0 || !getTareAsyncStatus() ) ? totalBrewTime : (totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000))) ) && 
-        ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (currentWeight + scaleSensorWeightOffset < *activeScaleSensorWeightSetPoint) : true)
-        && ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (millis() <= flowRateEndTime) : true)
+        ( (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus()) ? (currentWeight + scaleSensorWeightOffset < *activeScaleSensorWeightSetPoint) : true)
+        && ( (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus()) ? (millis() <= flowRateEndTime) : true)
       ) {
         if (*activePreinfusion > 0 && brewTimer <= *activePreinfusion * 1000) {
           if (brewState != 1) {
@@ -1082,7 +1082,7 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         digitalWrite(pinRelayVentil, relayOFF);
         digitalWrite(pinRelayPumpe, relayOFF);
         DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.3fg/%0.2fg) (flowRateTimer=%ldms flowRate=%0.2fg/s)\n", 
-          (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
+          (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
           (flowRateEndTime - millis()), flowRate);
         flowRateEndTime = millis();  //dont restart brew due to weight flapping
         scaleSensorWeightOffsetAtStop = currentWeight ;
@@ -1137,7 +1137,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       WiFi.setSleepMode(WIFI_NONE_SLEEP); // needed for some disconnection bugs?
 #endif
       // WiFi.enableSTA(true);
-      delay(100); // required for esp32?
+      delay(200); // esp32: prevent "store calibration data failed(0x1105)" errors 
       WiFi.setAutoConnect(false); // disable auto-connect
       WiFi.setAutoReconnect(false); // disable auto-reconnect
 #ifdef ESP32
@@ -1846,8 +1846,8 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     // powerDown scale + automatic calculation of scaleSensorWeightOffset + output brew statistics x seconds after brew happened
     #if (SCALE_SENSOR_ENABLE)
     if (!brewing && (millis() > brewStatisticsTimer + brewStatisticsAdditionalWeightTime) ) {
-        if (scaleRunning && (*activeBrewTimeEndDetection == 1) && scaleSensorWeightOffsetAtStop != 0) {
-          if (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus() && (brewTimer <= (totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000))) ) {
+        if (scaleRunning && (*activeBrewTimeEndDetection >= 1) && scaleSensorWeightOffsetAtStop != 0) {
+          if (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus() && (brewTimer <= (totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000))) ) {
             float scaleSensorWeightOffsetCurrent = (*activeScaleSensorWeightSetPoint - currentWeight) * -1;
             float scaleSensorWeightOffsetCurrentRelative = (*activeScaleSensorWeightSetPoint - currentWeight - scaleSensorWeightOffset) * -1;
 
@@ -2148,7 +2148,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       return (3*getAverageTemperature(3,0) + thermocouple.readCelsius()) / 4.0;
     }
 #else
-    return TSIC.getTemp();
+    return TSIC.getTemp(250U);
 #endif
   }
 
@@ -2361,9 +2361,13 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         DEBUG_print("IP address: %s\n", WiFi.localIP().toString().c_str());
 
 #if (defined(ESP32) and defined(DEBUGMODE))
-        WiFi.onEvent(WiFiStationConnected, SYSTEM_EVENT_STA_CONNECTED);
+        //WiFi.onEvent(WiFiStationConnected, SYSTEM_EVENT_STA_CONNECTED);
         //WiFi.onEvent(WiFiGotIP, SYSTEM_EVENT_STA_GOT_IP);
-        WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
+        //WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
+        WiFi.onEvent(WiFiStationConnected, ARDUINO_EVENT_WIFI_STA_CONNECTED);
+        WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP);
+        WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP6);
+        WiFi.onEvent(WiFiStationDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 #endif
 
 // MQTT

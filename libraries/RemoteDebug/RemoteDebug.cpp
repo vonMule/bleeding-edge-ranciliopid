@@ -195,7 +195,7 @@ static WiFiClient TelnetClient; // @suppress("Abstract class cannot be instantia
 
 static RemoteDebugWS DebugWS; // @suppress("Abstract class cannot be instantiated")
 
-static bool _connectedWS = false; // Connected :
+static boolean _connectedWS = false; // Connected :
 
 // Callbacks
 
@@ -296,7 +296,7 @@ bool RemoteDebug::begin(String hostName, uint16_t port,  uint8_t startingDebugLe
 
 #ifdef DEBUGGER_ENABLED
 // Simple software debugger - based on SerialDebug Library
-void RemoteDebug::initDebugger(bool (*callbackEnabled)(), void (*callbackHandle)(const boolean), String (*callbackGetHelp)(), void (*callbackProcessCmd)()) {
+void RemoteDebug::initDebugger(boolean (*callbackEnabled)(), void (*callbackHandle)(const boolean), String (*callbackGetHelp)(), void (*callbackProcessCmd)()) {
 
 	// Init callbacks for the debugger
 
@@ -370,7 +370,7 @@ void RemoteDebug::handle() {
 
 #ifdef DEBUGGER_ENABLED
 	static uint32_t dbgTimeHandle = millis(); // To avoid call the handler desnecessary
-	static bool dbgLastConnected = false; // Last is connected ?
+	static boolean dbgLastConnected = false; // Last is connected ?
 #endif
 
 	// Silence timeout ?
@@ -547,9 +547,9 @@ void RemoteDebug::handle() {
 	// Client connected ?
 
 #ifndef WEBSOCKET_DISABLED // For web socket server (app)
-	bool connected = (_connected || _connectedWS);
+	boolean connected = (_connected || _connectedWS);
 #else // By telnet
-	bool connected = _connected;
+	boolean connected = _connected;
 #endif
 
 	if (connected) {
@@ -606,7 +606,7 @@ void RemoteDebug::handle() {
 
 	if (_callbackDbgEnabled && _callbackDbgHandle) { // Calbacks ok ?
 
-		bool callHandle = false;
+		boolean callHandle = false;
 
 		if (dbgLastConnected != connected) { // Change connection -> always call
 
@@ -639,7 +639,7 @@ void RemoteDebug::handle() {
 
 // Disconnect client
 
-void RemoteDebug::disconnect(bool onlyTelnetClient) {
+void RemoteDebug::disconnect(boolean onlyTelnetClient) {
 
 	// Disconnect
 
@@ -668,7 +668,7 @@ void RemoteDebug::disconnect(bool onlyTelnetClient) {
 
 // Connection/disconnection event
 
-void RemoteDebug::onConnection(bool connected) {
+void RemoteDebug::onConnection(boolean connected) {
 
 	// Clear variables
 
@@ -727,7 +727,7 @@ void RemoteDebug::onConnection(bool connected) {
 	}
 }
 
-bool RemoteDebug::isConnected() {
+boolean RemoteDebug::isConnected() {
 
 	// Is connected
 
@@ -740,7 +740,7 @@ bool RemoteDebug::isConnected() {
 
 // Send to serial too (use only if need)
 
-void RemoteDebug::setSerialEnabled(bool enable) {
+void RemoteDebug::setSerialEnabled(boolean enable) {
 
 	_serialEnabled = enable;
 	_showColors = false; // Disable it for Serial
@@ -749,19 +749,19 @@ void RemoteDebug::setSerialEnabled(bool enable) {
 
 // Allow ESP reset over telnet client
 
-void RemoteDebug::setResetCmdEnabled(bool enable) {
+void RemoteDebug::setResetCmdEnabled(boolean enable) {
 	_resetCommandEnabled = enable;
 }
 
 // Show time in millis
 
-void RemoteDebug::showTime(bool show) {
+void RemoteDebug::showTime(boolean show) {
 	_showTime = show;
 }
 
 // Show profiler - time in millis between messages of debug
 
-void RemoteDebug::showProfiler(bool show, uint32_t minTime) {
+void RemoteDebug::showProfiler(boolean show, uint32_t minTime) {
 	_showProfiler = show;
 	_minTimeShowProfiler = minTime;
 }
@@ -776,13 +776,13 @@ void RemoteDebug::autoProfilerLevel(uint32_t millisElapsed) {
 
 // Show debug level
 
-void RemoteDebug::showDebugLevel(bool show) {
+void RemoteDebug::showDebugLevel(boolean show) {
 	_showDebugLevel = show;
 }
 
 // Show colors
 
-void RemoteDebug::showColors(bool show) {
+void RemoteDebug::showColors(boolean show) {
 	if (_serialEnabled == false) {
 		_showColors = show;
 	} else {
@@ -792,14 +792,14 @@ void RemoteDebug::showColors(bool show) {
 
 // Show in raw mode - only data ?
 
-void RemoteDebug::showRaw(bool show) {
+void RemoteDebug::showRaw(boolean show) {
 	_showRaw = show;
 }
 
 
 // Is active ? client telnet connected and level of debug equal or greater then set by user in telnet
 
-bool RemoteDebug::isActive(uint8_t debugLevel) {
+boolean RemoteDebug::isActive(uint8_t debugLevel) {
 
 	// Active ->
 	//	Not in silence (new)
@@ -810,13 +810,13 @@ bool RemoteDebug::isActive(uint8_t debugLevel) {
 
 #ifndef WEBSOCKET_DISABLED // For web socket server (app)
 
-	bool ret = (debugLevel >= _clientDebugLevel &&
+	boolean ret = (debugLevel >= _clientDebugLevel &&
 					!_silence &&
 					(_connected || _connectedWS || _serialEnabled));
 
 #else // Telnet only
 
-	bool ret = (debugLevel >= _clientDebugLevel &&
+	boolean ret = (debugLevel >= _clientDebugLevel &&
 					!_silence &&
 					(_connected || _serialEnabled));
 
@@ -878,9 +878,9 @@ size_t RemoteDebug::write(uint8_t character) {
 	// Connected ?
 
 #ifndef WEBSOCKET_DISABLED // For web socket server (app)
-	bool connected = (_connected || _connectedWS);
+	boolean connected = (_connected || _connectedWS);
 #else
-	bool connected = _connected;
+	boolean connected = _connected;
 #endif
 
 	// In silente mode now ?
@@ -984,7 +984,7 @@ size_t RemoteDebug::write(uint8_t character) {
 
 			if (_showProfiler) {
 				elapsed = (millis() - _lastTimePrint);
-				bool resetColors = false;
+				boolean resetColors = false;
 				if (show != "") {
 					show.concat(" ");
 				}
@@ -1093,7 +1093,7 @@ size_t RemoteDebug::write(uint8_t character) {
 
 			if (_showProfiler) {
 				elapsed = (millis() - _lastTimePrint);
-				bool resetColors = false;
+				boolean resetColors = false;
 				if (show != "")
 					show.concat(" ");
 				if (_showColors) {
@@ -1152,7 +1152,7 @@ size_t RemoteDebug::write(uint8_t character) {
 
 	// Print ?
 
-	bool doPrint = false;
+	boolean doPrint = false;
 
 	// New line ?
 
@@ -1177,7 +1177,7 @@ size_t RemoteDebug::write(uint8_t character) {
 
 	if (doPrint) { // Print the buffer
 
-		bool noPrint = false;
+		boolean noPrint = false;
 
 		if (_showProfiler && elapsed < _minTimeShowProfiler) { // Profiler time Minimal
 			noPrint = true;
@@ -1198,7 +1198,7 @@ size_t RemoteDebug::write(uint8_t character) {
 #endif
 			// Send to telnet or websocket (buffered)
 
-			bool sendToClient = connected;
+			boolean sendToClient = connected;
 
 			if (_password != "" && !_passwordOk) { // With no password -> no telnet output - 2018-10-19
 				sendToClient = false;
@@ -1788,7 +1788,7 @@ void RemoteDebug::setNoFilter() {
 
 // Silence
 
-void RemoteDebug::silence(bool activate, bool showMessage, bool fromBreak, uint32_t timeout) {
+void RemoteDebug::silence(boolean activate, boolean showMessage, boolean fromBreak, uint32_t timeout) {
 
 	// Set silence and timeout
 
@@ -1829,7 +1829,7 @@ void RemoteDebug::silence(bool activate, bool showMessage, bool fromBreak, uint3
 
 }
 
-bool RemoteDebug::isSilence() {
+boolean RemoteDebug::isSilence() {
 
 	return _silence;
 }
@@ -1951,7 +1951,7 @@ void RemoteDebug::wsSendLevelInfo() {
 
 #endif // WEBSOCKET_DISABLED
 
-bool RemoteDebug::wsIsConnected() {
+boolean RemoteDebug::wsIsConnected() {
 
 	// Web socket is connected (RemoteDebugApp)
 
@@ -1974,7 +1974,7 @@ uint32_t RemoteDebug::getFreeMemory() {
 
 // Is CR or LF ?
 
-bool RemoteDebug::isCRLF(char character) {
+boolean RemoteDebug::isCRLF(char character) {
 
 	return (character == '\r' || character == '\n');
 

@@ -239,23 +239,23 @@ class RemoteDebug: public Print
 
 	void handle();
 
-	void disconnect(bool onlyTelnetClient = false);
+	void disconnect(boolean onlyTelnetClient = false);
 
-	void setSerialEnabled(bool enable);
+	void setSerialEnabled(boolean enable);
 
-	void setResetCmdEnabled(bool enable);
+	void setResetCmdEnabled(boolean enable);
 
 	void setHelpProjectsCmds(String help);
 	void setCallBackProjectCmds(void (*callback)());
 	String getLastCommand();
 	void clearLastCommand();
 
-	void showTime(bool show);
-	void showProfiler(bool show, uint32_t minTime = 0);
-	void showDebugLevel(bool show);
-	void showColors(bool show);
+	void showTime(boolean show);
+	void showProfiler(boolean show, uint32_t minTime = 0);
+	void showDebugLevel(boolean show);
+	void showColors(boolean show);
 
-	void showRaw(bool show);
+	void showRaw(boolean show);
 
 	void setCallBackNewClient(void (*callback)());
 
@@ -266,18 +266,18 @@ class RemoteDebug: public Print
 	void setFilter(String filter);
 	void setNoFilter();
 
-	bool isActive(uint8_t debugLevel = DEBUG);
+	boolean isActive(uint8_t debugLevel = DEBUG);
 
-	void silence(bool activate, bool showMessage = true, bool fromBreak = false, uint32_t timeout = 0);
-	bool isSilence();
+	void silence(boolean activate, boolean showMessage = true, boolean fromBreak = false, uint32_t timeout = 0);
+	boolean isSilence();
 
-	void onConnection(bool connected);
+	void onConnection(boolean connected);
 
-	bool isConnected();
+	boolean isConnected();
 
 #ifdef DEBUGGER_ENABLED
 	// For Simple software debugger - based on SerialDebug Library
-	void initDebugger(bool (*callbackEnabled)(), void (*callbackHandle)(const boolean), String (*callbackGetHelp)(), void (*callbackProcessCmd)());
+	void initDebugger(boolean (*callbackEnabled)(), void (*callbackHandle)(const boolean), String (*callbackGetHelp)(), void (*callbackProcessCmd)());
 	WiFiClient* getTelnetClient();
 #endif
 
@@ -286,7 +286,7 @@ class RemoteDebug: public Print
 	void wsSendInfo();
 	void wsSendLevelInfo();
 #endif
-	bool wsIsConnected();
+	boolean wsIsConnected();
 
 	// Print
 
@@ -318,14 +318,14 @@ private:
 
 	String _hostName = "";				// Host name
 
-	bool _connected = false;			// Client is connected ?
+	boolean _connected = false;			// Client is connected ?
 
 	String _password = "";				// Password
 
-	bool _passwordOk = false; 		// Password request ? - 18/07/18
+	boolean _passwordOk = false; 		// Password request ? - 18/07/18
 	uint8_t _passwordAttempt = 0;
 
-	bool _silence = false;			// Silence mode ?
+	boolean _silence = false;			// Silence mode ?
 	uint32_t _silenceTimeout = 0;		// Silence timeout
 
 	uint8_t _clientDebugLevel = DEBUG;	// Level setted by user in web app or telnet client
@@ -337,22 +337,22 @@ private:
 	uint32_t _levelProfilerDisable = 0;	// time in millis to disable the profiler level
 	uint32_t _autoLevelProfiler = 0;	// Automatic change to profiler level if time between handles is greater than n millis
 
-	bool _showTime = false;			// Show time in millis
+	boolean _showTime = false;			// Show time in millis
 
-	bool _showProfiler = false;		// Show time between messages
+	boolean _showProfiler = false;		// Show time between messages
 	uint32_t _minTimeShowProfiler = 0;	// Minimal time to show profiler
 
-	bool _showDebugLevel = true;		// Show debug Level
+	boolean _showDebugLevel = true;		// Show debug Level
 
-	bool _showColors = false;		// Show colors
+	boolean _showColors = false;		// Show colors
 
-	bool _showRaw = false;			// Show in raw mode ?
+	boolean _showRaw = false;			// Show in raw mode ?
 
-	bool _serialEnabled = false;		// Send to serial too (not recommended)
+	boolean _serialEnabled = false;		// Send to serial too (not recommended)
 
-	bool _resetCommandEnabled=false;	// Enable command to reset the board
+	boolean _resetCommandEnabled=false;	// Enable command to reset the board
 
-	bool _newLine = true;			// New line write ?
+	boolean _newLine = true;			// New line write ?
 
 	String _command = "";				// Command received
 	String _lastCommand = "";			// Last Command received
@@ -362,7 +362,7 @@ private:
 	void (*_callbackNewClient)() = NULL; // Callable for when have a new client connected
 
 	String _filter = "";				// Filter
-	bool _filterActive = false;
+	boolean _filterActive = false;
 
 	String _bufferPrint = "";			// Buffer of print write to WiFi
 
@@ -374,7 +374,7 @@ private:
 
 #ifdef DEBUGGER_ENABLED
 //	// For Simple software debugger - based on SerialDebug Library
-	bool (*_callbackDbgEnabled)() = NULL;// Callable for debugger enabled
+	boolean (*_callbackDbgEnabled)() = NULL;// Callable for debugger enabled
 	void (*_callbackDbgHandle)(const boolean) = NULL;	// Callable for handle of debugger
 	String (*_callbackDbgHelp)() = NULL;	// Callable for get debugger help
 	void (*_callbackDbgProcessCmd)() = NULL;// Callable for process commands of debugger
@@ -385,7 +385,7 @@ private:
 	void showHelp();
 	void processCommand();
 	String formatNumber(uint32_t value, uint8_t size, char insert='0');
-	bool isCRLF(char character);
+	boolean isCRLF(char character);
 	uint32_t getFreeMemory();
 
 #ifdef ALPHA_VERSION // In test, not good yet

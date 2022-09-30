@@ -164,7 +164,7 @@ void RemoteDebugWS::handle() {
 
 // Is connected ?
 
-bool RemoteDebugWS::isConnected() {
+boolean RemoteDebugWS::isConnected() {
 	return (_webSocketConnected != WS_NOT_CONNECTED);
 }
 

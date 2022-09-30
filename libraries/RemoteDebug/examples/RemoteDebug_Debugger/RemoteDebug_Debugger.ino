@@ -206,7 +206,7 @@ uint8_t mRunHours = 0;
 
 // Globals for example of debugger
 
-bool mBoolean = false;
+boolean mBoolean = false;
 char mChar = 'X';
 byte mByte = 'Y';
 int mInt = 1;
