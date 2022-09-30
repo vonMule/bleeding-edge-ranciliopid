@@ -120,8 +120,8 @@
  *******/
 #define DISPLAY_HARDWARE 0                // 0=Deaktiviert, 1=SH1106_128X64_I2C, 2=SSD1306_128X64_I2C, 3=SH1106_126x64_SPI
                                           // for 3 (SH1106 SPI) use P23=MOSI P18=CLK P5=OLED_CS P2=OLED_DC (see display.h)
-#define DISPLAY_I2C_SCL 22                // SCL for OLED display; P22 on ESP32 by default
-#define DISPLAY_I2C_SDA 21                // SDA for OLED display; P21 on ESP32 by default
+#define DISPLAY_I2C_SCL 255               // 255=use default SCL (default); (esp32 only) x=pin number to be used for SCL 
+#define DISPLAY_I2C_SDA 255               // 255=use default SDA (default); (esp32 only) x=pin number to be used for SDA
 #define ROTATE_DISPLAY 0                  // 0=Off (Default), 1=180 degree clockwise rotation
 #define DISPLAY_TEXT_STATE 1              // 1=On  (Default), 0=Off display text of Maschine-state
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter", 3:="text"

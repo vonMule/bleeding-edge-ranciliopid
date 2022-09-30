@@ -125,6 +125,10 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.1 beta 3:
+  - Feature: Add support for custom display pins (see DISPLAY_I2C_SCL, DISPLAY_I2C_SDA). Thanks piontec!
+  - userConfig.h Changes:
+    - Added DISPLAY_I2C_SCL, DISPLAY_I2C_SDA (default 255).
 - 3.2.1 beta 2:
   - Feature: Add support for SH1106 in SPI mode. Thanks piontec!
   - Fix: SSD1306 support should also work again. Thanks piontec!

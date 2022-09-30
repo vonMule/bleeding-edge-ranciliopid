@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.1 beta2";
+const char* sysVersion PROGMEM = "3.2.1 beta3";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -2524,7 +2524,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
 #if (WATER_LEVEL_SENSOR_ENABLE)
 #ifdef ESP32
     Wire1.begin(WATER_LEVEL_SENSOR_SDA, WATER_LEVEL_SENSOR_SCL,
-        100000); // Wire0 cannot be re-used due to core0 stickyness
+        100000U); // Wire0 cannot be re-used due to core0 stickyness
     waterSensor.setBus(&Wire1);
 #else
     Wire.begin();
