@@ -29,7 +29,8 @@ const char* sysVersion PROGMEM = "3.2.1 beta2";
 const int OnlyPID = ONLYPID;
 const int TempSensorRecovery = TEMPSENSORRECOVERY;
 const int brewDetection = BREWDETECTION;
-const int triggerType = TRIGGERTYPE;
+const int valveTriggerType = VALVE_TRIGGERTYPE;
+const int pumpTriggerType = PUMP_TRIGGERTYPE;
 const bool ota = OTA;
 const int grafana = GRAFANA;
 
@@ -275,7 +276,8 @@ unsigned int activeProfile = profile;  // profile set
 
 bool emergencyStop = false; // protect system when temperature is too high or sensor defect
 int pidON = 1; // 1 = control loop in closed loop
-int relayON, relayOFF; // used for relay trigger type. Do not change!
+int pumpRelayON, pumpRelayOFF; // used for pump relay trigger type. Do not change!
+int valveRelayON, valveRelayOFF; // used for valve relay trigger type. Do not change!
 char displayMessageLine1[21] = "\0";
 char displayMessageLine2[21] = "\0";
 unsigned long userActivity = 0;
@@ -981,11 +983,11 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       }
       if (brewTimer <= totalBrewTime) {
         if (!cleaningEnableAutomatic || brewTimer <= cleaningInterval * 1000U) {
-          digitalWrite(pinRelayVentil, relayON);
-          digitalWrite(pinRelayPumpe, relayON);
+          digitalWrite(pinRelayVentil, valveRelayON);
+          digitalWrite(pinRelayPumpe, pumpRelayON);
         } else {
-          digitalWrite(pinRelayVentil, relayOFF);
-          digitalWrite(pinRelayPumpe, relayOFF);
+          digitalWrite(pinRelayVentil, valveRelayOFF);
+          digitalWrite(pinRelayPumpe, pumpRelayOFF);
         }
       } else {
         if (cleaningEnableAutomatic && cycle < cleaningCycles) {
@@ -995,8 +997,8 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
           DEBUG_print("End clean()\n");
           brewing = 0;
           cycle = 1;
-          digitalWrite(pinRelayVentil, relayOFF);
-          digitalWrite(pinRelayPumpe, relayOFF);
+          digitalWrite(pinRelayVentil, valveRelayOFF);
+          digitalWrite(pinRelayPumpe, pumpRelayOFF);
         }
       }
     } else if (simulatedBrewSwitch && !brewing) { // corner-case: switch=On but brewing==0
@@ -1006,8 +1008,8 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       if (waitingForBrewSwitchOff) { DEBUG_print("simulatedBrewSwitch=off\n"); }
       waitingForBrewSwitchOff = false;
       if (brewing == 1) {
-        digitalWrite(pinRelayVentil, relayOFF);
-        digitalWrite(pinRelayPumpe, relayOFF);
+        digitalWrite(pinRelayVentil, valveRelayOFF);
+        digitalWrite(pinRelayPumpe, pumpRelayOFF);
         brewing = 0;
         cycle = 1;
       }
@@ -1057,30 +1059,30 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
           if (brewState != 1) {
             brewState = 1;
             //DEBUG_println("preinfusion");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayON);
+            digitalWrite(pinRelayVentil, valveRelayON);
+            digitalWrite(pinRelayPumpe, pumpRelayON);
           }
         } else if (*activePreinfusion > 0 && brewTimer > *activePreinfusion * 1000 && brewTimer <= (*activePreinfusion + *activePreinfusionPause) * 1000) {
           if (brewState != 2) {
             brewState = 2;
             //DEBUG_println("preinfusion pause");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayOFF);
+            digitalWrite(pinRelayVentil, valveRelayON);
+            digitalWrite(pinRelayPumpe, pumpRelayOFF);
           }
         } else if (*activePreinfusion == 0 || brewTimer > (*activePreinfusion + *activePreinfusionPause) * 1000) {
           if (brewState != 3) {
             brewState = 3;
             //DEBUG_println("brew");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayON);
+            digitalWrite(pinRelayVentil, valveRelayON);
+            digitalWrite(pinRelayPumpe, pumpRelayON);
           }
         }
       } else {
         brewState = 0;
         //DEBUG_print("brew end\n");
         brewing = 0;
-        digitalWrite(pinRelayVentil, relayOFF);
-        digitalWrite(pinRelayPumpe, relayOFF);
+        digitalWrite(pinRelayVentil, valveRelayOFF);
+        digitalWrite(pinRelayPumpe, pumpRelayOFF);
         DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.3fg/%0.2fg) (flowRateTimer=%ldms flowRate=%0.2fg/s)\n", 
           (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
           (flowRateEndTime - millis()), flowRate);
@@ -1089,15 +1091,15 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       }
     } else if (simulatedBrewSwitch && !brewing) { // corner-case: switch=On but brewing==0
       waitingForBrewSwitchOff = true; // just to be sure
-      // digitalWrite(pinRelayVentil, relayOFF);  //already handled by brewing
-      // var digitalWrite(pinRelayPumpe, relayOFF);
+      // digitalWrite(pinRelayVentil, valveRelayOFF);  //already handled by brewing
+      // var digitalWrite(pinRelayPumpe, pumpRelayOFF);
       brewState = 0;
     } else if (!simulatedBrewSwitch) {
       if (waitingForBrewSwitchOff) { DEBUG_print("simulatedBrewSwitch=off\n"); }
       waitingForBrewSwitchOff = false;
       if (brewing == 1) {
-        digitalWrite(pinRelayVentil, relayOFF);
-        digitalWrite(pinRelayPumpe, relayOFF);
+        digitalWrite(pinRelayVentil, valveRelayOFF);
+        digitalWrite(pinRelayPumpe, pumpRelayOFF);
         brewing = 0;
       }
       brewState = 0;
@@ -1473,7 +1475,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         /* STATE 6 (Steam) DETECTION */
         if (steaming) {
           snprintf(debugLine, sizeof(debugLine), "Steaming Detected. Transition to state 6 (Steam)");
-          // digitalWrite(pinRelayVentil, relayOFF);
+          // digitalWrite(pinRelayVentil, valveRelayOFF);
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           if (*activeSetPoint != setPointSteam) {
@@ -2263,21 +2265,28 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     /********************************************************
      * Define trigger type
      ******************************************************/
-    if (triggerType) {
-      relayON = HIGH;
-      relayOFF = LOW;
+    if (valveTriggerType) {
+      valveRelayON = HIGH;
+      valveRelayOFF = LOW;
     } else {
-      relayON = LOW;
-      relayOFF = HIGH;
+      valveRelayON = LOW;
+      valveRelayOFF = HIGH;
+    }
+    if (pumpTriggerType) {
+      pumpRelayON = HIGH;
+      pumpRelayOFF = LOW;
+    } else {
+      pumpRelayON = LOW;
+      pumpRelayOFF = HIGH;
     }
 
     /********************************************************
      * Init Pins
      ******************************************************/
     pinMode(pinRelayVentil, OUTPUT);
-    digitalWrite(pinRelayVentil, relayOFF);
+    digitalWrite(pinRelayVentil, valveRelayOFF);
     pinMode(pinRelayPumpe, OUTPUT);
-    digitalWrite(pinRelayPumpe, relayOFF);
+    digitalWrite(pinRelayPumpe, pumpRelayOFF);
     pinMode(pinRelayHeater, OUTPUT);
     digitalWrite(pinRelayHeater, LOW);
 #if (ENABLE_HARDWARE_LED == 1)
