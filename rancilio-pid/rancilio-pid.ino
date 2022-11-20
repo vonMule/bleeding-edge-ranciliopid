@@ -94,15 +94,7 @@ unsigned long mqttConnectTime = 0; // time of last successfull mqtt connection
 /********************************************************
  * states
  ******************************************************/
-int activeState = 3; // (0:= undefined / EMERGENCY_TEMP reached)
-                     // 1:= Coldstart required (machine is cold)
-                     // 2:= Stabilize temperature after coldstart
-                     // 3:= (default) Inner Zone detected (temperature near setPoint)
-                     // 4:= Brew detected 
-                     // 5:= Outer Zone detected (temperature outside of "inner zone")
-                     // 6:= steam mode activated
-                     // 7:= sleep mode activated 
-                     // 8:= clean mode
+int activeState = STATE_DEFAULT;
 
 /********************************************************
  * history of temperatures
@@ -620,7 +612,7 @@ bool isBlynkWorking() {
   #endif
 }
 
-bool inSensitivePhase() { return (brewing || activeState == 4 || isrCounter > 1000); }
+bool inSensitivePhase() { return (brewing || activeState == STATE_BREW_DETECTED || isrCounter > 1000); }
 
 int signnum(float x) {
   if (x >= 0.0)
@@ -892,13 +884,13 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         error, secondlatestTemperature, latestTemperature);
     }
 #ifdef DEV_ESP
-  } else if ((activeState==3 || activeState==1)  &&
+  } else if ((activeState == STATE_INNER_ZONE_DETECTED || activeState == STATE_COLDSTART)  &&
      fabs(latestTemperature - secondlatestTemperature) >= 0.2 &&
      fabs(secondlatestTemperature - getTemperature(0)) >= 0.2 && 
      signnum(getTemperature(0) - secondlatestTemperature)*signnum(latestTemperature - secondlatestTemperature) > 0
      ) {
 #else
-  } else if (activeState==3 &&
+  } else if (activeState == STATE_INNER_ZONE_DETECTED &&
      //fabs(secondlatestTemperature - setPoint) <= 5 &&
      fabs(latestTemperature - *activeSetPoint) <= 5 &&
      fabs(latestTemperature - secondlatestTemperature) >= 0.2 &&
@@ -1252,8 +1244,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
    ******************************************************/
   void updateState() {
     switch (activeState) {
-      case 1: // state 1 running, that means full heater power. Check if target
-              // temp is reached
+      case STATE_COLDSTART: // state 1 running, that means full heater power. Check if target temp is reached
       {
         if (!MaschineColdstartRunOnce) {
           MaschineColdstartRunOnce = true;
@@ -1273,12 +1264,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetSumOutputI(0);
-          activeState = 2;
+          activeState = STATE_STABILIZE_TEMPERATURE;
         }
         break;
       }
-      case 2: // state 2 running, that means heater is on steadyState and we
-              // are waiting to temperature to stabilize
+      case STATE_STABILIZE_TEMPERATURE: // that means heater is on steadyState and we are waiting to temperature to stabilize
       {
         bPID.SetFilterSumOutputI(30);
 
@@ -1345,12 +1335,12 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetSumOutputI(0);
-          activeState = 3;
+          activeState = STATE_INNER_ZONE_DETECTED;
           bPID.SetAutoTune(true);
         }
         break;
       }
-      case 4: // state 4 running = Brew running
+      case STATE_BREW_DETECTED: // = Brew running
       {
         bPID.SetFilterSumOutputI(100);
         bPID.SetAutoTune(false);
@@ -1364,11 +1354,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           bPID.SetSumOutputI(0);
           lastBrewEnd = millis();  //used to detect time from brew until brewReady
           timerBrewDetection = 0;
-          activeState = 2; 
+          activeState = STATE_STABILIZE_TEMPERATURE; 
         }
         break;
       }
-      case 5: // state 5 in outerZone
+      case STATE_OUTER_ZONE_DETECTED: // state 5 in outerZone
       {
         if (Input >= *activeSetPoint - outerZoneTemperatureDifference - 1.5) {
           bPID.SetFilterSumOutputI(4.5);
@@ -1385,11 +1375,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           bPID.SetSumOutputI(0);
           bPID.SetAutoTune(true);
           timerBrewDetection = 0;
-          activeState = 3;
+          activeState = STATE_INNER_ZONE_DETECTED;
         }
         break;
       }
-      case 6: // state 6 heat up because we want to steam
+      case STATE_STEAM_MODE: // state 6 heat up because we want to steam
       {
         bPID.SetAutoTune(false); // do not tune during steam phase
 
@@ -1408,11 +1398,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           bPID.SetAutoTune(false);
           Output = 0;
           timerBrewDetection = 0;
-          activeState = 3;
+          activeState = STATE_INNER_ZONE_DETECTED;
         }
         break;
       }
-      case 7: // state 7 sleep modus activated (no heater,..)
+      case STATE_SLEEP_MODE: // state 7 sleep modus activated (no heater,..)
       {
         if (!sleeping) {
           snprintf(debugLine, sizeof(debugLine), "** End of Sleeping phase. Transition to state 3 (normal mode)");
@@ -1420,23 +1410,23 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(true);
           bPID.SetMode(AUTOMATIC);
-          activeState = 3;
+          activeState = STATE_INNER_ZONE_DETECTED;
         }
         break;
       }
-      case 8: // state 8 clean modus activated
+      case STATE_CLEAN_MODE: // state 8 clean modus activated
       {
         if (!cleaning) {
           snprintf(debugLine, sizeof(debugLine), "** End of Cleaning phase. Transition to state 3 (normal mode)");
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(true);
-          activeState = 3;
+          activeState = STATE_INNER_ZONE_DETECTED;
         }
         break;
       }
 
-      case 3: // normal PID mode
+      case STATE_INNER_ZONE_DETECTED: // normal PID mode
       default: {
         if (!pidMode) break;
 
@@ -1456,7 +1446,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           snprintf(debugLine, sizeof(debugLine), "** End of normal mode. Transition to state 7 (sleeping)");
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
-          activeState = 7;
+          activeState = STATE_SLEEP_MODE;
           bPID.SetAutoTune(false);
           bPID.SetMode(MANUAL);
           break;
@@ -1468,7 +1458,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(false); // do not tune
-          activeState = 8;
+          activeState = STATE_CLEAN_MODE;
           break;
         }
 
@@ -1482,7 +1472,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
             activeSetPoint = &setPointSteam;
             DEBUG_print("set activeSetPoint: %0.2f\n", *activeSetPoint);
           }
-          activeState = 6;
+          activeState = STATE_STEAM_MODE;
           break;
         }
 
@@ -1495,7 +1485,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           DEBUG_print("Enable steadyPowerOffset (%0.2f)\n", steadyPowerOffset);
           bPID.SetAutoTune(false); // do not tune during coldstart + phase2
           bPID.SetSumOutputI(0);
-          activeState = 1;
+          activeState = STATE_COLDSTART;
           break;
         }
 
@@ -1522,7 +1512,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
             DEBUG_println(debugLine);
             mqttPublish((char*)"events", debugLine);
             bPID.SetSumOutputI(0);
-            activeState = 4;
+            activeState = STATE_BREW_DETECTED;
             break;
           }
         }
@@ -1533,7 +1523,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetSumOutputI(0);
-          activeState = 5;
+          activeState = STATE_OUTER_ZONE_DETECTED;
           if (Input > *activeSetPoint) { // if we are above setPoint always disable heating (primary useful after steaming)  YYY1
             bPID.SetAutoTune(false);
             bPID.SetMode(MANUAL);
@@ -1576,7 +1566,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   float Output_save;
   void pidCompute() {
     // certain activeState set Output to fixed values
-    if (activeState == 1 || activeState == 2 || activeState == 4) { Output_save = Output; }
+    if (activeState == STATE_COLDSTART || activeState == STATE_STABILIZE_TEMPERATURE || activeState == STATE_BREW_DETECTED) { Output_save = Output; }
     int ret = bPID.Compute();
     if (ret == 1) { // compute() did run successfully
       if (isrCounter > (windowSize + 100)) {
@@ -1589,7 +1579,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       pidComputeDelay = millis() + 5 - pidComputeLastRunTime - windowSize;
       if (pidComputeDelay > 50 && pidComputeDelay < 100000000) { DEBUG_print("pidCompute() delay of %lu ms (loop() hang?)\n", pidComputeDelay); }
       pidComputeLastRunTime = millis();
-      if (activeState == 1 || activeState == 2 || activeState == 4) {
+      if (activeState == STATE_COLDSTART || activeState == STATE_STABILIZE_TEMPERATURE || activeState == STATE_BREW_DETECTED) {
 #pragma GCC diagnostic error "-Wuninitialized"
         Output = Output_save;
       }
@@ -1808,7 +1798,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
 
     checkControls(controlsConfig); // transform controls to actions
 
-    if (activeState == 8) {
+    if (activeState == STATE_CLEAN_MODE) {
       clean();
     } else {
       // handle brewing if button is pressed (ONLYPID=0 for now, because
@@ -1877,18 +1867,18 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       updateState();
 
       /* state 1: Water is very cold, set heater to full power */
-      if (activeState == 1) {
+      if (activeState == STATE_COLDSTART) {
         Output = windowSize;
 
         /* state 2: ColdstartTemp reached. Now stabilizing temperature after
          * coldstart */
-      } else if (activeState == 2) {
+      } else if (activeState == STATE_STABILIZE_TEMPERATURE) {
         // Output = convertUtilisationToOutput(steadyPower +
         // bPID.GetSteadyPowerOffsetCalculated());
         Output = convertUtilisationToOutput(steadyPower);
 
         /* state 4: Brew detected. Increase heater power */
-      } else if (activeState == 4) {
+      } else if (activeState == STATE_BREW_DETECTED) {
         if (Input > *activeSetPoint + outerZoneTemperatureDifference) {
           Output = convertUtilisationToOutput(steadyPower + bPID.GetSteadyPowerOffsetCalculated());
         } else {
@@ -1899,7 +1889,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
 
         /* state 5: Outer Zone reached. More power than in inner zone */
-      } else if (activeState == 5) {
+      } else if (activeState == STATE_OUTER_ZONE_DETECTED) {
         if (Input > *activeSetPoint) {
           Output = 0;
         } else {
@@ -1914,7 +1904,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
 
         /* state 6: Steaming state active*/
-      } else if (activeState == 6) {
+      } else if (activeState == STATE_STEAM_MODE) {
         bPID.SetMode(MANUAL);
         if (!pidMode) {
           if (millis() >= streamComputeLastRunTime + 500) {
@@ -1942,7 +1932,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
 
         /* state 7: Sleeping state active*/
-      } else if (activeState == 7) {
+      } else if (activeState == STATE_SLEEP_MODE) {
         if (millis() - recurringOutput > 60000) {
           recurringOutput = millis();
           snprintf(debugLine, sizeof(debugLine), "sleeping...");
@@ -1951,7 +1941,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         Output = 0;
 
         /* state 8: Cleaning state active*/
-      } else if (activeState == 8) {
+      } else if (activeState == STATE_CLEAN_MODE) {
         if (millis() - recurringOutput > 60000) {
           recurringOutput = millis();
           snprintf(debugLine, sizeof(debugLine), "cleaning...");
