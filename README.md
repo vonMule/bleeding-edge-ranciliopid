@@ -3,7 +3,7 @@
 
 ## Do it yourself, open-source PID for your espresso machine  
 
-Version 3.2.1 beta
+Version 3.2.1
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -125,20 +125,16 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
-- 3.2.1 beta 4:
-  - Feature: Distinguish triggertype for for 3way-valve and pump. Thanks piontec!
+- 3.2.1:
+  - Feature: Add support for SH1106 in SPI mode. Thanks piontec!
+  - Feature: Add support for custom display pins (see DISPLAY_I2C_SCL, DISPLAY_I2C_SDA). Thanks piontec!
+  - Feature: Distinguish triggertype for 3way-valve and pump. Thanks piontec!
   - userConfig.h Changes:
     - Added VALVE_TRIGGERTYPE, PUMP_TRIGGERTYPE (default HIGH. Previously called TRIGGERTYPE).
     - RENAMED pinRelayVentil to pinRelayValve.
     - RENAMED pinRelayPumpe to pinRelayPump.
-- 3.2.1 beta 3:
-  - Feature: Add support for custom display pins (see DISPLAY_I2C_SCL, DISPLAY_I2C_SDA). Thanks piontec!
-  - userConfig.h Changes:
     - Added DISPLAY_I2C_SCL, DISPLAY_I2C_SDA (default 255).
-- 3.2.1 beta 2:
-  - Feature: Add support for SH1106 in SPI mode. Thanks piontec!
   - Fix: SSD1306 support should also work again. Thanks piontec!
-- 3.2.1 beta 1:
   - Added IoTMQTTPanel-perfect_coffee_pid_v3.2.0_v1.json to support the "new" scale settings.
   - Fix: Changed BREWTIME_END_DETECTION to type "bool" to improve handling of improper configuration.
   - Upgrade ZACWire to v2.0.0. Thanks Adrian/lebuni.
