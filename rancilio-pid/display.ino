@@ -143,7 +143,6 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     unsigned int align_right;
     const unsigned int align_right_2digits = LCDWidth - 56;
     const unsigned int align_right_3digits = LCDWidth - 56 - 12;
-    const unsigned int align_right_2digits_decimal = LCDWidth - 56 + 28;
 
     bool showLastBrewStatistics = ( (brewTimer > 0) && (currentWeight != 0) && 
      (millis() <= brewStatisticsTimer + brewStatisticsAdditionalDisplayTime) ) ? true : false;
@@ -411,7 +410,6 @@ void showMenu(char** displaymessagetext, char** displaymessagetext2) {
   unsigned int align_right;
   const unsigned int align_right_2digits = LCDWidth - 56;
   const unsigned int align_right_3digits = LCDWidth - 56 - 12;
-  //const unsigned int align_right_2digits_decimal = LCDWidth - 56 + 28;
   const unsigned int align_right_1digits_decimal = LCDWidth - 56 + 12;
   menuMap* menuConfigPosition = getMenuConfigPosition(menuConfig, menuPosition);
   if (!menuConfigPosition) return;

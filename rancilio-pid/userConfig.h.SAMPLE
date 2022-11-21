@@ -1,5 +1,5 @@
 /********************************************************
- * Version 3.2.0
+ * Version 3.2.1
  * Config must be configured by the user
  *****************************************************/
 
@@ -15,7 +15,8 @@
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
 #define ONLYPID 1             // 1=Only PID with no Preinfussion | 0=PID + Preinfussion
-#define TRIGGERTYPE HIGH      // LOW = low trigger, HIGH = high trigger relay
+#define VALVE_TRIGGERTYPE HIGH // LOW = low trigger, HIGH = high trigger relay
+#define PUMP_TRIGGERTYPE HIGH  // LOW = low trigger, HIGH = high trigger relay
 #define OTA true              // true=activate update via OTA
 #define GRAFANA 0             // 0=default(off), 1=enable grafana visualisation by Markus (simply ask him for free access)
 #define EMERGENCY_TEMP 135    // If temperature is higher then notifications are send via display/debug/mqtt and PID is temporary disabled.
@@ -45,8 +46,8 @@
  *******/
 #define pinTemperature    2    // read temperature (TSIC): esp8266=2, esp32=26
 #define pinRelayHeater    14   // trigger relais used to heat water: esp8266=14, esp32=16
-#define pinRelayVentil    12   // (ONLYPID=0) trigger relais used to open (three-way) valve: esp8266=13, esp32=18
-#define pinRelayPumpe     13   // (ONLYPID=0) trigger relais used to activate the water pump: esp8266=15, esp32=19
+#define pinRelayValve     12   // (ONLYPID=0) trigger relais used to open (three-way) valve: esp8266=13, esp32=18
+#define pinRelayPump      13   // (ONLYPID=0) trigger relais used to activate the water pump: esp8266=15, esp32=19
 #define pinLed            15   // (ENABLE_HARDWARE_LED=1) Hardware LED (16 is also "free" to use): esp8266=15, esp32=14
 
 #define ENABLE_GPIO_ACTION  0        // 0=off (default) | 1=GPIOs related to actions are set to HIGH when enabled (eg to be used by LEDs)
@@ -120,6 +121,8 @@
  *******/
 #define DISPLAY_HARDWARE 0                // 0=Deaktiviert, 1=SH1106_128X64_I2C, 2=SSD1306_128X64_I2C, 3=SH1106_126x64_SPI
                                           // for 3 (SH1106 SPI) use P23=MOSI P18=CLK P5=OLED_CS P2=OLED_DC (see display.h)
+#define DISPLAY_I2C_SCL 255               // 255=use default SCL (default); (esp32 only) x=pin number to be used for SCL 
+#define DISPLAY_I2C_SDA 255               // 255=use default SDA (default); (esp32 only) x=pin number to be used for SDA
 #define ROTATE_DISPLAY 0                  // 0=Off (Default), 1=180 degree clockwise rotation
 #define DISPLAY_TEXT_STATE 1              // 1=On  (Default), 0=Off display text of Maschine-state
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter", 3:="text"

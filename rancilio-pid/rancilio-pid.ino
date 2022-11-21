@@ -21,7 +21,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.0";
+const char* sysVersion PROGMEM = "3.2.1";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -29,7 +29,8 @@ const char* sysVersion PROGMEM = "3.2.0";
 const int OnlyPID = ONLYPID;
 const int TempSensorRecovery = TEMPSENSORRECOVERY;
 const int brewDetection = BREWDETECTION;
-const int triggerType = TRIGGERTYPE;
+const int valveTriggerType = VALVE_TRIGGERTYPE;
+const int pumpTriggerType = PUMP_TRIGGERTYPE;
 const bool ota = OTA;
 const int grafana = GRAFANA;
 
@@ -275,7 +276,8 @@ unsigned int activeProfile = profile;  // profile set
 
 bool emergencyStop = false; // protect system when temperature is too high or sensor defect
 int pidON = 1; // 1 = control loop in closed loop
-int relayON, relayOFF; // used for relay trigger type. Do not change!
+int pumpRelayON, pumpRelayOFF; // used for pump relay trigger type. Do not change!
+int valveRelayON, valveRelayOFF; // used for valve relay trigger type. Do not change!
 char displayMessageLine1[21] = "\0";
 char displayMessageLine2[21] = "\0";
 unsigned long userActivity = 0;
@@ -361,13 +363,13 @@ unsigned long previousTimerWaterLevelCheck = 0;
 #else // TSIC306 default sensor
   #define TEMPSENSOR_NAME "TSIC306"
   #include <ZACwire.h>
-#if (!defined(ZACWIRE_VERSION) || (defined(ZACWIRE_VERSION) && ZACWIRE_VERSION <= 133L))
-#error ERROR ZACwire library version must be >= 1.3.4
+#if (!defined(ZACWIRE_VERSION) || (defined(ZACWIRE_VERSION) && ZACWIRE_VERSION < 200L))
+#error ERROR ZACwire library version must be >= 2.0.0
 #endif
     #ifdef ESP32
-ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
+ZACwire TSIC(pinTemperature, 306, true);
     #else
-ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
+ZACwire TSIC(pinTemperature, 306, true);
     #endif
 #endif    
 
@@ -423,7 +425,7 @@ void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info){
 }
 
 void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
-  ERROR_print("WiFi lost connection. (IP=%s) Reason: %u\n", WiFi.localIP().toString().c_str(), info.disconnected.reason);
+  ERROR_print("WiFi lost connection. (IP=%s)\n", WiFi.localIP().toString().c_str());
 }
 #endif
 
@@ -981,11 +983,11 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       }
       if (brewTimer <= totalBrewTime) {
         if (!cleaningEnableAutomatic || brewTimer <= cleaningInterval * 1000U) {
-          digitalWrite(pinRelayVentil, relayON);
-          digitalWrite(pinRelayPumpe, relayON);
+          digitalWrite(pinRelayValve, valveRelayON);
+          digitalWrite(pinRelayPump, pumpRelayON);
         } else {
-          digitalWrite(pinRelayVentil, relayOFF);
-          digitalWrite(pinRelayPumpe, relayOFF);
+          digitalWrite(pinRelayValve, valveRelayOFF);
+          digitalWrite(pinRelayPump, pumpRelayOFF);
         }
       } else {
         if (cleaningEnableAutomatic && cycle < cleaningCycles) {
@@ -995,8 +997,8 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
           DEBUG_print("End clean()\n");
           brewing = 0;
           cycle = 1;
-          digitalWrite(pinRelayVentil, relayOFF);
-          digitalWrite(pinRelayPumpe, relayOFF);
+          digitalWrite(pinRelayValve, valveRelayOFF);
+          digitalWrite(pinRelayPump, pumpRelayOFF);
         }
       }
     } else if (simulatedBrewSwitch && !brewing) { // corner-case: switch=On but brewing==0
@@ -1006,8 +1008,8 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       if (waitingForBrewSwitchOff) { DEBUG_print("simulatedBrewSwitch=off\n"); }
       waitingForBrewSwitchOff = false;
       if (brewing == 1) {
-        digitalWrite(pinRelayVentil, relayOFF);
-        digitalWrite(pinRelayPumpe, relayOFF);
+        digitalWrite(pinRelayValve, valveRelayOFF);
+        digitalWrite(pinRelayPump, pumpRelayOFF);
         brewing = 0;
         cycle = 1;
       }
@@ -1044,60 +1046,60 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         brewStatisticsTimer = millis();  //refresh timer
         lastBrewMessage = millis();
         DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.3fg/%0.2fg) (flowRateTimer=%ldms flowRate=%0.2fg/s)\n", 
-          (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
+          (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
           (flowRateEndTime - millis()), flowRate);
       }
 
       if (
         (brewTimer <= ((*activeBrewTimeEndDetection == 0 || !getTareAsyncStatus() ) ? totalBrewTime : (totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000))) ) && 
-        ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (currentWeight + scaleSensorWeightOffset < *activeScaleSensorWeightSetPoint) : true)
-        && ( (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()) ? (millis() <= flowRateEndTime) : true)
+        ( (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus()) ? (currentWeight + scaleSensorWeightOffset < *activeScaleSensorWeightSetPoint) : true)
+        && ( (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus()) ? (millis() <= flowRateEndTime) : true)
       ) {
         if (*activePreinfusion > 0 && brewTimer <= *activePreinfusion * 1000) {
           if (brewState != 1) {
             brewState = 1;
             //DEBUG_println("preinfusion");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayON);
+            digitalWrite(pinRelayValve, valveRelayON);
+            digitalWrite(pinRelayPump, pumpRelayON);
           }
         } else if (*activePreinfusion > 0 && brewTimer > *activePreinfusion * 1000 && brewTimer <= (*activePreinfusion + *activePreinfusionPause) * 1000) {
           if (brewState != 2) {
             brewState = 2;
             //DEBUG_println("preinfusion pause");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayOFF);
+            digitalWrite(pinRelayValve, valveRelayON);
+            digitalWrite(pinRelayPump, pumpRelayOFF);
           }
         } else if (*activePreinfusion == 0 || brewTimer > (*activePreinfusion + *activePreinfusionPause) * 1000) {
           if (brewState != 3) {
             brewState = 3;
             //DEBUG_println("brew");
-            digitalWrite(pinRelayVentil, relayON);
-            digitalWrite(pinRelayPumpe, relayON);
+            digitalWrite(pinRelayValve, valveRelayON);
+            digitalWrite(pinRelayPump, pumpRelayON);
           }
         }
       } else {
         brewState = 0;
         //DEBUG_print("brew end\n");
         brewing = 0;
-        digitalWrite(pinRelayVentil, relayOFF);
-        digitalWrite(pinRelayPumpe, relayOFF);
+        digitalWrite(pinRelayValve, valveRelayOFF);
+        digitalWrite(pinRelayPump, pumpRelayOFF);
         DEBUG_print("brew(%u): brewTimer=%02lu/%02lus (weight=%0.3fg/%0.2fg) (flowRateTimer=%ldms flowRate=%0.2fg/s)\n", 
-          (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
+          (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus()), brewTimer / 1000, totalBrewTime / 1000, currentWeight, *activeScaleSensorWeightSetPoint, 
           (flowRateEndTime - millis()), flowRate);
         flowRateEndTime = millis();  //dont restart brew due to weight flapping
         scaleSensorWeightOffsetAtStop = currentWeight ;
       }
     } else if (simulatedBrewSwitch && !brewing) { // corner-case: switch=On but brewing==0
       waitingForBrewSwitchOff = true; // just to be sure
-      // digitalWrite(pinRelayVentil, relayOFF);  //already handled by brewing
-      // var digitalWrite(pinRelayPumpe, relayOFF);
+      // digitalWrite(pinRelayValve, valveRelayOFF);  //already handled by brewing
+      // var digitalWrite(pinRelayPump, pumpRelayOFF);
       brewState = 0;
     } else if (!simulatedBrewSwitch) {
       if (waitingForBrewSwitchOff) { DEBUG_print("simulatedBrewSwitch=off\n"); }
       waitingForBrewSwitchOff = false;
       if (brewing == 1) {
-        digitalWrite(pinRelayVentil, relayOFF);
-        digitalWrite(pinRelayPumpe, relayOFF);
+        digitalWrite(pinRelayValve, valveRelayOFF);
+        digitalWrite(pinRelayPump, pumpRelayOFF);
         brewing = 0;
       }
       brewState = 0;
@@ -1137,7 +1139,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       WiFi.setSleepMode(WIFI_NONE_SLEEP); // needed for some disconnection bugs?
 #endif
       // WiFi.enableSTA(true);
-      delay(100); // required for esp32?
+      delay(200); // esp32: prevent "store calibration data failed(0x1105)" errors 
       WiFi.setAutoConnect(false); // disable auto-connect
       WiFi.setAutoReconnect(false); // disable auto-reconnect
 #ifdef ESP32
@@ -1473,7 +1475,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         /* STATE 6 (Steam) DETECTION */
         if (steaming) {
           snprintf(debugLine, sizeof(debugLine), "Steaming Detected. Transition to state 6 (Steam)");
-          // digitalWrite(pinRelayVentil, relayOFF);
+          // digitalWrite(pinRelayValve, valveRelayOFF);
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           if (*activeSetPoint != setPointSteam) {
@@ -1846,8 +1848,8 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     // powerDown scale + automatic calculation of scaleSensorWeightOffset + output brew statistics x seconds after brew happened
     #if (SCALE_SENSOR_ENABLE)
     if (!brewing && (millis() > brewStatisticsTimer + brewStatisticsAdditionalWeightTime) ) {
-        if (scaleRunning && (*activeBrewTimeEndDetection == 1) && scaleSensorWeightOffsetAtStop != 0) {
-          if (*activeBrewTimeEndDetection == 1 && getTareAsyncStatus() && (brewTimer <= (totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000))) ) {
+        if (scaleRunning && (*activeBrewTimeEndDetection >= 1) && scaleSensorWeightOffsetAtStop != 0) {
+          if (*activeBrewTimeEndDetection >= 1 && getTareAsyncStatus() && (brewTimer <= (totalBrewTime + (brewtimeMaxAdditionalTimeWhenWeightNotReached * 1000))) ) {
             float scaleSensorWeightOffsetCurrent = (*activeScaleSensorWeightSetPoint - currentWeight) * -1;
             float scaleSensorWeightOffsetCurrentRelative = (*activeScaleSensorWeightSetPoint - currentWeight - scaleSensorWeightOffset) * -1;
 
@@ -2148,7 +2150,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       return (3*getAverageTemperature(3,0) + thermocouple.readCelsius()) / 4.0;
     }
 #else
-    return TSIC.getTemp();
+    return TSIC.getTemp(250U);
 #endif
   }
 
@@ -2263,21 +2265,18 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     /********************************************************
      * Define trigger type
      ******************************************************/
-    if (triggerType) {
-      relayON = HIGH;
-      relayOFF = LOW;
-    } else {
-      relayON = LOW;
-      relayOFF = HIGH;
-    }
+    valveRelayON = valveTriggerType ? HIGH: LOW;
+    valveRelayOFF = !valveRelayON;
+    pumpRelayON = pumpTriggerType ? HIGH: LOW;
+    pumpRelayOFF = !pumpRelayON;
 
     /********************************************************
      * Init Pins
      ******************************************************/
-    pinMode(pinRelayVentil, OUTPUT);
-    digitalWrite(pinRelayVentil, relayOFF);
-    pinMode(pinRelayPumpe, OUTPUT);
-    digitalWrite(pinRelayPumpe, relayOFF);
+    pinMode(pinRelayValve, OUTPUT);
+    digitalWrite(pinRelayValve, valveRelayOFF);
+    pinMode(pinRelayPump, OUTPUT);
+    digitalWrite(pinRelayPump, pumpRelayOFF);
     pinMode(pinRelayHeater, OUTPUT);
     digitalWrite(pinRelayHeater, LOW);
 #if (ENABLE_HARDWARE_LED == 1)
@@ -2361,9 +2360,13 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         DEBUG_print("IP address: %s\n", WiFi.localIP().toString().c_str());
 
 #if (defined(ESP32) and defined(DEBUGMODE))
-        WiFi.onEvent(WiFiStationConnected, SYSTEM_EVENT_STA_CONNECTED);
+        //WiFi.onEvent(WiFiStationConnected, SYSTEM_EVENT_STA_CONNECTED);
         //WiFi.onEvent(WiFiGotIP, SYSTEM_EVENT_STA_GOT_IP);
-        WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
+        //WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
+        WiFi.onEvent(WiFiStationConnected, ARDUINO_EVENT_WIFI_STA_CONNECTED);
+        WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP);
+        WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP6);
+        WiFi.onEvent(WiFiStationDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 #endif
 
 // MQTT
@@ -2520,7 +2523,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
 #if (WATER_LEVEL_SENSOR_ENABLE)
 #ifdef ESP32
     Wire1.begin(WATER_LEVEL_SENSOR_SDA, WATER_LEVEL_SENSOR_SCL,
-        100000); // Wire0 cannot be re-used due to core0 stickyness
+        100000U); // Wire0 cannot be re-used due to core0 stickyness
     waterSensor.setBus(&Wire1);
 #else
     Wire.begin();

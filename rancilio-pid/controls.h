@@ -34,7 +34,7 @@ typedef struct controlMap {
   int upperBoundary;
   int value;
   int action;
-  char* gpioCheck;
+  GpioCheck* gpioCheck;
   struct controlMap* nextControlMap;
 } controlMap;
 
@@ -99,7 +99,8 @@ extern const int OnlyPID;
 extern const int brewDetection;
 extern int brewing;
 extern void setGpioAction(int action, bool mode);
-extern int relayON, relayOFF;
+extern int pumpRelayON, pumpRelayOFF;
+extern int valveRelayON, valveRelayOFF;
 extern int steaming;
 extern int cleaning;
 extern PIDBias bPID;
