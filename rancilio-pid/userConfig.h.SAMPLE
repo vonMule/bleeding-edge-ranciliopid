@@ -127,6 +127,7 @@
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter", 3:="text"
 #define DISPLAY_TEXT "Perfect-Coffee PID"  // Text is displayed on bootup (max 21 chars)
 //#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)
+#define ENABLE_BIG_STATUS_ICONS 0         // 0=off (default), 1=on. Use double size status icons (22x18)
 #define ENABLE_PROFILE_STATUS 2           // 0 = off. 1 = always show . 2 = only show not-default profile (which is "profile 1")
 #define ENABLE_FAILURE_STATUS_ICONS 1     // 1 = on (default), 0 = off. If enabled show status icons if services are offline.
 #define ENABLE_SCREEN_SAVER 3             // 0=Disable, 1=Enable(blank screen), 2=Enable(use BrewReady Collection Icon), 3=Enable(Use Maschine logo)

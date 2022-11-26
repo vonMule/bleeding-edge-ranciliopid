@@ -5,7 +5,12 @@
 const int Display = DISPLAY_HARDWARE;
 
 #include "controls.h"
+#include "icon_shared.h"
+#if (ENABLE_BIG_STATUS_ICONS)
+#include "icon_big.h"
+#else
 #include "icon.h"
+#endif
 #if (ICON_COLLECTION == 2)
 #include "icon_winter.h"
 #elif (ICON_COLLECTION == 1)
