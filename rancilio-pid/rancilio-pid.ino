@@ -18,10 +18,11 @@
 #include "MQTT.h"
 #include "display.h"
 #include "eeprom-pcpid.h"
+#include <blynk.h>
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.1";
+const char* sysVersion PROGMEM = "3.2.2";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -48,9 +49,6 @@ unsigned int wifiReconnects = 0; // number of reconnects
 const char* OTApass = OTAPASS;
 
 WiFiClient espClient;
-
-// Blynk
-#include <blynk.h>
 
 // MQTT
 #if (MQTT_ENABLE == 1)
@@ -431,14 +429,6 @@ bool isWifiWorking() {
 #else
   return ((!forceOffline) && (WiFi.status() == WL_CONNECTED) && (WiFi.localIP() != IPAddress(0U)));
 #endif
-}
-
-bool isBlynkWorking() {
-  #if (BLYNK_ENABLE==0)
-    return false;
-  #else
-    return isWifiWorking() && Blynk.connected(); 
-  #endif
 }
 
 bool inSensitivePhase() { return (brewing || activeState == 4 || isrCounter > 1000); }

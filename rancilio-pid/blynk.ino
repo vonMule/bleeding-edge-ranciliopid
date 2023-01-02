@@ -1,6 +1,10 @@
-#include "blynk.h"
-
+/********************************************************
+ * Perfect Coffee PID
+ * https://github.com/medlor/bleeding-edge-ranciliopid
+ *****************************************************/
 #include "rancilio-pid.h"
+#include "blynk.h"
+#include "controls.h"
 
 #if (BLYNK_ENABLE==0)
     void blynkSave(char* setting) {};
@@ -9,6 +13,7 @@
     void runBlynk() {};
     void disableBlynkTemporary() {};
     void setPreviousTimerBlynk(unsigned long prevTimer) {};
+    bool isBlynkWorking() { return false; } 
 #else
 
 /******************************************************
@@ -105,6 +110,10 @@ BLYNK_WRITE(V110) {
   } else {
     actionController(SLEEPING, val, true, false);
   }
+}
+
+bool isBlynkWorking() { 
+  return isWifiWorking() && Blynk.connected(); 
 }
 
 /******************************************************

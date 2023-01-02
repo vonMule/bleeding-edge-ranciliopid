@@ -19,7 +19,7 @@
 #define BLYNK_RED "#D3435C"
 unsigned long previousTimerBlynk = 0;
 unsigned long blynkConnectTime = 0;
-const long intervalBlynk = 1000; // Update Intervall zur App
+const long intervalBlynk = 1000;    // Update intervall to send data to the app
 int blynkSendCounter = 1;
 bool blynkSyncRunOnce = false;
 String PreviousError = "";
@@ -44,6 +44,7 @@ unsigned int blynkMaxIncrementalBackoff = 5; // At most backoff <mqtt_max_increm
 
 char* blynkReadyLedColor = (char*)"#000000";
 
+bool isBlynkWorking();
 void blynkSave(char* setting);
 void sendToBlynk();
 bool setupBlynk();
@@ -51,5 +52,37 @@ void runBlynk();
 void disableBlynkTemporary();
 void setPreviousTimerBlynk(unsigned long prevTimer);
 
+extern unsigned int profile;
+extern float aggKp;
+extern float aggTn;
+extern float aggTv;
+extern float* activeSetPoint;
+extern float* activeStartTemp;
+extern float* activeBrewTime;
+extern float* activePreinfusion;
+extern float* activePreinfusionPause;
+extern int pidON;
+extern float aggoKp;
+extern float aggoTn;
+extern float aggoTv;
+extern float brewDetectionSensitivity;
+extern float brewDetectionPower;
+extern float steadyPower;
+extern float steadyPowerOffset;
+extern unsigned int steadyPowerOffsetTime;
+extern float setPointSteam;
+extern unsigned int* activeBrewTimeEndDetection;
+extern float* activeScaleSensorWeightSetPoint;
+extern float Input;
+extern double Output;
+extern unsigned int powerOffTimer;
+extern int cleaningCycles;
+extern int cleaningInterval;
+extern int cleaningPause;
+extern bool brewReady;
+extern float marginOfFluctuation;
+extern bool checkBrewReady(float setPoint, float marginOfFluctuation, int lookback);
+extern const int grafana;
+extern int previousPowerOffTimer;
 
 #endif
