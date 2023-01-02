@@ -1,6 +1,8 @@
-/***********************************
- *  Seonsor Mock for testing
- ***********************************/
+/********************************************************
+ * Perfect Coffee PID
+ * https://github.com/medlor/bleeding-edge-ranciliopid
+ *****************************************************/
+#include "Arduino.h"
 #include "sensorMock.h"
 
 float temperature_simulate_steam(float *minValue) {
