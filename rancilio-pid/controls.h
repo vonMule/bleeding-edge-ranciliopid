@@ -1,11 +1,11 @@
 #ifndef _control_H
 #define _control_H
 
+#include "Arduino.h"
 #include "userConfig.h"
 #include "MQTT.h"
 #include "PIDBias.h"
 #include "GpioCheck.h"
-
 
 // supported actions
 #define UNDEFINED_ACTION 0 // can also be used as NOOP

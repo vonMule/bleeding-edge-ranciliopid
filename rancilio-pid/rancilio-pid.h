@@ -118,7 +118,6 @@ void checkWifi(bool, unsigned long);
 extern char debugLine[200];
 void maintenance();
 void performance_check();
-void blynkSave(char* setting);
 void set_profile();
 void set_profile(bool);
 void debugWaterLevelSensor();

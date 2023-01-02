@@ -1,5 +1,5 @@
 /********************************************************
- * Version 3.2.1
+ * Version 3.2.2
  * Config must be configured by the user
  *****************************************************/
 
@@ -10,7 +10,7 @@
  * General settings
  *****************************************************/
 #define MACHINE_TYPE "rancilio"  // supported values are "rancilio", "gaggia" and "ecm".
-#define TEMPSENSOR 2          // 2=TSIC306 (fully supported); 3=MAX6675K (working but untested); (1=DS19B20 not supported anymore)
+#define TEMPSENSOR 2          // 2=TSIC306 (fully supported); 3=MAX6675K (working but untested); (1=DS19B20 not supported anymore); 9=Sensor Mock (for testing without real sensor)
 #define TEMPSENSORRECOVERY 0  // 1 = on, 2= off (default). If off, temp sensor errors will stop the heater until power cycle
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
