@@ -349,6 +349,9 @@ unsigned long previousTimerWaterLevelCheck = 0;
   #define TEMPSENSOR_NAME "MAX6675"
   #include <max6675.h>
   MAX6675 thermocouple(pinTemperatureCLK, pinTemperatureCS, pinTemperatureSO);
+#elif (TEMPSENSOR == 9)
+  #define TEMPSENSOR_NAME "Mock"
+  #include <sensorMock.h>
 #else // TSIC306 default sensor
   #define TEMPSENSOR_NAME "TSIC306"
   #include <ZACwire.h>
@@ -625,34 +628,6 @@ void setGpioAction(int action, bool mode) {
 #endif
 }
 
-float temperature_simulate_steam() {
-  unsigned long now = millis();
-  // if ( now <= 20000 ) return 102;
-  // if ( now <= 26000 ) return 99;
-  // if ( now <= 33000 ) return 96;
-  // if (now <= 45000) return setPoint;
-  if (now <= 20000) return 114;
-  if (now <= 26000) return 117;
-  if (now <= 29000) return 120;
-  if (now <= 32000) return 116;
-  if (now <= 35000) return 113;
-  if (now <= 37000) return 109;
-  if (now <= 39000) return 105;
-  if (now <= 40000) return 101;
-  if (now <= 43000) return 97;
-  return *activeSetPoint;
-}
-
-float temperature_simulate_normal() {
-  unsigned long now = millis();
-  if (now <= 12000) return 82;
-  if (now <= 15000) return 85;
-  if (now <= 19000) return 88;
-  if (now <= 25000) return 91;
-  if (now <= 28000) return 92;
-  return *activeSetPoint;
-}
-
 /********************************************************
  * check sensor value. If there is an issue, increase error value. 
  * If error is equal to maxErrorCounter, then set sensorMalfunction.
@@ -751,8 +726,6 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         //secondlatestTemperature = getCurrentTemperature();
         float latestTemperature = readTemperatureFromSensor();
         //DEBUG_print("latestTemperature: %0.2f\n", latestTemperature);
-        // Temperatur_C = temperature_simulate_steam();
-        // Temperatur_C = temperature_simulate_normal();
         int sensorStatus = checkSensor(latestTemperature, secondlatestTemperature);
         previousTimerRefreshTemp = millis();
         if (sensorStatus == 1) {  //hardware issue
@@ -1853,6 +1826,9 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     } else {
       return (3*getAverageTemperature(3,0) + thermocouple.readCelsius()) / 4.0;
     }
+#elif (TEMPSENSOR == 9)
+    return temperature_simulate_normal(activeSetPoint);
+    //return temperature_simulate_steam(activeSetPoint);
 #else
     return TSIC.getTemp(250U);
 #endif
@@ -2190,11 +2166,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     while (true) {
       secondlatestTemperature = readTemperatureFromSensor();
       delay(refreshTempInterval);
-      // secondlatestTemperature = temperature_simulate_steam();
-      // secondlatestTemperature = temperature_simulate_normal();
       Input = readTemperatureFromSensor();
-      // Input = temperature_simulate_steam();
-      // Input = temperature_simulate_normal();
       if (checkSensor(Input, secondlatestTemperature) == 0) {
         updateTemperatureHistory(secondlatestTemperature);
         secondlatestTemperature = Input;
