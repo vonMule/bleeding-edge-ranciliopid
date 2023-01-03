@@ -14,6 +14,6 @@ jobs:
         - name: PlatformIO Run
           uses: karniv00l/platformio-run-action@v1
           with:
-            environments: "esp32_ota_LIVE"
+            environments: "nodemcuv2_ota,esp32_ota_LIVE"
             silent: false
             verbose: true
