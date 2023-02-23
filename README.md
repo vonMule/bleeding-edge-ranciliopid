@@ -3,7 +3,7 @@
 
 ## Do it yourself, open-source PID for your espresso machine  
 
-Version 3.2.1
+Version 3.2.2
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -129,6 +129,7 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
   - Refactor: Moved blynk code into own files. Thanks aschoelzhorn!
   - Refactor: Add a temperature sensor mock. Thanks aschoelzhorn!
   - Refactor: Replace state magic numbers with meaningful names. Thanks aschoelzhorn!
+  - Fix: Schematic_bleeding_edge_full_control_pcb_layout_v0.7.png, was wrong at one place.
 - 3.2.1:
   - Feature: Add support for SH1106 in SPI mode. Thanks piontec!
   - Feature: Add support for custom display pins (see DISPLAY_I2C_SCL, DISPLAY_I2C_SDA). Thanks piontec!
