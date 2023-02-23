@@ -18,10 +18,11 @@
 #include "MQTT.h"
 #include "display.h"
 #include "eeprom-pcpid.h"
+#include <blynk.h>
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.1";
+const char* sysVersion PROGMEM = "3.2.2";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -46,17 +47,6 @@ unsigned int wifiReconnects = 0; // number of reconnects
 
 // OTA
 const char* OTApass = OTAPASS;
-
-// Blynk
-const char* blynkAddress = BLYNKADDRESS;
-const int blynkPort = BLYNKPORT;
-const char* blynkAuth = BLYNKAUTH;
-unsigned long blynkLastReconnectAttemptTime = 0;
-unsigned int blynkReconnectAttempts = 0;
-unsigned long blynkReconnectIncrementalBackoff = 180000; // Failsafe: add 180sec to reconnect time after each
-                                                         // connect-failure.
-unsigned int blynkMaxIncrementalBackoff = 5; // At most backoff <mqtt_max_incremenatl_backoff>+1 *
-                                             // (<mqttReconnectIncrementalBackoff>ms)
 
 WiFiClient espClient;
 
@@ -94,15 +84,7 @@ unsigned long mqttConnectTime = 0; // time of last successfull mqtt connection
 /********************************************************
  * states
  ******************************************************/
-int activeState = 3; // (0:= undefined / EMERGENCY_TEMP reached)
-                     // 1:= Coldstart required (machine is cold)
-                     // 2:= Stabilize temperature after coldstart
-                     // 3:= (default) Inner Zone detected (temperature near setPoint)
-                     // 4:= Brew detected 
-                     // 5:= Outer Zone detected (temperature outside of "inner zone")
-                     // 6:= steam mode activated
-                     // 7:= sleep mode activated 
-                     // 8:= clean mode
+int activeState = STATE_DEFAULT;
 
 /********************************************************
  * history of temperatures
@@ -186,7 +168,6 @@ const float outerZoneTemperatureDifference = 1;
 #include "PIDBias.h"
 float steadyPower = STEADYPOWER; // in percent
 float steadyPowerSaved = steadyPower;
-float steadyPowerSavedInBlynk = 0;
 float steadyPowerMQTTDisableUpdateUntilProcessed = 0; // used as semaphore
 unsigned long steadyPowerMQTTDisableUpdateUntilProcessedTime = 0;
 const int lastBrewTimeOffset = 4 * 1000; // compensate for lag in software brew-detection
@@ -285,7 +266,7 @@ unsigned long userActivitySavedOnForcedSleeping = 0;
 unsigned long previousTimerRefreshTemp; // initialisation at the end of init()
 unsigned long previousTimerOtaHandle = 0;
 unsigned long previousTimerMqttHandle = 0;
-unsigned long previousTimerBlynkHandle = 0;
+
 unsigned long previousTimerDebugHandle = 0;
 unsigned long previousTimerPidCheck = 0;
 #if (TEMPSENSOR==3)
@@ -315,7 +296,7 @@ CRGB leds[enabledHardwareLedNumber];
 const int enabledHardwareLed = 0; // 0 = disable functionality
 float marginOfFluctuation = 0; // 0 = disable functionality
 #endif
-char* blynkReadyLedColor = (char*)"#000000";
+
 unsigned long lastCheckBrewReady = 0;
 unsigned long lastBrewReady = 0;
 unsigned long lastBrewEnd = 0; // used to determime the time it takes to reach brewReady==true
@@ -360,6 +341,9 @@ unsigned long previousTimerWaterLevelCheck = 0;
   #define TEMPSENSOR_NAME "MAX6675"
   #include <max6675.h>
   MAX6675 thermocouple(pinTemperatureCLK, pinTemperatureCS, pinTemperatureSO);
+#elif (TEMPSENSOR == 9)
+  #define TEMPSENSOR_NAME "Mock"
+  #include <sensorMock.h>
 #else // TSIC306 default sensor
   #define TEMPSENSOR_NAME "TSIC306"
   #include <ZACwire.h>
@@ -429,176 +413,6 @@ void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
 }
 #endif
 
-/********************************************************
- * BLYNK
- ******************************************************/
-#define BLYNK_GREEN "#23C48E"
-#define BLYNK_YELLOW "#ED9D00"
-#define BLYNK_RED "#D3435C"
-unsigned long previousTimerBlynk = 0;
-unsigned long blynkConnectTime = 0;
-const long intervalBlynk = 1000; // Update Intervall zur App
-int blynkSendCounter = 1;
-bool blynkSyncRunOnce = false;
-String PreviousError = "";
-String PreviousOutputString = "";
-String PreviousPastTemperatureChange = "";
-String PreviousInputString = "";
-bool blynkDisabledTemporary = false;
-
-#if (BLYNK_ENABLE==1)
-#define BLYNK_PRINT Serial
-#ifdef ESP32
-#include <BlynkSimpleEsp32.h>
-#else
-#include <ESP8266WiFi.h>
-#include <BlynkSimpleEsp8266.h>
-#endif
-
-/******************************************************
- * Receive following BLYNK PIN values from app/server
- ******************************************************/
-BLYNK_CONNECTED() {
-  blynkConnectTime = millis();
-  if (!blynkSyncRunOnce) {
-    blynkSyncRunOnce = true;
-    Blynk.syncAll(); // get all values from server/app when connected
-  }
-}
-// This is called when Smartphone App is opened
-BLYNK_APP_CONNECTED() {
-  DEBUG_print("Blynk Client Connected.\n");
-  print_settings();
-  printControlsConfig(controlsConfig);
-  printMenuConfig(menuConfig);
-  // one time refresh on connect cause BLYNK_READ seems not to work always
-  blynkSave((char*)"cleaningCycles");
-  blynkSave((char*)"cleaningInterval");
-  blynkSave((char*)"cleaningPause");
-}
-// This is called when Smartphone App is closed
-BLYNK_APP_DISCONNECTED() { DEBUG_print("Blynk Client Disconnected.\n"); }
-BLYNK_WRITE(V3) { profile = param.asInt(); }
-BLYNK_WRITE(V4) { aggKp = param.asFloat(); }
-BLYNK_WRITE(V5) { aggTn = param.asFloat(); }
-BLYNK_WRITE(V6) { aggTv = param.asFloat(); }
-BLYNK_WRITE(V7) { if ((millis() - blynkConnectTime > 10000 )) *activeSetPoint = param.asFloat(); }
-BLYNK_WRITE(V8) { if ((millis() - blynkConnectTime > 10000 )) *activeBrewTime = param.asFloat(); }
-BLYNK_WRITE(V9) { if ((millis() - blynkConnectTime > 10000 )) *activePreinfusion = param.asFloat(); }
-BLYNK_WRITE(V10) { if ((millis() - blynkConnectTime > 10000 )) *activePreinfusionPause = param.asFloat(); }
-BLYNK_WRITE(V12) { if ((millis() - blynkConnectTime > 10000 )) *activeStartTemp = param.asFloat(); }
-BLYNK_WRITE(V13) { pidON = param.asInt() == 1 ? 1 : 0; }
-BLYNK_WRITE(V30) { aggoKp = param.asFloat(); }
-BLYNK_WRITE(V31) { aggoTn = param.asFloat(); }
-BLYNK_WRITE(V32) { aggoTv = param.asFloat(); }
-BLYNK_WRITE(V34) { brewDetectionSensitivity = param.asFloat(); }
-BLYNK_WRITE(V36) { brewDetectionPower = param.asFloat(); }
-//BLYNK_WRITE(V40) { burstShot = param.asInt(); }
-BLYNK_WRITE(V41) {
-  steadyPower = param.asFloat();
-  // TODO fix this bPID.SetSteadyPowerDefault(steadyPower); //TOBIAS: working?
-}
-BLYNK_WRITE(V42) { steadyPowerOffset = param.asFloat(); }
-BLYNK_WRITE(V43) { steadyPowerOffsetTime = param.asInt(); }
-//BLYNK_WRITE(V44) { burstPower = param.asFloat(); }
-BLYNK_WRITE(V50) { setPointSteam = param.asFloat(); }
-BLYNK_READ(V51) { blynkSave((char*)"cleaningCycles"); }
-BLYNK_READ(V52) { blynkSave((char*)"cleaningInterval"); }
-BLYNK_READ(V53) { blynkSave((char*)"cleaningPause"); }
-BLYNK_WRITE(V64) { if ((millis() - blynkConnectTime > 10000 )) *activeBrewTimeEndDetection = (unsigned int) param.asInt(); }
-BLYNK_WRITE(V65) { if ((millis() - blynkConnectTime > 10000 )) *activeScaleSensorWeightSetPoint = param.asFloat(); }
-BLYNK_WRITE(V101) {
-  int val = param.asInt();
-  if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
-    actionController(BREWING, 0, true, false);
-    Blynk.virtualWrite(V101, 0);
-  } else {
-    actionController(BREWING, val, true, false);
-  }
-}
-BLYNK_WRITE(V102) {
-  int val = param.asInt();
-  if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
-    actionController(HOTWATER, 0, true, false);
-    Blynk.virtualWrite(V102, 0);
-  } else {
-    actionController(HOTWATER, val, true, false);
-  }
-}
-BLYNK_WRITE(V103) {
-  int val = param.asInt();
-  if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
-    actionController(STEAMING, 0, true, false);
-    Blynk.virtualWrite(V103, 0);
-  } else {
-    actionController(STEAMING, val, true, false);
-  }
-}
-BLYNK_WRITE(V107) {
-  int val = param.asInt();
-  if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
-    actionController(CLEANING, 0, true, false);
-    Blynk.virtualWrite(V107, 0);
-  } else {
-    actionController(CLEANING, val, true, false);
-  }
-}
-BLYNK_WRITE(V110) {
-  int val = param.asInt();
-  if (((millis() - blynkConnectTime < 10000 )) && val != 0) {
-    actionController(SLEEPING, 0, true, false);
-    Blynk.virtualWrite(V110, 0);
-  } else {
-    actionController(SLEEPING, val, true, false);
-  }
-}
-#endif
-
-void blynkSave(char* setting) {
-  #if (BLYNK_ENABLE==1)
-  if (!strcmp(setting, "Input")) { Blynk.virtualWrite(V2, String(Input, 2)); }
-  else if (!strcmp(setting, "profile")) { Blynk.virtualWrite(V3, profile); }
-  else if (!strcmp(setting, "aggKp")) { Blynk.virtualWrite(V4, String(aggKp, 1)); }
-  else if (!strcmp(setting, "aggTn")) { Blynk.virtualWrite(V5, String(aggTn, 1)); }
-  else if (!strcmp(setting, "aggTv")) { Blynk.virtualWrite(V6, String(aggTv, 1)); }
-  else if (!strcmp(setting, "activeSetPoint")) { Blynk.virtualWrite(V7, String(*activeSetPoint, 1)); }
-  else if (!strcmp(setting, "activeBrewTime")) { Blynk.virtualWrite(V8, String(*activeBrewTime, 1)); }
-  else if (!strcmp(setting, "activePreinfusion")) { Blynk.virtualWrite(V9, String(*activePreinfusion, 1)); }
-  else if (!strcmp(setting, "activePreinfusionPause")) { Blynk.virtualWrite(V10, String(*activePreinfusionPause, 1)); }
-  else if (!strcmp(setting, "error")) { Blynk.virtualWrite(V11, String(Input - *activeSetPoint, 2)); }
-  else if (!strcmp(setting, "activeStartTemp")) { Blynk.virtualWrite(V12, String(*activeStartTemp, 1)); }
-  else if (!strcmp(setting, "pidON")) { Blynk.virtualWrite(V13, String(pidON)); }
-  else if (!strcmp(setting, "output")) { Blynk.virtualWrite(V23, String(convertOutputToUtilisation(Output), 2)); }
-  else if (!strcmp(setting, "aggoKp")) { Blynk.virtualWrite(V30, String(aggoKp, 1)); }
-  else if (!strcmp(setting, "aggoTn")) { Blynk.virtualWrite(V31, String(aggoTn, 1)); }
-  else if (!strcmp(setting, "aggoTv")) { Blynk.virtualWrite(V32, String(aggoTv, 1)); }
-  else if (!strcmp(setting, "brewDetectionSensitivity")) { Blynk.virtualWrite(V34, String(brewDetectionSensitivity, 1)); }
-  else if (!strcmp(setting, "pastTemperatureChange")) { Blynk.virtualWrite(V35, String(pastTemperatureChange(10*10) / 2, 2)); }
-  else if (!strcmp(setting, "brewDetectionPower")) { Blynk.virtualWrite(V36, String(brewDetectionPower, 1)); }
-  else if (!strcmp(setting, "steadyPower")) { Blynk.virtualWrite(V41, String(steadyPower, 1)); }
-  else if (!strcmp(setting, "steadyPowerOffset")) { Blynk.virtualWrite(V42, String(steadyPowerOffset, 1)); }
-  else if (!strcmp(setting, "steadyPowerOffsetTime")) { Blynk.virtualWrite(V43, String(steadyPowerOffsetTime, 1)); }
-  else if (!strcmp(setting, "power_off_timer_min")) { Blynk.virtualWrite(V45, String(powerOffTimer >= 0 ? ((powerOffTimer + 59) / 60) : 0)); }
-  else if (!strcmp(setting, "setPointSteam")) { Blynk.virtualWrite(V50, String(setPointSteam, 1)); }
-  else if (!strcmp(setting, "cleaningCycles")) { Blynk.virtualWrite(V61, cleaningCycles); }
-  else if (!strcmp(setting, "cleaningInterval")) { Blynk.virtualWrite(V62, cleaningInterval); }
-  else if (!strcmp(setting, "cleaningPause")) { Blynk.virtualWrite(V63, cleaningPause); }
-  else if (!strcmp(setting, "activeBrewTimeEndDetection")) { Blynk.virtualWrite(V64, String(*activeBrewTimeEndDetection, 1)); }
-  else if (!strcmp(setting, "activeScaleSensorWeightSetPoint")) { Blynk.virtualWrite(V65, String(*activeScaleSensorWeightSetPoint, 1)); }
-  else {
-    ERROR_print("blynkSave(%s) not supported.\n", setting);
-  }
-  #endif
-}
-
-/******************************************************
- * Type Definition of "sending" BLYNK PIN values from
- * hardware to app/server (only defined if required)
- ******************************************************/
-#if (BLYNK_ENABLE==1)
-WidgetLED brewReadyLed(V14);
-#endif
-
 /******************************************************
  * HELPER
  ******************************************************/
@@ -612,15 +426,7 @@ bool isWifiWorking() {
 #endif
 }
 
-bool isBlynkWorking() {
-  #if (BLYNK_ENABLE==0)
-    return false;
-  #else
-    return isWifiWorking() && Blynk.connected(); 
-  #endif
-}
-
-bool inSensitivePhase() { return (brewing || activeState == 4 || isrCounter > 1000); }
+bool inSensitivePhase() { return (brewing || activeState == STATE_BREW_DETECTED || isrCounter > 1000); }
 
 int signnum(float x) {
   if (x >= 0.0)
@@ -814,34 +620,6 @@ void setGpioAction(int action, bool mode) {
 #endif
 }
 
-float temperature_simulate_steam() {
-  unsigned long now = millis();
-  // if ( now <= 20000 ) return 102;
-  // if ( now <= 26000 ) return 99;
-  // if ( now <= 33000 ) return 96;
-  // if (now <= 45000) return setPoint;
-  if (now <= 20000) return 114;
-  if (now <= 26000) return 117;
-  if (now <= 29000) return 120;
-  if (now <= 32000) return 116;
-  if (now <= 35000) return 113;
-  if (now <= 37000) return 109;
-  if (now <= 39000) return 105;
-  if (now <= 40000) return 101;
-  if (now <= 43000) return 97;
-  return *activeSetPoint;
-}
-
-float temperature_simulate_normal() {
-  unsigned long now = millis();
-  if (now <= 12000) return 82;
-  if (now <= 15000) return 85;
-  if (now <= 19000) return 88;
-  if (now <= 25000) return 91;
-  if (now <= 28000) return 92;
-  return *activeSetPoint;
-}
-
 /********************************************************
  * check sensor value. If there is an issue, increase error value. 
  * If error is equal to maxErrorCounter, then set sensorMalfunction.
@@ -892,13 +670,13 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         error, secondlatestTemperature, latestTemperature);
     }
 #ifdef DEV_ESP
-  } else if ((activeState==3 || activeState==1)  &&
+  } else if ((activeState == STATE_INNER_ZONE_DETECTED || activeState == STATE_COLDSTART)  &&
      fabs(latestTemperature - secondlatestTemperature) >= 0.2 &&
      fabs(secondlatestTemperature - getTemperature(0)) >= 0.2 && 
      signnum(getTemperature(0) - secondlatestTemperature)*signnum(latestTemperature - secondlatestTemperature) > 0
      ) {
 #else
-  } else if (activeState==3 &&
+  } else if (activeState == STATE_INNER_ZONE_DETECTED &&
      //fabs(secondlatestTemperature - setPoint) <= 5 &&
      fabs(latestTemperature - *activeSetPoint) <= 5 &&
      fabs(latestTemperature - secondlatestTemperature) >= 0.2 &&
@@ -940,8 +718,6 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
         //secondlatestTemperature = getCurrentTemperature();
         float latestTemperature = readTemperatureFromSensor();
         //DEBUG_print("latestTemperature: %0.2f\n", latestTemperature);
-        // Temperatur_C = temperature_simulate_steam();
-        // Temperatur_C = temperature_simulate_normal();
         int sensorStatus = checkSensor(latestTemperature, secondlatestTemperature);
         previousTimerRefreshTemp = millis();
         if (sensorStatus == 1) {  //hardware issue
@@ -1163,97 +939,13 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     }
   }
 
-  /********************************************************
-   * send data to Blynk server
-   *****************************************************/
-  void sendToBlynk() {
-    #if (BLYNK_ENABLE==0)
-      return;
-    #else
-      if (forceOffline || !isBlynkWorking() || blynkDisabledTemporary) return;
-      unsigned long currentMillisBlynk = millis();
-      if (currentMillisBlynk >= previousTimerBlynk + intervalBlynk) {
-        previousTimerBlynk = currentMillisBlynk;
-        if (brewReady) {
-          if (blynkReadyLedColor != (char*)BLYNK_GREEN) {
-            blynkReadyLedColor = (char*)BLYNK_GREEN;
-            brewReadyLed.setColor(blynkReadyLedColor);
-          }
-        } else if (marginOfFluctuation != 0 && checkBrewReady(*activeSetPoint, marginOfFluctuation * 2, 40*10)) {
-          if (blynkReadyLedColor != (char*)BLYNK_YELLOW) {
-            blynkReadyLedColor = (char*)BLYNK_YELLOW;
-            brewReadyLed.setColor(blynkReadyLedColor);
-          }
-        } else {
-          if (blynkReadyLedColor != (char*)BLYNK_RED) {
-            brewReadyLed.on();
-            blynkReadyLedColor = (char*)BLYNK_RED;
-            brewReadyLed.setColor(blynkReadyLedColor);
-          }
-        }
-        if (grafana == 1 && blynkSendCounter == 1) { Blynk.virtualWrite(V60, Input, Output, bPID.GetKp(), bPID.GetKi(), bPID.GetKd(), *activeSetPoint); }
-        // performance tests has shown to only send one api-call per sendToBlynk()
-        if (blynkSendCounter == 1) {
-          if (steadyPower != steadyPowerSavedInBlynk) {
-            blynkSave((char*)"steadyPower");  // auto-tuning params should be saved by Blynk.virtualWrite()
-            steadyPowerSavedInBlynk = steadyPower;
-          } else {
-            blynkSendCounter++;
-          }
-        }
-        if (blynkSendCounter == 2) {
-          if (String(pastTemperatureChange(10*10) / 2, 2) != PreviousPastTemperatureChange) {
-            blynkSave((char*)"pastTemperatureChange");
-            PreviousPastTemperatureChange = String(pastTemperatureChange(10*10) / 2, 2);
-          } else {
-            blynkSendCounter++;
-          }
-        }
-        if (blynkSendCounter == 3) {
-          if (String(Input - *activeSetPoint, 2) != PreviousError) {
-            blynkSave((char*)"error");
-            PreviousError = String(Input - *activeSetPoint, 2);
-          } else {
-            blynkSendCounter++;
-          }
-        }
-        if (blynkSendCounter == 4) {
-          if (String(convertOutputToUtilisation(Output), 2) != PreviousOutputString) {
-            blynkSave((char*)"output");
-            PreviousOutputString = String(convertOutputToUtilisation(Output), 2);
-          } else {
-            blynkSendCounter++;
-          }
-        }
-        if (blynkSendCounter == 5) {
-          powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
-          int power_off_timer_min = powerOffTimer >= 0 ? ((powerOffTimer + 59) / 60) : 0;
-          if (power_off_timer_min != previousPowerOffTimer) {
-            blynkSave((char*)"power_off_timer_min");
-            previousPowerOffTimer = power_off_timer_min;
-          } else {
-            blynkSendCounter++;
-          }
-        }
-        if (blynkSendCounter >= 6) {
-          if (String(Input, 2) != PreviousInputString) {
-            blynkSave((char*)"Input");
-            PreviousInputString = String(Input, 2);
-          }
-          blynkSendCounter = 0;
-        }
-        blynkSendCounter++;
-      }
-    #endif
-  }
 
   /********************************************************
    * state Detection
    ******************************************************/
   void updateState() {
     switch (activeState) {
-      case 1: // state 1 running, that means full heater power. Check if target
-              // temp is reached
+      case STATE_COLDSTART: // state 1 running, that means full heater power. Check if target temp is reached
       {
         if (!MaschineColdstartRunOnce) {
           MaschineColdstartRunOnce = true;
@@ -1273,12 +965,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetSumOutputI(0);
-          activeState = 2;
+          activeState = STATE_STABILIZE_TEMPERATURE;
         }
         break;
       }
-      case 2: // state 2 running, that means heater is on steadyState and we
-              // are waiting to temperature to stabilize
+      case STATE_STABILIZE_TEMPERATURE: // that means heater is on steadyState and we are waiting to temperature to stabilize
       {
         bPID.SetFilterSumOutputI(30);
 
@@ -1345,12 +1036,12 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetSumOutputI(0);
-          activeState = 3;
+          activeState = STATE_INNER_ZONE_DETECTED;
           bPID.SetAutoTune(true);
         }
         break;
       }
-      case 4: // state 4 running = Brew running
+      case STATE_BREW_DETECTED: // = Brew running
       {
         bPID.SetFilterSumOutputI(100);
         bPID.SetAutoTune(false);
@@ -1364,11 +1055,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           bPID.SetSumOutputI(0);
           lastBrewEnd = millis();  //used to detect time from brew until brewReady
           timerBrewDetection = 0;
-          activeState = 2; 
+          activeState = STATE_STABILIZE_TEMPERATURE; 
         }
         break;
       }
-      case 5: // state 5 in outerZone
+      case STATE_OUTER_ZONE_DETECTED: // state 5 in outerZone
       {
         if (Input >= *activeSetPoint - outerZoneTemperatureDifference - 1.5) {
           bPID.SetFilterSumOutputI(4.5);
@@ -1385,11 +1076,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           bPID.SetSumOutputI(0);
           bPID.SetAutoTune(true);
           timerBrewDetection = 0;
-          activeState = 3;
+          activeState = STATE_INNER_ZONE_DETECTED;
         }
         break;
       }
-      case 6: // state 6 heat up because we want to steam
+      case STATE_STEAM_MODE: // state 6 heat up because we want to steam
       {
         bPID.SetAutoTune(false); // do not tune during steam phase
 
@@ -1408,11 +1099,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           bPID.SetAutoTune(false);
           Output = 0;
           timerBrewDetection = 0;
-          activeState = 3;
+          activeState = STATE_INNER_ZONE_DETECTED;
         }
         break;
       }
-      case 7: // state 7 sleep modus activated (no heater,..)
+      case STATE_SLEEP_MODE: // state 7 sleep modus activated (no heater,..)
       {
         if (!sleeping) {
           snprintf(debugLine, sizeof(debugLine), "** End of Sleeping phase. Transition to state 3 (normal mode)");
@@ -1420,23 +1111,23 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(true);
           bPID.SetMode(AUTOMATIC);
-          activeState = 3;
+          activeState = STATE_INNER_ZONE_DETECTED;
         }
         break;
       }
-      case 8: // state 8 clean modus activated
+      case STATE_CLEAN_MODE: // state 8 clean modus activated
       {
         if (!cleaning) {
           snprintf(debugLine, sizeof(debugLine), "** End of Cleaning phase. Transition to state 3 (normal mode)");
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(true);
-          activeState = 3;
+          activeState = STATE_INNER_ZONE_DETECTED;
         }
         break;
       }
 
-      case 3: // normal PID mode
+      case STATE_INNER_ZONE_DETECTED: // normal PID mode
       default: {
         if (!pidMode) break;
 
@@ -1456,7 +1147,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           snprintf(debugLine, sizeof(debugLine), "** End of normal mode. Transition to state 7 (sleeping)");
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
-          activeState = 7;
+          activeState = STATE_SLEEP_MODE;
           bPID.SetAutoTune(false);
           bPID.SetMode(MANUAL);
           break;
@@ -1468,7 +1159,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(false); // do not tune
-          activeState = 8;
+          activeState = STATE_CLEAN_MODE;
           break;
         }
 
@@ -1482,7 +1173,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
             activeSetPoint = &setPointSteam;
             DEBUG_print("set activeSetPoint: %0.2f\n", *activeSetPoint);
           }
-          activeState = 6;
+          activeState = STATE_STEAM_MODE;
           break;
         }
 
@@ -1495,7 +1186,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           DEBUG_print("Enable steadyPowerOffset (%0.2f)\n", steadyPowerOffset);
           bPID.SetAutoTune(false); // do not tune during coldstart + phase2
           bPID.SetSumOutputI(0);
-          activeState = 1;
+          activeState = STATE_COLDSTART;
           break;
         }
 
@@ -1522,7 +1213,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
             DEBUG_println(debugLine);
             mqttPublish((char*)"events", debugLine);
             bPID.SetSumOutputI(0);
-            activeState = 4;
+            activeState = STATE_BREW_DETECTED;
             break;
           }
         }
@@ -1533,7 +1224,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetSumOutputI(0);
-          activeState = 5;
+          activeState = STATE_OUTER_ZONE_DETECTED;
           if (Input > *activeSetPoint) { // if we are above setPoint always disable heating (primary useful after steaming)  YYY1
             bPID.SetAutoTune(false);
             bPID.SetMode(MANUAL);
@@ -1576,7 +1267,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   float Output_save;
   void pidCompute() {
     // certain activeState set Output to fixed values
-    if (activeState == 1 || activeState == 2 || activeState == 4) { Output_save = Output; }
+    if (activeState == STATE_COLDSTART || activeState == STATE_STABILIZE_TEMPERATURE || activeState == STATE_BREW_DETECTED) { Output_save = Output; }
     int ret = bPID.Compute();
     if (ret == 1) { // compute() did run successfully
       if (isrCounter > (windowSize + 100)) {
@@ -1589,7 +1280,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       pidComputeDelay = millis() + 5 - pidComputeLastRunTime - windowSize;
       if (pidComputeDelay > 50 && pidComputeDelay < 100000000) { DEBUG_print("pidCompute() delay of %lu ms (loop() hang?)\n", pidComputeDelay); }
       pidComputeLastRunTime = millis();
-      if (activeState == 1 || activeState == 2 || activeState == 4) {
+      if (activeState == STATE_COLDSTART || activeState == STATE_STABILIZE_TEMPERATURE || activeState == STATE_BREW_DETECTED) {
 #pragma GCC diagnostic error "-Wuninitialized"
         Output = Output_save;
       }
@@ -1720,32 +1411,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           ArduinoOTA.handle();
         }
 
-        #if (BLYNK_ENABLE==1)
-        if (!blynkDisabledTemporary) {
-          if (isBlynkWorking()) {
-            if (millis() >= previousTimerBlynkHandle + 500) {
-              previousTimerBlynkHandle = millis();
-              Blynk.run(); // Do Blynk household stuff. (On reconnect after
-                           // disconnect, timeout seems to be 5 seconds)
-            }
-          } else {
-            unsigned long now = millis();
-            if ((now > blynkLastReconnectAttemptTime + (blynkReconnectIncrementalBackoff * (blynkReconnectAttempts)))
-                && now > allServicesLastReconnectAttemptTime + allservicesMinReconnectInterval && !inSensitivePhase()) {
-              blynkLastReconnectAttemptTime = now;
-              allServicesLastReconnectAttemptTime = now;
-              ERROR_print("Blynk disconnected. Reconnecting...\n");
-              if (Blynk.connect(2000)) { // Attempt to reconnect
-                blynkLastReconnectAttemptTime = 0;
-                blynkReconnectAttempts = 0;
-                DEBUG_print("Blynk reconnected in %lu seconds\n", (millis() - now) / 1000);
-              } else if (blynkReconnectAttempts < blynkMaxIncrementalBackoff) {
-                blynkReconnectAttempts++;
-              }
-            }
-          }
-        }
-        #endif
+        runBlynk();
 
         // Check mqtt connection
         if (MQTT_ENABLE && !mqttDisabledTemporary) {
@@ -1808,7 +1474,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
 
     checkControls(controlsConfig); // transform controls to actions
 
-    if (activeState == 8) {
+    if (activeState == STATE_CLEAN_MODE) {
       clean();
     } else {
       // handle brewing if button is pressed (ONLYPID=0 for now, because
@@ -1877,18 +1543,18 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       updateState();
 
       /* state 1: Water is very cold, set heater to full power */
-      if (activeState == 1) {
+      if (activeState == STATE_COLDSTART) {
         Output = windowSize;
 
         /* state 2: ColdstartTemp reached. Now stabilizing temperature after
          * coldstart */
-      } else if (activeState == 2) {
+      } else if (activeState == STATE_STABILIZE_TEMPERATURE) {
         // Output = convertUtilisationToOutput(steadyPower +
         // bPID.GetSteadyPowerOffsetCalculated());
         Output = convertUtilisationToOutput(steadyPower);
 
         /* state 4: Brew detected. Increase heater power */
-      } else if (activeState == 4) {
+      } else if (activeState == STATE_BREW_DETECTED) {
         if (Input > *activeSetPoint + outerZoneTemperatureDifference) {
           Output = convertUtilisationToOutput(steadyPower + bPID.GetSteadyPowerOffsetCalculated());
         } else {
@@ -1899,7 +1565,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
 
         /* state 5: Outer Zone reached. More power than in inner zone */
-      } else if (activeState == 5) {
+      } else if (activeState == STATE_OUTER_ZONE_DETECTED) {
         if (Input > *activeSetPoint) {
           Output = 0;
         } else {
@@ -1914,7 +1580,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
 
         /* state 6: Steaming state active*/
-      } else if (activeState == 6) {
+      } else if (activeState == STATE_STEAM_MODE) {
         bPID.SetMode(MANUAL);
         if (!pidMode) {
           if (millis() >= streamComputeLastRunTime + 500) {
@@ -1942,7 +1608,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         }
 
         /* state 7: Sleeping state active*/
-      } else if (activeState == 7) {
+      } else if (activeState == STATE_SLEEP_MODE) {
         if (millis() - recurringOutput > 60000) {
           recurringOutput = millis();
           snprintf(debugLine, sizeof(debugLine), "sleeping...");
@@ -1951,7 +1617,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         Output = 0;
 
         /* state 8: Cleaning state active*/
-      } else if (activeState == 8) {
+      } else if (activeState == STATE_CLEAN_MODE) {
         if (millis() - recurringOutput > 60000) {
           recurringOutput = millis();
           snprintf(debugLine, sizeof(debugLine), "cleaning...");
@@ -1990,6 +1656,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       displaymessage(activeState, (char*)displayMessageLine1, (char*)displayMessageLine2);
 
       sendToBlynk();
+      
 #if (1 == 0)
       performance_check();
       return;
@@ -2149,6 +1816,9 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     } else {
       return (3*getAverageTemperature(3,0) + thermocouple.readCelsius()) / 4.0;
     }
+#elif (TEMPSENSOR == 9)
+    return temperature_simulate_normal(activeSetPoint);
+    //return temperature_simulate_steam(activeSetPoint);
 #else
     return TSIC.getTemp(250U);
 #endif
@@ -2351,7 +2021,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         if (DISABLE_SERVICES_ON_STARTUP_ERRORS) {
           forceOffline = true;
           mqttDisabledTemporary = true;
-          blynkDisabledTemporary = true;
+          disableBlynkTemporary();
           lastWifiConnectionAttempt = millis();
         }
         displaymessage(0, (char*)"Cannot connect to Wifi", (char*)"");
@@ -2416,23 +2086,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         // delay(1000);
       }
 #endif
-
-        #if (BLYNK_ENABLE==1)
-          DEBUG_print("Connecting to Blynk ...\n");
-          Blynk.config(blynkAuth, blynkAddress, blynkPort);
-          if (!Blynk.connect(5000)) {
-            if (DISABLE_SERVICES_ON_STARTUP_ERRORS) blynkDisabledTemporary = true;
-            ERROR_print("Cannot connect to Blynk. Disabling...\n");
-            // delay(1000);
-          } else {
-            DEBUG_print("Blynk is online, get latest values\n");
-            unsigned long started = millis();
-            while (isBlynkWorking() && (millis() < started + 2000)) {
-              Blynk.run();
-            }
-            eeprom_force_read = false;
-          }
-        #endif
+        eeprom_force_read = setupBlynk();
       }
 
     } else {
@@ -2502,11 +2156,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     while (true) {
       secondlatestTemperature = readTemperatureFromSensor();
       delay(refreshTempInterval);
-      // secondlatestTemperature = temperature_simulate_steam();
-      // secondlatestTemperature = temperature_simulate_normal();
       Input = readTemperatureFromSensor();
-      // Input = temperature_simulate_steam();
-      // Input = temperature_simulate_normal();
       if (checkSensor(Input, secondlatestTemperature) == 0) {
         updateTemperatureHistory(secondlatestTemperature);
         secondlatestTemperature = Input;
@@ -2514,6 +2164,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       }
       displaymessage(0, (char*)"Temp sensor defect", (char*)"");
       ERROR_print("Temp sensor defect. Cannot read consistent values. Retrying\n");
+      //ArduinoOTA.handle();
       delay(1000);
     }
 
@@ -2554,7 +2205,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     // comparison in loop() will have a big offset
     unsigned long currentTime = millis();
     previousTimerRefreshTemp = currentTime;
-    previousTimerBlynk = currentTime + 800;
+    setPreviousTimerBlynk(currentTime + 800);
     lastMQTTStatusReportTime = currentTime + 300;
     pidComputeLastRunTime = currentTime;
 

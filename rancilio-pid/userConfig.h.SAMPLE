@@ -1,5 +1,5 @@
 /********************************************************
- * Version 3.2.1
+ * Version 3.2.2
  * Config must be configured by the user
  *****************************************************/
 
@@ -10,7 +10,7 @@
  * General settings
  *****************************************************/
 #define MACHINE_TYPE "rancilio"  // supported values are "rancilio", "gaggia" and "ecm".
-#define TEMPSENSOR 2          // 2=TSIC306 (fully supported); 3=MAX6675K (working but untested); (1=DS19B20 not supported anymore)
+#define TEMPSENSOR 2          // 2=TSIC306 (fully supported); 3=MAX6675K (working but untested); (1=DS19B20 not supported anymore); 9=Sensor Mock (for testing without real sensor)
 #define TEMPSENSORRECOVERY 0  // 1 = on, 2= off (default). If off, temp sensor errors will stop the heater until power cycle
 #define FORCE_OFFLINE 0       // 0=Use network | 1=Disable all network stuff (WiFi, MQTT, Blynk).
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 1 // 1=on (default) when a service cannot be connected during startup, never retry | 0=off Try reconnecting to service during regular operations.
@@ -254,11 +254,11 @@
 #define BLYNKPORT 8080
 
 // MQTT
-#define MQTT_ENABLE 2        // 0 = off (no MQTT at all) | 1=MQTT client  | 2=MQTT Server if you dont have a mqtt server running on another system)
+#define MQTT_ENABLE 1        // 0 = off (no MQTT at all) | 1=MQTT client  | 2=MQTT Server if you dont have a mqtt server running on another system)
 #define MQTT_USERNAME "myuser"
 #define MQTT_PASSWORD "mypass"
 #define MQTT_TOPIC_PREFIX "custom/Küche."  // topic will be "<MQTT_TOPIC_PREFIX><HOSTNAME>/<READING>" <HOSTNAME> is defined in //Wifi section
-#define MQTT_SERVER_IP "192.168.x.x"       // (MQTT_ENABLE=1) IP-Address of locally installed mqtt server
+#define MQTT_SERVER_IP "192.168.1.1"       // (MQTT_ENABLE=1) IP-Address of locally installed mqtt server
 #define MQTT_SERVER_PORT 1883              // (MQTT_ENABLE=1)
 
 #endif // _userConfig_H

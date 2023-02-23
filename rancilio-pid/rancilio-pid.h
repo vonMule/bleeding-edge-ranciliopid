@@ -63,6 +63,18 @@
 #define TEMPSENSOR_BITWINDOW 125
 #endif
 
+#define STATE_UNDEFINED 0
+#define STATE_EMERGENCY_TEMP_REACHED 0
+#define STATE_COLDSTART 1
+#define STATE_STABILIZE_TEMPERATURE 2
+#define STATE_INNER_ZONE_DETECTED 3
+#define STATE_DEFAULT 3
+#define STATE_BREW_DETECTED 4
+#define STATE_OUTER_ZONE_DETECTED 5
+#define STATE_STEAM_MODE 6
+#define STATE_SLEEP_MODE 7
+#define STATE_CLEAN_MODE 8
+
 #include <RemoteDebug.h> //https://github.com/JoaoLopesF/RemoteDebug
 extern RemoteDebug Debug;
 
@@ -106,7 +118,6 @@ void checkWifi(bool, unsigned long);
 extern char debugLine[200];
 void maintenance();
 void performance_check();
-void blynkSave(char* setting);
 void set_profile();
 void set_profile(bool);
 void debugWaterLevelSensor();

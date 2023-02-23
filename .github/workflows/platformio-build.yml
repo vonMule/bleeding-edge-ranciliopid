@@ -1,0 +1,19 @@
+name: Test build
+
+on: [push, pull_request]
+
+jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v3
+        - name: Add config file
+          working-directory: ./rancilio-pid
+          run: cp userConfig.h.SAMPLE userConfig.h
+        - name: PlatformIO Run
+          uses: karniv00l/platformio-run-action@v1
+          with:
+            environments: "nodemcuv2_ota,esp32_ota_LIVE"
+            silent: false
+            verbose: true

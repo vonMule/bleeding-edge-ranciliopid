@@ -51,13 +51,13 @@ bool menuCheck() {
 
 char* outputSimpleState() {
   switch (activeState) {
-    case 6: {
+    case STATE_STEAM_MODE: {
       return (char*)"Steaming";
     }
-    case 8: {
+    case STATE_CLEAN_MODE: {
       return (char*)"Cleaning";
     }
-    case 7: {
+    case STATE_SLEEP_MODE: {
       return (char*)"Sleeping";
     }
   }
@@ -69,7 +69,7 @@ char* outputSimpleState() {
 void setDisplayTextState(int activeState, char* displaymessagetext, char* displaymessagetext2) {
 #if (DISPLAY_TEXT_STATE == 1)
   if (menuPosition != 0) return;
-  if (strlen(displaymessagetext) > 0 || strlen(displaymessagetext2) > 0 || screenSaverOn || activeState == 4) { // dont show state in certain situations
+  if (strlen(displaymessagetext) > 0 || strlen(displaymessagetext2) > 0 || screenSaverOn || activeState == STATE_BREW_DETECTED) { // dont show state in certain situations
     snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
     snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);
   } else {
@@ -148,7 +148,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
      (millis() <= brewStatisticsTimer + brewStatisticsAdditionalDisplayTime) ) ? true : false;
 
     // boot logo
-    if (activeState == 0) {
+    if (activeState == STATE_UNDEFINED) {
       if (strcmp(MACHINE_TYPE, "rancilio") == 0) {
         u8g2.drawXBMP(41, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
       } else if (strcmp(MACHINE_TYPE, "gaggia") == 0) {
@@ -169,22 +169,22 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
 #else
       // display icons
       switch (activeState) {
-        case 1:
-        case 2:
+        case STATE_COLDSTART:
+        case STATE_STABILIZE_TEMPERATURE:
           if (image_flip) {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_rotate_bits);
           } else {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_bits);
           }
           break;
-        case 4: // brew
+        case STATE_BREW_DETECTED: // brew
           if (image_flip) {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, brewing_bits);
           } else {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, brewing_rotate_bits);
           }
           break;
-        case 3:
+        case STATE_INNER_ZONE_DETECTED:
           if (brewReady) {
             if (image_flip) {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, brew_ready_bits);
@@ -199,7 +199,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             }
           }
           break;
-        case 5:
+        case STATE_OUTER_ZONE_DETECTED:
           if (Input >= steamReadyTemp) { // fallback: if hardware steaming button is used still show steaming icon
             if (image_flip) {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, steam_bits);
@@ -214,7 +214,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             }
           }
           break;
-        case 6: // steaming state (detected via controlAction STEAMING)
+        case STATE_STEAM_MODE: // steaming state (detected via controlAction STEAMING)
           if (Input >= steamReadyTemp) {
             if (image_flip) {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, steam_bits);
@@ -230,9 +230,9 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             }
           }
           break;
-        case 7: // sleeping state
+        case STATE_SLEEP_MODE: // sleeping state
           break;
-        case 8: // cleaning state
+        case STATE_CLEAN_MODE: // cleaning state
           if (image_flip) {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, clean_bits);
           } else {
@@ -244,7 +244,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     }
 
     // display current and target temperature
-    if (activeState > 0 && activeState != 4 && !showLastBrewStatistics) {
+    if (activeState > STATE_UNDEFINED && activeState != STATE_BREW_DETECTED && !showLastBrewStatistics) {
       if (Input - 100 > -FLT_EPSILON) {
         align_right = align_right_3digits;
       } else {
@@ -259,7 +259,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
       u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
       u8g2.drawGlyph(align_right - 11, 3 + 6, 0x0046);
 
-      // if (Input <= *activeSetPoint + 5 || activeState == 6) { //only show setpoint if we are not steaming
+      // if (Input <= *activeSetPoint + 5 || activeState == STATE_STEAM_MODE) { //only show setpoint if we are not steaming
       if (!steaming) {
         if (*activeSetPoint >= 100) {
           align_right = align_right_3digits;
@@ -275,7 +275,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
         u8g2.drawGlyph(align_right - 11, 20 + 6, 0x047);
       }
-    } else if (activeState == 4 || showLastBrewStatistics) {  //brew
+    } else if (activeState == STATE_BREW_DETECTED || showLastBrewStatistics) {  //brew
       totalBrewTime = ( (OnlyPID || BREWTIME_TIMER == 0 )? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
       unsigned int align_right_left_value = LCDWidth - 56 - 5;
       unsigned int align_right_right_value = LCDWidth - 56 + 28;
