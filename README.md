@@ -3,7 +3,7 @@
 
 ## Do it yourself, open-source PID for your espresso machine  
 
-Version 3.2.2
+Version 3.2.3 beta1
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -125,6 +125,13 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.3 beta1:
+  - Fix: Wifi stability improvements.
+    - Disable WiFi Power Safe.
+    - Reduce WiFi retry wait times.
+    - WiFi instability by adding housekeeping times.
+  - Fix: Support for Expressif v5.3.
+  - Performance improvements. 
 - 3.2.2:
   - Refactor: Moved blynk code into own files. Thanks aschoelzhorn!
   - Refactor: Add a temperature sensor mock. Thanks aschoelzhorn!

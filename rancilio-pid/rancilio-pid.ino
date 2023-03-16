@@ -20,9 +20,11 @@
 #include "eeprom-pcpid.h"
 #include <blynk.h>
 
+
+
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.2";
+const char* sysVersion PROGMEM = "3.2.3 beta1";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -41,8 +43,8 @@ const char* ssid = D_SSID;
 const char* pass = PASS;
 
 unsigned long lastWifiConnectionAttempt = millis();
-const unsigned long wifiReconnectInterval = 60000; // try to reconnect every 60 seconds
-unsigned long wifiConnectWaitTime = 6000; // ms to wait for the connection to succeed
+const unsigned long wifiReconnectInterval = 15000; // try to reconnect every 15 seconds
+unsigned long wifiConnectWaitTime = 10000; // ms to wait for the connection to succeed
 unsigned int wifiReconnects = 0; // number of reconnects
 
 // OTA
@@ -297,6 +299,7 @@ const int enabledHardwareLed = 0; // 0 = disable functionality
 float marginOfFluctuation = 0; // 0 = disable functionality
 #endif
 
+unsigned long lastCheckNetwork = 0;
 unsigned long lastCheckBrewReady = 0;
 unsigned long lastBrewReady = 0;
 unsigned long lastBrewEnd = 0; // used to determime the time it takes to reach brewReady==true
@@ -416,14 +419,28 @@ void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
 /******************************************************
  * HELPER
  ******************************************************/
+void yieldIfNecessary(void){
+    static uint64_t lastYield = 0;
+    uint64_t now = millis();
+    if((now - lastYield) > 15) {
+        lastYield = now;
+        delay(1);
+        //vTaskDelay(5); //delay 1 RTOS tick
+    }
+}
+
 bool isWifiWorking() {
+  static bool val_wifi = false;
+  if (millis() - lastCheckNetwork > 100UL) {
+    lastCheckNetwork = millis();
 #ifdef ESP32
-  // DEBUG_print("status=%d ip=%s\n", WiFi.status() == WL_CONNECTED,
-  // WiFi.localIP().toString());
-  return ((!forceOffline) && (WiFi.status() == WL_CONNECTED) && (WiFi.localIP() != IPAddress(0U))); // TODO 2.7.x correct to remove IPAddress(0) check?
+    //DEBUG_print("status=%d\n", WiFi.status() == WL_CONNECTED);
+    val_wifi = ((!forceOffline) && (WiFi.status() == WL_CONNECTED)); // XXX1 correct to remove IPAddress(0) check?
 #else
-  return ((!forceOffline) && (WiFi.status() == WL_CONNECTED) && (WiFi.localIP() != IPAddress(0U)));
+    val = ((!forceOffline) && (WiFi.status() == WL_CONNECTED) && (WiFi.localIP() != IPAddress(0U)));
 #endif
+  }
+  return val_wifi;
 }
 
 bool inSensitivePhase() { return (brewing || activeState == STATE_BREW_DETECTED || isrCounter > 1000); }
@@ -891,14 +908,18 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
     if (forceOffline)
       return; // remove this to allow wifi reconnects even when
               // DISABLE_SERVICES_ON_STARTUP_ERRORS=1
-    if ((!force_connect) && (isWifiWorking() || inSensitivePhase())) return;
-    if (force_connect || (millis() > lastWifiConnectionAttempt + 5000 + (wifiReconnectInterval * wifiReconnects))) {
-      lastWifiConnectionAttempt = millis();
+    if ((!force_connect) && (isWifiWorking() || inSensitivePhase())) return; 
+    if (force_connect || (millis() > lastWifiConnectionAttempt + 5000 + (wifiReconnectInterval * (wifiReconnects<=4?wifiReconnects: 4) ))) {
       // noInterrupts();
       DEBUG_print("Connecting to WIFI with SID %s ...\n", ssid);
       WiFi.persistent(false); // Don't save WiFi configuration in flash
+      #ifdef ESP32
+      WiFi.disconnect();
+      WiFi.setHostname(hostname);
+      #else
       WiFi.disconnect(true); // Delete SDK WiFi config
-// displaymessage(0, "Connecting Wifi", "");
+      #endif
+      // displaymessage(0, "Connecting Wifi", "");
 #ifdef STATIC_IP
       IPAddress STATIC_IP;
       IPAddress STATIC_GATEWAY;
@@ -909,23 +930,23 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
 default, would try to act as both a client and an access-point and could cause
 network-issues with your other WiFi-devices on your WiFi-network. */
       WiFi.mode(WIFI_STA);
+      delay(200); // esp32: prevent "store calibration data failed(0x1105)" errors
 #ifdef ESP32
-      //WiFi.setSleep(false);  //improve network performance. disabled because sometimes reboot happen?!
+      WiFi.setSleep(WIFI_PS_NONE);  //disable powersaving mode. improve network performance. disabled because sometimes reboot happen?!
 #else
       WiFi.setSleepMode(WIFI_NONE_SLEEP); // needed for some disconnection bugs?
+      WiFi.setAutoConnect(false); // disable auto-connect
 #endif
       // WiFi.enableSTA(true);
-      delay(200); // esp32: prevent "store calibration data failed(0x1105)" errors 
-      WiFi.setAutoConnect(false); // disable auto-connect
       WiFi.setAutoReconnect(false); // disable auto-reconnect
 #ifdef ESP32
       WiFi.begin(ssid, pass);
-      WiFi.setHostname(hostname); // TODO Reihenfolge wirklich richtig?
 #else
     WiFi.hostname(hostname);
     WiFi.begin(ssid, pass);
 #endif
 
+      lastWifiConnectionAttempt = millis();
       while (!isWifiWorking() && (millis() < lastWifiConnectionAttempt + wifiConnectWaitTime_tmp)) {
         yield(); // Prevent Watchdog trigger
       }
@@ -935,6 +956,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       } else {
         ERROR_print("Wifi connection attempt (#%u) not successfull (%lu secs)\n", wifiReconnects, (millis() - lastWifiConnectionAttempt) / 1000);
         wifiReconnects++;
+        WiFi.disconnect();
       }
     }
   }
@@ -1285,10 +1307,10 @@ network-issues with your other WiFi-devices on your WiFi-network. */
         Output = Output_save;
       }
       DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f = b:%5.2f + "
-                  "p:%5.2f + i:%5.2f(%5.2f) + d:%5.2f\n",
+                  "p:%5.2f + i:%5.2f(%5.2f) + d:%5.2f (RSSI=%d)\n",
           Input, (*activeSetPoint - Input), pastTemperatureChange(10*10) / 2, convertOutputToUtilisation(Output), steadyPower + bPID.GetSteadyPowerOffsetCalculated(),
           convertOutputToUtilisation(bPID.GetOutputP()), convertOutputToUtilisation(bPID.GetSumOutputI()), convertOutputToUtilisation(bPID.GetOutputI()),
-          convertOutputToUtilisation(bPID.GetOutputD()));
+          convertOutputToUtilisation(bPID.GetOutputD()), WiFi.RSSI());
     } else if (ret == 2) { // PID is disabled but compute() should have run
       isrCounter = 0;
       pidComputeLastRunTime = millis();
@@ -1405,6 +1427,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
 #endif
           });
+          ArduinoOTA.begin();
         }
         if (millis() >= previousTimerOtaHandle + 500) {
           previousTimerOtaHandle = millis();
@@ -1418,12 +1441,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
           if (!isMqttWorking()) {
             mqttReconnect(false);
           } else {
-#if (MQTT_ENABLE == 1)
-            if (millis() >= previousTimerMqttHandle + 200) {
-              previousTimerMqttHandle = millis();
-              mqttClient.loop(); // mqtt client connected, do mqtt housekeeping
-            }
-#endif
             unsigned long now = millis();
             if (now >= lastMQTTStatusReportTime + lastMQTTStatusReportInterval) {
               lastMQTTStatusReportTime = now;
@@ -1438,6 +1455,12 @@ network-issues with your other WiFi-devices on your WiFi-network. */
               }
               // mqttPublishSettings();  //not needed because we update live on occurence
             }
+#if (MQTT_ENABLE == 1)
+            if (millis() >= previousTimerMqttHandle + 100) {
+              previousTimerMqttHandle = millis();
+              mqttClient.loop(); // mqtt client connected, do mqtt housekeeping
+            }
+#endif
           }
         }
       }
@@ -1728,10 +1751,11 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     if (!inSensitivePhase() && (millis() >= eepromSaveTime + eepromSaveTimer || (eepromForceSync > 0 && (millis() >= eepromForceSync + eepromForceSyncWaitTimer)))) {
       eepromSaveTime = millis();
       eepromForceSync = 0;
-      noInterrupts();
       sync_eeprom();
-      interrupts();
     }
+#ifdef ESP32
+    yieldIfNecessary();  // it seems esp32 multicore needs some time to complete internal house keeping
+#endif
   }
 
   /***********************************
@@ -1790,16 +1814,19 @@ network-issues with your other WiFi-devices on your WiFi-network. */
 #endif
   }
 
-  void performance_check() {
+  void performance_check() {  // has an influence on esp housekeeping
+    static int printCounter = 0;
     loops += 1;
     curMicros = micros();
     if (maxMicros < curMicros - curMicrosPreviousLoop) { maxMicros = curMicros - curMicrosPreviousLoop; }
     if (curMicros >= lastReportMicros + 100000) { // 100ms
-      snprintf(debugLine, sizeof(debugLine),
-          "%lu loop() | loops/ms=%lu | spend_micros_last_loop=%lu | "
-          "max_micros_since_last_report=%lu | avg_micros/loop=%lu",
+      printCounter++;
+      if (true || printCounter >20) {
+        DEBUG_print("%lu loop() | loops/ms=%lu | spend_micros_last_loop=%lu | "
+          "max_micros_since_last_report=%lu | avg_micros/loop=%lu\n",
           curMicros / 1000, loops / 100, (curMicros - curMicrosPreviousLoop), maxMicros, (curMicros - lastReportMicros) / loops);
-      DEBUG_println(debugLine);
+        printCounter = 0;
+      }
       lastReportMicros = curMicros;
       maxMicros = 0;
       loops = 0;
@@ -1918,9 +1945,10 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   void setup() {
     bool eeprom_force_read = true;
     DEBUGSTART(115200);
-
-// required for remoteDebug to work
+    
 #ifdef ESP32
+    WiFi.useStaticBuffers(true);
+    // required for remoteDebug to work
     WiFi.mode(WIFI_STA);
 #endif
     Debug.begin(hostname, Debug.DEBUG);
@@ -2059,7 +2087,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
             // read and use settings retained in mqtt and therefore dont use eeprom values
             eeprom_force_read = false;
             unsigned long started = millis();
-            while (isMqttWorking() && (millis() < started + 3000)) // attention: delay might not
+            while (isMqttWorking() && (millis() < started + 4000)) // attention: delay might not
                                                                    // be long enough over WAN
             {
               mqttClient.loop();
@@ -2133,7 +2161,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       // wifi connection is done during blynk connection
       ArduinoOTA.setHostname(hostname); //  Device name for OTA
       ArduinoOTA.setPassword(OTApass); //  Password for OTA
-      ArduinoOTA.begin();
+      //ArduinoOTA.begin();
     }
 
     /********************************************************
@@ -2164,7 +2192,6 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       }
       displaymessage(0, (char*)"Temp sensor defect", (char*)"");
       ERROR_print("Temp sensor defect. Cannot read consistent values. Retrying\n");
-      //ArduinoOTA.handle();
       delay(1000);
     }
 

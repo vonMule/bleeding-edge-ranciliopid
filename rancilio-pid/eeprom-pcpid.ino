@@ -564,6 +564,7 @@ DEBUG_print("EEPROM: sync_eeprom() finished.\n");
 
 #else
 void sync_eeprom(bool startup_read, bool force_read) {
+  noInterrupts();
   int current_version;
   DEBUG_print("EEPROM: sync_eeprom(startup_read=%d, force_read=%d) called\n", startup_read, force_read);
   //EEPROM.begin(432);
@@ -1010,4 +1011,5 @@ void sync_eeprom(bool startup_read, bool force_read) {
   if (!EEPROM.commit()) ERROR_print("Cannot write to EEPROM.\n");
   DEBUG_print("EEPROM: sync_eeprom() finished.\n");
 }
+interrupts();
 #endif

@@ -92,7 +92,8 @@ ESP8266:
 WITHOUT NETWORK:
  [0m(D p:^0100ms) 23 23236 loop() | loops/ms=20 | spend_micros_last_loop=47 | max_micros_since_last_report=2519 | avg_micros/loop=48
 
-
+ESP32 3.2.3:
+    (D p:^2100ms) 22 22316 loop() | loops/ms=60 | spend_micros_last_loop=17 | max_micros_since_last_report=117 | avg_micros/loop=16
 
 # Sample brew detection
 (D p:^0004ms) 970 Input= 94.28 | error=-0.28 delta= 0.00 | Output=  4.95 b: 5.60 + p:-0.45 + i:-0.20(-0.20) + d:-0.00

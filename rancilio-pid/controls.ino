@@ -728,9 +728,9 @@ int checkMultiToggle() {
 
 void checkControls(controlMap* controlsConfig) {
   if (!controlsConfig) { return; }
-  unsigned long aktuelleZeit = millis();
-  if (aktuelleZeit >= previousCheckControls + FREQUENCYCHECKCONTROLS) {
-    previousCheckControls = aktuelleZeit;
+  unsigned long now = millis();
+  if (now >= previousCheckControls + FREQUENCYCHECKCONTROLS) {
+    previousCheckControls = now;
     controlMap* ptr = controlsConfig;
     int currentMultiAction = -1;
     int currentAction = -1;

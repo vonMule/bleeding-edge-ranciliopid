@@ -7,6 +7,7 @@
 #include "MQTT.h"
 #include "controls.h"
 
+unsigned long lastCheckMQTT = 0;
 
 bool almostEqual_exact(float a, float b) { return fabs(a - b) <= FLT_EPSILON; }
 bool almostEqual(float a, float b) { return fabs(a - b) <= 0.0001; }
@@ -53,7 +54,14 @@ bool isMqttWorking() { return false; }
 
 /* ------------------------------ */
 #elif (MQTT_ENABLE == 1) // MQTT Client
-bool isMqttWorking() { return ((MQTT_ENABLE > 0) && (isWifiWorking()) && (mqttClient.connected())); }
+bool isMqttWorking() { 
+  static bool val_mqtt = false;
+  if (millis() > lastCheckMQTT + 100UL) {
+    lastCheckMQTT = millis();
+    val_mqtt = ((MQTT_ENABLE > 0) && (isWifiWorking()) && (mqttClient.connected()));
+  }
+  return val_mqtt;
+}
 
 bool mqttPublish(char* reading, char* payload) {
   if (!MQTT_ENABLE || forceOffline || mqttDisabledTemporary) return true;
