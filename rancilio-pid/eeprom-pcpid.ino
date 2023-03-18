@@ -1010,6 +1010,6 @@ void sync_eeprom(bool startup_read, bool force_read) {
   }
   if (!EEPROM.commit()) ERROR_print("Cannot write to EEPROM.\n");
   DEBUG_print("EEPROM: sync_eeprom() finished.\n");
+  interrupts();
 }
-interrupts();
 #endif

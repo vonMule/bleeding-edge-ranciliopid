@@ -18,7 +18,6 @@
 #define VALVE_TRIGGERTYPE HIGH // LOW = low trigger, HIGH = high trigger relay
 #define PUMP_TRIGGERTYPE HIGH  // LOW = low trigger, HIGH = high trigger relay
 #define OTA true              // true=activate update via OTA
-#define GRAFANA 0             // 0=default(off), 1=enable grafana visualisation by Markus (simply ask him for free access)
 #define EMERGENCY_TEMP 135    // If temperature is higher then notifications are send via display/debug/mqtt and PID is temporary disabled.
                               // Set this to the higest temperature supported by your maschine minus a few degress. (Silvia 5E: 135)
 #define HEATER_INACTIVITY_TIMER 120  // 0=Disable. When there is no activity at the maschine for this amount of minutes, the heater should stop heating until new activity is detected.

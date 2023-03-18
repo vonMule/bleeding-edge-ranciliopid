@@ -3,7 +3,7 @@
 
 ## Do it yourself, open-source PID for your espresso machine  
 
-Version 3.2.3 beta1
+Version 3.2.3 beta2
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -125,6 +125,14 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.3 beta2:
+  - Fix: esp8266 compile issues.
+  - Fix: Newly beta1 added esp8266 compile issues.
+  - Fix: Blynk working again with latest version.
+  - Fix: Some "include" issues when arduinoIDE is used. Thanks Helge!
+  - Removed legacy grafana.
+  - TODO FIX: Case buttons not working when no WiFi
+    - TODO Check "This is unpleasant, since the cleaning mode requires WiFi and Blynq."
 - 3.2.3 beta1:
   - Fix: Wifi stability improvements.
     - Disable WiFi Power Safe.

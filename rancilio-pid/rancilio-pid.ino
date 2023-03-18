@@ -24,7 +24,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.3 beta1";
+const char* sysVersion PROGMEM = "3.2.3 beta2";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -35,7 +35,6 @@ const int brewDetection = BREWDETECTION;
 const int valveTriggerType = VALVE_TRIGGERTYPE;
 const int pumpTriggerType = PUMP_TRIGGERTYPE;
 const bool ota = OTA;
-const int grafana = GRAFANA;
 
 // Wifi
 const char* hostname = HOSTNAME;
@@ -437,7 +436,7 @@ bool isWifiWorking() {
     //DEBUG_print("status=%d\n", WiFi.status() == WL_CONNECTED);
     val_wifi = ((!forceOffline) && (WiFi.status() == WL_CONNECTED)); // XXX1 correct to remove IPAddress(0) check?
 #else
-    val = ((!forceOffline) && (WiFi.status() == WL_CONNECTED) && (WiFi.localIP() != IPAddress(0U)));
+    val_wifi = ((!forceOffline) && (WiFi.status() == WL_CONNECTED) && (WiFi.localIP() != IPAddress(0U)));
 #endif
   }
   return val_wifi;
@@ -1341,7 +1340,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     }
   }
 #else
-  void ICACHE_RAM_ATTR onTimer1ISR() {
+  void IRAM_ATTR onTimer1ISR() {
     timer1_write(50000); // set interrupt time to 10ms
     if (isrCounter >= heaterOverextendingIsrCounter) {
       // turn off when when compute() is not run in time (safetly measure)

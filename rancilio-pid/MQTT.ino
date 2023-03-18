@@ -40,12 +40,6 @@ char* number2string(unsigned int in) {
   return number2string_uint;
 }
 
-char* mqttBuildTopic(char* reading) {
-  char* topic = (char*)malloc(sizeof(char) * 256);
-  snprintf(topic, sizeof(*topic), "%s%s/%s", mqttTopicPrefix, hostname, reading);
-  return topic;
-}
-
 /* ------------------------------ */
 #if (MQTT_ENABLE == 0) // MQTT Disabled
 bool mqttPublish(char* reading, char* payload) { return true; }
