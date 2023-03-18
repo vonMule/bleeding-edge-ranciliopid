@@ -9,7 +9,7 @@
 #include <BlynkSimpleEsp8266.h>
 #endif
 
-#include <userConfig.h>
+#include "userConfig.h"
 
 /********************************************************
  * BLYNK
