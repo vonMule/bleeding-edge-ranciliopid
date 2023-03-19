@@ -287,9 +287,9 @@ unsigned long previousTimerBlynkHandle = 0;
 unsigned long previousTimerDebugHandle = 0;
 unsigned long previousTimerPidCheck = 0;
 #if (TEMPSENSOR==3)
-const long refreshTempInterval = 200; // How often to read the temperature sensor (must be >=180ms)
+const long refreshTempInterval = 180; // How often to read the temperature sensor (must be >=180ms)
 #else
-const long refreshTempInterval = 100; // How often to read the temperature sensor
+const long refreshTempInterval = 300; // How often to read the temperature sensor
 #endif
 #ifdef EMERGENCY_TEMP
 const unsigned int emergencyTemperature = EMERGENCY_TEMP; // temperature at which the emergency shutdown should take
@@ -354,22 +354,32 @@ unsigned long previousTimerWaterLevelCheck = 0;
 /********************************************************
  * Temperature Sensor: TSIC 30x TEMP / Max6675
  ******************************************************/
-#if (TEMPSENSOR == 3)
-  #define TEMPSENSOR_NAME "MAX6675"
-  #include <max6675.h>
-  MAX6675 thermocouple(pinTemperatureCLK, pinTemperatureCS, pinTemperatureSO);
-#else // TSIC306 default sensor
-  #define TEMPSENSOR_NAME "TSIC306"
-  #include <ZACwire.h>
-#if (!defined(ZACWIRE_VERSION) || (defined(ZACWIRE_VERSION) && ZACWIRE_VERSION <= 133L))
-#error ERROR ZACwire library version must be >= 1.3.4
-#endif
-    #ifdef ESP32
-ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
-    #else
-ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
-    #endif
-#endif    
+#define TEMPSENSOR_NAME "MAX31865"
+#include <Adafruit_MAX31865.h>
+// Use software SPI: CS, DI, DO, CLK
+Adafruit_MAX31865 Thermo = Adafruit_MAX31865(5, 26, 4, 25);
+////#if (TEMPSENSOR == 3)
+////  #define TEMPSENSOR_NAME "MAX6675"
+////  #include <max6675.h>
+////  MAX6675 thermocouple(pinTemperatureCLK, pinTemperatureCS, pinTemperatureSO);
+//#if (TEMPSENSOR == 3)
+//  #define TEMPSENSOR_NAME "Thermo"
+//  #include <Adafruit_MAX31865.h>
+//  //Thermo Adafruit_MAX31865(5,26,4,25);
+//  Adafruit_MAX31865 Thermo = Adafruit_MAX31865(5, 26, 4, 25);
+//  //Adafruit_MAX31865.begin(MAX31865_3WIRE);
+//#else // TSIC306 default sensor
+//  #define TEMPSENSOR_NAME "TSIC306"
+//  #include <ZACwire.h>
+//#if (!defined(ZACWIRE_VERSION) || (defined(ZACWIRE_VERSION) && ZACWIRE_VERSION <= 133L))
+//#error ERROR ZACwire library version must be >= 1.3.4
+//#endif
+//    #ifdef ESP32
+//ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
+//    #else
+//ZACwire<pinTemperature> TSIC(306, TEMPSENSOR_BITWINDOW, 0, true);
+//    #endif
+//#endif    
 
 uint16_t temperature = 0;
 volatile uint16_t temp_value[2] = { 0 };
@@ -1652,7 +1662,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   /***********************************
    * LOOP()
    ***********************************/
-  void loop() {
+void loop() {
     refreshTemp(); // save new temperature values
     testEmergencyStop(); // test if Temp is to high
 
@@ -2139,13 +2149,25 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   }
 
   float readTemperatureFromSensor() {
+//#if (TEMPSENSOR == 3)
+//    //this sensor's reading flaps 0.5degrees on every read. Also calculate averages to mitigate PID issues.
+//    float past_average = getAverageTemperature(3,0);
+//    if (past_average == 0) {
+//      return thermocouple.readCelsius();
+//    } else {
+//      return (3*getAverageTemperature(3,0) + thermocouple.readCelsius()) / 4.0;
+//    }
 #if (TEMPSENSOR == 3)
     //this sensor's reading flaps 0.5degrees on every read. Also calculate averages to mitigate PID issues.
     float past_average = getAverageTemperature(3,0);
+    Thermo.readRTD();
+    float result = Thermo.temperature(100.0,430.0);
+    //Serial.println(result);
     if (past_average == 0) {
-      return thermocouple.readCelsius();
+      return result;
+      //return Thermo.temperature(100.0, 430.0);
     } else {
-      return (3*getAverageTemperature(3,0) + thermocouple.readCelsius()) / 4.0;
+      return ((3*getAverageTemperature(3,0) + result) / 4.0);
     }
 #else
     return TSIC.getTemp();
@@ -2244,6 +2266,7 @@ network-issues with your other WiFi-devices on your WiFi-network. */
    * SETUP()
    ***********************************/
   void setup() {
+    //Serial.begin(115200);
     bool eeprom_force_read = true;
     DEBUGSTART(115200);
 
@@ -2492,10 +2515,12 @@ network-issues with your other WiFi-devices on your WiFi-network. */
      ******************************************************/
     // displaymessage(0, "Init. vars", "");
     isrCounter = 950; // required
-#if (TEMPSENSOR == 2)    
-    if (TSIC.begin() != true) { ERROR_println("TSIC Tempsensor cannot be initialized"); }
-    delay(120);
-#endif    
+
+Thermo.begin(MAX31865_3WIRE);  
+//#if (TEMPSENSOR == 2)    
+//    if (TSIC.begin() != true) { ERROR_println("TSIC Tempsensor cannot be initialized"); }
+//    delay(120);
+//#endif    
     while (true) {
       secondlatestTemperature = readTemperatureFromSensor();
       delay(refreshTempInterval);
