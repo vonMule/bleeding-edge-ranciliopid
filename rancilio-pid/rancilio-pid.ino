@@ -24,7 +24,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.3 beta2";
+const char* sysVersion PROGMEM = "3.2.3 beta3";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -72,12 +72,12 @@ unsigned long lastMQTTStatusReportTime = 0;
 unsigned long lastMQTTStatusReportInterval = 5000; // mqtt send status-report every 5 second
 const bool mqttFlagRetained = true;
 unsigned long mqttDontPublishUntilTime = 0;
-unsigned long mqttDontPublishBackoffTime = 60000; // Failsafe: dont publish if there are errors for 10 seconds
+unsigned long mqttDontPublishBackoffTime = 15000; // Failsafe: dont publish if there are errors for 15 seconds
 unsigned long mqttLastReconnectAttemptTime = 0;
 unsigned int mqttReconnectAttempts = 0;
-unsigned long mqttReconnectIncrementalBackoff = 210000; // Failsafe: add 210sec to reconnect time after each
+unsigned long mqttReconnectIncrementalBackoff = 30000; // Failsafe: add 30sec to reconnect time after each
                                                         // connect-failure.
-unsigned int mqttMaxIncrementalBackoff = 5; // At most backoff <mqtt_max_incremenatl_backoff>+1 *
+unsigned int mqttMaxIncrementalBackoff = 4; // At most backoff <mqtt_max_incremenatl_backoff>+1 *
                                             // (<mqttReconnectIncrementalBackoff>ms)
 bool mqttDisabledTemporary = false;
 unsigned long mqttConnectTime = 0; // time of last successfull mqtt connection
@@ -312,7 +312,7 @@ unsigned long eepromSaveTime = 0;
 char debugLine[200];
 unsigned long recurringOutput = 0;
 unsigned long allServicesLastReconnectAttemptTime = 0;
-unsigned long allservicesMinReconnectInterval = 160000; // 160sec minimum wait-time between service reconnections
+unsigned long allservicesMinReconnectInterval = 60000; // 60sec minimum wait-time between service reconnections
 bool forceOffline = FORCE_OFFLINE;
 unsigned long eepromForceSync = 0;
 const int eepromForceSyncWaitTimer = 3000; // after updating a setting wait this number of milliseconds before writing to eeprom
@@ -433,7 +433,7 @@ bool isWifiWorking() {
   if (millis() - lastCheckNetwork > 100UL) {
     lastCheckNetwork = millis();
 #ifdef ESP32
-    //DEBUG_print("status=%d\n", WiFi.status() == WL_CONNECTED);
+    //DEBUG_print("status=%d, IP=%s\n", WiFi.status() == WL_CONNECTED, WiFi.localIP().toString().c_str());
     val_wifi = ((!forceOffline) && (WiFi.status() == WL_CONNECTED)); // XXX1 correct to remove IPAddress(0) check?
 #else
     val_wifi = ((!forceOffline) && (WiFi.status() == WL_CONNECTED) && (WiFi.localIP() != IPAddress(0U)));

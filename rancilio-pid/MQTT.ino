@@ -88,7 +88,7 @@ bool mqttReconnect(bool force_connect = false) {
 
   unsigned long now = millis();
   if (force_connect
-      || ((now > mqttLastReconnectAttemptTime + (mqttReconnectIncrementalBackoff * (mqttReconnectAttempts)))
+      || ((now > mqttLastReconnectAttemptTime + (mqttReconnectIncrementalBackoff * (mqttReconnectAttempts<=mqttMaxIncrementalBackoff? mqttReconnectAttempts:mqttMaxIncrementalBackoff)))
           && now > allServicesLastReconnectAttemptTime + allservicesMinReconnectInterval)) {
     mqttLastReconnectAttemptTime = now;
     allServicesLastReconnectAttemptTime = now;
@@ -107,7 +107,7 @@ bool mqttReconnect(bool force_connect = false) {
       mqttConnectTime = millis();
     } else {
       DEBUG_print("Cannot connect to mqtt server (consecutive failures=#%u)\n", mqttReconnectAttempts);
-      if (mqttReconnectAttempts < mqttMaxIncrementalBackoff) { mqttReconnectAttempts++; }
+      mqttReconnectAttempts++;
     }
   }
   return mqttClient.connected();

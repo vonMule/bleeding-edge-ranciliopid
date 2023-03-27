@@ -113,7 +113,13 @@ BLYNK_WRITE(V110) {
 }
 
 bool isBlynkWorking() { 
-  return isWifiWorking() && Blynk.connected(); 
+  static bool val_blynk = false;
+  static unsigned long lastCheckBlynk = 0;
+  if (millis() > lastCheckBlynk + 100UL) {
+    lastCheckBlynk = millis();
+    val_blynk = ((BLYNK_ENABLE > 0) && (isWifiWorking()) && (Blynk.connected()));
+  }
+  return val_blynk;
 }
 
 /******************************************************
@@ -246,7 +252,7 @@ void runBlynk() {
             }
         } else {
             unsigned long now = millis();
-            if ((now > blynkLastReconnectAttemptTime + (blynkReconnectIncrementalBackoff * (blynkReconnectAttempts)))
+            if ((now > blynkLastReconnectAttemptTime + (blynkReconnectIncrementalBackoff * (blynkReconnectAttempts<=blynkMaxIncrementalBackoff? blynkReconnectAttempts:blynkMaxIncrementalBackoff)))
                 && now > allServicesLastReconnectAttemptTime + allservicesMinReconnectInterval && !inSensitivePhase()) {
               blynkLastReconnectAttemptTime = now;
               allServicesLastReconnectAttemptTime = now;
@@ -255,7 +261,7 @@ void runBlynk() {
                 blynkLastReconnectAttemptTime = 0;
                 blynkReconnectAttempts = 0;
                 DEBUG_print("Blynk reconnected in %lu seconds\n", (millis() - now) / 1000);
-              } else if (blynkReconnectAttempts < blynkMaxIncrementalBackoff) {
+              } else {
                 blynkReconnectAttempts++;
               }
             }
