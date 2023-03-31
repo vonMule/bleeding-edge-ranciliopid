@@ -438,7 +438,7 @@ bool isWifiWorking() {
 #else
     val_wifi = ((!forceOffline) && (WiFi.status() == WL_CONNECTED) && (WiFi.localIP() != IPAddress(0U)));
 #endif
-  }
+}
   return val_wifi;
 }
 
@@ -907,7 +907,7 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
     if (forceOffline)
       return; // remove this to allow wifi reconnects even when
               // DISABLE_SERVICES_ON_STARTUP_ERRORS=1
-    if ((!force_connect) && (isWifiWorking() || inSensitivePhase())) return; 
+    if ((!force_connect) && (isWifiWorking() || inSensitivePhase())) return;
     if (force_connect || (millis() > lastWifiConnectionAttempt + 5000 + (wifiReconnectInterval * (wifiReconnects<=4?wifiReconnects: 4) ))) {
       // noInterrupts();
       DEBUG_print("Connecting to WIFI with SID %s ...\n", ssid);
@@ -918,7 +918,7 @@ int checkSensor(float latestTemperature, float secondlatestTemperature) {
       #else
       WiFi.disconnect(true); // Delete SDK WiFi config
       #endif
-      // displaymessage(0, "Connecting Wifi", "");
+// displaymessage(0, "Connecting Wifi", "");
 #ifdef STATIC_IP
       IPAddress STATIC_IP;
       IPAddress STATIC_GATEWAY;
@@ -1363,6 +1363,79 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   }
 #endif
 
+  void DisableTimerAlarm() {
+#ifdef ESP32
+    timerAlarmDisable(timer);
+#else
+    timer1_disable();
+#endif
+  }
+
+  void EnableTimerAlarm() {
+#ifdef ESP32
+    timerAlarmEnable(timer);
+#else
+    timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
+#endif
+  }
+
+void InitOTA() {
+	static bool runOnceOTASetup = true;
+	if (runOnceOTASetup) {
+	  runOnceOTASetup = false;
+	  // Disable interrupt when OTA starts, otherwise it will not work
+	  ArduinoOTA.onStart([]() {
+		  DEBUG_print("OTA update initiated\n");
+		  Output = 0;
+		  DisableTimerAlarm();
+		  digitalWrite(pinRelayHeater, LOW); // Stop heating
+	  });
+	  ArduinoOTA.onError([](ota_error_t error) {
+		  ERROR_print("OTA update error\n");
+		  EnableTimerAlarm();
+	  });
+	  // Enable interrupts if OTA is finished
+	  ArduinoOTA.onEnd([]() {
+  		EnableTimerAlarm();
+	  });
+	  ArduinoOTA.begin();
+	}
+	if (millis() >= previousTimerOtaHandle + 500) {
+	  previousTimerOtaHandle = millis();
+	  ArduinoOTA.handle();
+	}
+}
+
+// Check mqtt connection
+void CheckMqttConnection() {
+  if (MQTT_ENABLE && !mqttDisabledTemporary) {
+    if (!isMqttWorking()) {
+      mqttReconnect(false);
+    } else {
+      unsigned long now = millis();
+      if (now >= lastMQTTStatusReportTime + lastMQTTStatusReportInterval) {
+        lastMQTTStatusReportTime = now;
+        mqttPublish((char*)"temperature", number2string(Input));
+        mqttPublish((char*)"temperatureAboveTarget", number2string((Input - *activeSetPoint)));
+        mqttPublish((char*)"heaterUtilization", number2string(convertOutputToUtilisation(Output)));
+        mqttPublish((char*)"pastTemperatureChange", number2string(pastTemperatureChange(10*10)));
+        mqttPublish((char*)"brewReady", bool2string(brewReady));
+        if (ENABLE_POWER_OFF_COUNTDOWN != 0) {
+          powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
+          mqttPublish((char*)"powerOffTimer", int2string(powerOffTimer >= 0 ? ((powerOffTimer + 59) / 60) : 0)); // in minutes always rounded up
+        }
+        // mqttPublishSettings();  //not needed because we update live on occurence
+      }
+#if (MQTT_ENABLE == 1)
+      if (millis() >= previousTimerMqttHandle + 100) {
+        previousTimerMqttHandle = millis();
+        mqttClient.loop(); // mqtt client connected, do mqtt housekeeping
+      }
+#endif
+    }
+  }
+}
+
   /***********************************
    * LOOP()
    ***********************************/
@@ -1396,72 +1469,9 @@ network-issues with your other WiFi-devices on your WiFi-network. */
 #endif
         checkWifi();
       } else {
-        static bool runOnceOTASetup = true;
-        if (runOnceOTASetup) {
-          runOnceOTASetup = false;
-          // Disable interrupt when OTA starts, otherwise it will not work
-          ArduinoOTA.onStart([]() {
-            DEBUG_print("OTA update initiated\n");
-            Output = 0;
-#ifdef ESP32
-            timerAlarmDisable(timer);
-#else
-          timer1_disable();
-#endif
-            digitalWrite(pinRelayHeater, LOW); // Stop heating
-          });
-          ArduinoOTA.onError([](ota_error_t error) {
-            ERROR_print("OTA update error\n");
-#ifdef ESP32
-            timerAlarmEnable(timer);
-#else
-          timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
-#endif
-          });
-          // Enable interrupts if OTA is finished
-          ArduinoOTA.onEnd([]() {
-#ifdef ESP32
-            timerAlarmEnable(timer);
-#else
-          timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
-#endif
-          });
-          ArduinoOTA.begin();
-        }
-        if (millis() >= previousTimerOtaHandle + 500) {
-          previousTimerOtaHandle = millis();
-          ArduinoOTA.handle();
-        }
-
+        InitOTA();
         runBlynk();
-
-        // Check mqtt connection
-        if (MQTT_ENABLE && !mqttDisabledTemporary) {
-          if (!isMqttWorking()) {
-            mqttReconnect(false);
-          } else {
-            unsigned long now = millis();
-            if (now >= lastMQTTStatusReportTime + lastMQTTStatusReportInterval) {
-              lastMQTTStatusReportTime = now;
-              mqttPublish((char*)"temperature", number2string(Input));
-              mqttPublish((char*)"temperatureAboveTarget", number2string((Input - *activeSetPoint)));
-              mqttPublish((char*)"heaterUtilization", number2string(convertOutputToUtilisation(Output)));
-              mqttPublish((char*)"pastTemperatureChange", number2string(pastTemperatureChange(10*10)));
-              mqttPublish((char*)"brewReady", bool2string(brewReady));
-              if (ENABLE_POWER_OFF_COUNTDOWN != 0) {
-                powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
-                mqttPublish((char*)"powerOffTimer", int2string(powerOffTimer >= 0 ? ((powerOffTimer + 59) / 60) : 0)); // in minutes always rounded up
-              }
-              // mqttPublishSettings();  //not needed because we update live on occurence
-            }
-#if (MQTT_ENABLE == 1)
-            if (millis() >= previousTimerMqttHandle + 100) {
-              previousTimerMqttHandle = millis();
-              mqttClient.loop(); // mqtt client connected, do mqtt housekeeping
-            }
-#endif
-          }
-        }
+        CheckMqttConnection();
       }
     }
 
@@ -1938,18 +1948,10 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     DEBUG_print("========================\n");
   }
 
-  /***********************************
-   * SETUP()
-   ***********************************/
-  void setup() {
-    bool eeprom_force_read = true;
+  void InitDebug()
+  {
     DEBUGSTART(115200);
-    
-#ifdef ESP32
-    WiFi.useStaticBuffers(true);
-    // required for remoteDebug to work
-    WiFi.mode(WIFI_STA);
-#endif
+
     Debug.begin(hostname, Debug.DEBUG);
     Debug.setResetCmdEnabled(true); // Enable the reset command
     Debug.showProfiler(true); // Profiler (Good to measure times, to optimize codes)
@@ -1957,19 +1959,15 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     Debug.setSerialEnabled(true); // log to Serial also
     // Serial.setDebugOutput(true); // enable diagnostic output of WiFi
     // libraries
-    Debug.setCallBackNewClient(&print_settings);
+    Debug.setCallBackNewClient(&print_settings);  
 
-    /********************************************************
-     * Define trigger type
-     ******************************************************/
-    valveRelayON = valveTriggerType ? HIGH: LOW;
-    valveRelayOFF = !valveRelayON;
-    pumpRelayON = pumpTriggerType ? HIGH: LOW;
-    pumpRelayOFF = !pumpRelayON;
+    DEBUG_print("\nMachine: %s\nVersion: %s\n", MACHINE_TYPE, sysVersion);
+  }
 
-    /********************************************************
-     * Init Pins
-     ******************************************************/
+  /********************************************************
+   * Init Pins
+  ******************************************************/
+  void InitPins() {
     pinMode(pinRelayValve, OUTPUT);
     digitalWrite(pinRelayValve, valveRelayOFF);
     pinMode(pinRelayPump, OUTPUT);
@@ -1981,165 +1979,103 @@ network-issues with your other WiFi-devices on your WiFi-network. */
     digitalWrite(pinLed, LOW);
     setHardwareLed(1);
 #elif (ENABLE_HARDWARE_LED == 2)
-  pinMode(pinLed, OUTPUT);
-  FastLED.addLeds<WS2812B, pinLed, GRB>(leds, enabledHardwareLedNumber);
-  setHardwareLed(1);
+    pinMode(pinLed, OUTPUT);
+    FastLED.addLeds<WS2812B, pinLed, GRB>(leds, enabledHardwareLedNumber);
+    setHardwareLed(1);
 #endif
 
 #if (ENABLE_GPIO_ACTION == 1)
-#ifdef pinBrewAction
+  #ifdef pinBrewAction
     pinMode(pinBrewAction, OUTPUT);
     setGpioAction(BREWING, 1);
-#endif
-#ifdef pinHotwaterAction
+  #endif
+  #ifdef pinHotwaterAction
     pinMode(pinHotwaterAction, OUTPUT);
     setGpioAction(HOTWATER, 1);
-#endif
-#ifdef pinSteamingAction
+  #endif
+  #ifdef pinSteamingAction
     pinMode(pinSteamingAction, OUTPUT);
     setGpioAction(STEAMING, 1);
+  #endif
 #endif
-#endif
+  }
 
-    DEBUG_print("\nMachine: %s\nVersion: %s\n", MACHINE_TYPE, sysVersion);
+  /********************************************************
+  * Define trigger type
+  ******************************************************/
+  void DefineTriggerTypes() {
+    valveRelayON = valveTriggerType ? HIGH: LOW;
+    valveRelayOFF = !valveRelayON;
+    pumpRelayON = pumpTriggerType ? HIGH: LOW;
+    pumpRelayOFF = !pumpRelayON;
+  }
 
-#if defined(OVERWRITE_VERSION_DISPLAY_TEXT)
-    displaymessage(0, (char*)DISPLAY_TEXT, (char*)OVERWRITE_VERSION_DISPLAY_TEXT);
-#else
-  displaymessage(0, (char*)DISPLAY_TEXT, (char*)sysVersion);
-#endif
-
-    delay(1000);
-
-    controlsConfig = parseControlsConfig();
-    configureControlsHardware(controlsConfig);
-    checkControls(controlsConfig);  // to get switch states at startup
-
-    menuConfig = parseMenuConfig();
-    
-    // if simulatedBrewSwitch is already "on" on startup, then we brew should
-    // not start automatically
-    if (simulatedBrewSwitch) {
-      ERROR_print("Brewswitch is already turned on after poweron. Dont brew until it is turned off.\n");
-      waitingForBrewSwitchOff = true;
-    }
-
-    /********************************************************
-     * Init PID
-     ******************************************************/
+  /********************************************************
+  * Init PID
+  ******************************************************/
+  void InitPid() {
     bPID.SetSampleTime(windowSize);
     bPID.SetOutputLimits(0, windowSize);
     bPID.SetMode(AUTOMATIC);
+  }
 
-    /********************************************************
-     * INIT SCALE
-     ******************************************************/
+  /********************************************************
+  * INIT SCALE
+  ******************************************************/
+  void InitScale() {
 #if (SCALE_SENSOR_ENABLE)
     initScale();
+    scalePowerDown();
 #endif
+  }
 
-    /********************************************************
-     * BLYNK & Fallback offline
-     ******************************************************/
-    if (!forceOffline) {
-      checkWifi(true, 12000); // wait up to 12 seconds for connection
-      if (!isWifiWorking()) {
-        ERROR_print("Cannot connect to WIFI %s. Disabling WIFI\n", ssid);
-        if (DISABLE_SERVICES_ON_STARTUP_ERRORS) {
-          forceOffline = true;
-          mqttDisabledTemporary = true;
-          disableBlynkTemporary();
-          lastWifiConnectionAttempt = millis();
-        }
-        displaymessage(0, (char*)"Cannot connect to Wifi", (char*)"");
-        delay(1000);
-      } else {
-        DEBUG_print("IP address: %s\n", WiFi.localIP().toString().c_str());
+/********************************************************
+ * WATER LEVEL SENSOR
+ ******************************************************/
+void InitWaterLevelSensor() {
+	#if (WATER_LEVEL_SENSOR_ENABLE)
+	#ifdef ESP32
+		Wire1.begin(WATER_LEVEL_SENSOR_SDA, WATER_LEVEL_SENSOR_SCL,
+			100000U); // Wire0 cannot be re-used due to core0 stickyness
+		waterSensor.setBus(&Wire1);
+	#else
+		Wire.begin();
+		waterSensor.setBus(&Wire);
+	#endif
+		waterSensor.setTimeout(300);
+		if (!waterSensor.init()) {
+		  ERROR_println("Water level sensor cannot be initialized");
+		  displaymessage(0, (char*)"Water sensor defect", (char*)"");
+		}
+		// increased accuracy by increase timing budget to 200 ms
+		waterSensor.setMeasurementTimingBudget(200000);
+		// continuous timed mode
+		waterSensor.startContinuous(ENABLE_CALIBRATION_MODE == 1 ? 1000 : waterSensorCheckTimer / 2);
+	#endif
+}
 
-#if (defined(ESP32) and defined(DEBUGMODE))
-        //WiFi.onEvent(WiFiStationConnected, SYSTEM_EVENT_STA_CONNECTED);
-        //WiFi.onEvent(WiFiGotIP, SYSTEM_EVENT_STA_GOT_IP);
-        //WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
-        WiFi.onEvent(WiFiStationConnected, ARDUINO_EVENT_WIFI_STA_CONNECTED);
-        WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP);
-        WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP6);
-        WiFi.onEvent(WiFiStationDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
-#endif
-
-// MQTT
-#if (MQTT_ENABLE == 1)
-        snprintf(topicWill, sizeof(topicWill), "%s%s/%s", mqttTopicPrefix, hostname, "will");
-        snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
-        snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
-        //mqttClient.setKeepAlive(3);      //activates mqttping keepalives (default 15)
-        mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)
-        mqttClient.setServer(mqttServerIP, mqttServerPort);
-        mqttClient.setCallback(mqttCallback1);
-        if (!mqttReconnect(true)) {
-          if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
-          ERROR_print("Cannot connect to MQTT. Disabling...\n");
-          // displaymessage(0, "Cannot connect to MQTT", "");
-          // delay(1000);
-        } else {
-          const bool useRetainedSettingsFromMQTT = true;
-          if (useRetainedSettingsFromMQTT) {
-            // read and use settings retained in mqtt and therefore dont use eeprom values
-            eeprom_force_read = false;
-            unsigned long started = millis();
-            while (isMqttWorking() && (millis() < started + 4000)) // attention: delay might not
-                                                                   // be long enough over WAN
-            {
-              mqttClient.loop();
-            }
-            eepromForceSync = 0;
-          }
-        }
-#elif (MQTT_ENABLE == 2)
-      DEBUG_print("Starting MQTT service\n");
-      const unsigned int max_subscriptions = 30;
-      const unsigned int max_retained_topics = 30;
-      const unsigned int mqtt_service_port = 1883;
-      snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
-      snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
-      MQTT_server_onData(mqtt_callback_2);
-      if (MQTT_server_start(mqtt_service_port, max_subscriptions, max_retained_topics)) {
-        if (!MQTT_local_subscribe((unsigned char*)topicSet, 0) || !MQTT_local_subscribe((unsigned char*)topicActions, 0)) {
-          ERROR_print("Cannot subscribe to local MQTT service\n");
-        }
-      } else {
-        if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
-        ERROR_print("Cannot create MQTT service. Disabling...\n");
-        // displaymessage(0, "Cannot create MQTT service", "");
-        // delay(1000);
-      }
-#endif
-        eeprom_force_read = setupBlynk();
-      }
-
-    } else {
-      DEBUG_print("Staying offline due to forceOffline=1\n");
-    }
-
-    /********************************************************
-     * READ/SAVE EEPROM
-     * get latest values from EEPROM if not already fetched from blynk or
-     * remote mqtt-server Additionally this function honors changed values in
-     * userConfig.h (changed userConfig.h values have priority). Some special
-     * variables like profile-dependent ones are always fetched from eeprom.
-     ******************************************************/
+/********************************************************
+ * READ/SAVE EEPROM
+ * get latest values from EEPROM 
+ * remote mqtt-server Additionally this function honors changed values in
+ * userConfig.h (changed userConfig.h values have priority). Some special
+ * variables like profile-dependent ones are always fetched from eeprom.
+ ******************************************************/
+void SyncEeprom(bool force_read) {	 
     #ifndef ESP32
     EEPROM.begin(432);
     #endif
-    sync_eeprom(true, eeprom_force_read);
 
+    sync_eeprom(true, force_read);
     set_profile();
-
     print_settings();
+}
 
-    /********************************************************
-     * PUBLISH settings on MQTT (and wait for them to be processed!)
-     * + SAVE settings on MQTT-server if MQTT_ENABLE==1
-     ******************************************************/
+/********************************************************
+ * PUBLISH settings on MQTT (and wait for them to be processed!)
+ * + SAVE settings on MQTT-server if MQTT_ENABLE==1
+ ******************************************************/
+void MqttPublishSettings() {
     steadyPowerSaved = steadyPower;
     if (isMqttWorking()) {
       steadyPowerMQTTDisableUpdateUntilProcessed = steadyPower;
@@ -2152,28 +2088,12 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       }
 #endif
     }
+}	
 
-    /********************************************************
-     * OTA
-     ******************************************************/
-    if (ota && !forceOffline) {
-      // wifi connection is done during blynk connection
-      ArduinoOTA.setHostname(hostname); //  Device name for OTA
-      ArduinoOTA.setPassword(OTApass); //  Password for OTA
-      //ArduinoOTA.begin();
-    }
-
-    /********************************************************
-     * movingaverage ini array
-     ******************************************************/
-    for (int thisReading = 0; thisReading < numReadings; thisReading++) {
-      readingsTemp[thisReading] = 0;
-      readingsTime[thisReading] = 0;
-    }
-
-    /********************************************************
-     * TEMP SENSOR
-     ******************************************************/
+/********************************************************
+ * TEMP SENSOR
+ ******************************************************/
+void InitTemperaturSensor() {
     // displaymessage(0, "Init. vars", "");
     isrCounter = 950; // required
 #if (TEMPSENSOR == 2)    
@@ -2191,67 +2111,195 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       }
       displaymessage(0, (char*)"Temp sensor defect", (char*)"");
       ERROR_print("Temp sensor defect. Cannot read consistent values. Retrying\n");
+      ArduinoOTA.handle();
       delay(1000);
     }
+}
 
-    /********************************************************
-     * WATER LEVEL SENSOR
-     ******************************************************/
-#if (WATER_LEVEL_SENSOR_ENABLE)
+/********************************************************
+ * Timer1 ISR - Initialisierung
+ * TIM_DIV1 = 0,   //80MHz (80 ticks/us - 104857.588 us max)
+ * TIM_DIV16 = 1,  //5MHz (5 ticks/us - 1677721.4 us max)
+ * TIM_DIV256 = 3  //312.5Khz (1 tick = 3.2us - 26843542.4 us max)
+ ******************************************************/
+void InitTimer() {
+	  isrCounter = 0;
+	#ifdef ESP32
+	  timer = timerBegin(0, 80, true); // 1Mhz
+	  timerAttachInterrupt(timer, &onTimer1ISR, true);
+	  timerAlarmWrite(timer, 10000, true); // 10ms
+	  timerAlarmEnable(timer);
+	#else
+	  timer1_isr_init();
+	  timer1_attachInterrupt(onTimer1ISR);
+	  timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
+	  timer1_write(50000); // set interrupt time to 10ms
+	#endif
+}
+
+/***********************************
+ * SETUP()
+ ***********************************/
+void setup() {
+  bool eeprom_force_read = true;
+   
 #ifdef ESP32
-    Wire1.begin(WATER_LEVEL_SENSOR_SDA, WATER_LEVEL_SENSOR_SCL,
-        100000U); // Wire0 cannot be re-used due to core0 stickyness
-    waterSensor.setBus(&Wire1);
-#else
-    Wire.begin();
-    waterSensor.setBus(&Wire);
-#endif
-    waterSensor.setTimeout(300);
-    if (!waterSensor.init()) {
-      ERROR_println("Water level sensor cannot be initialized");
-      displaymessage(0, (char*)"Water sensor defect", (char*)"");
-    }
-    // increased accuracy by increase timing budget to 200 ms
-    waterSensor.setMeasurementTimingBudget(200000);
-    // continuous timed mode
-    waterSensor.startContinuous(ENABLE_CALIBRATION_MODE == 1 ? 1000 : waterSensorCheckTimer / 2);
+  WiFi.useStaticBuffers(true);
+  // required for remoteDebug to work
+  WiFi.mode(WIFI_STA);
 #endif
 
-    /********************************************************
-     * REST INIT()
-     ******************************************************/
-    #if (SCALE_SENSOR_ENABLE)
-    scalePowerDown();
-    #endif
-    setHardwareLed(0);
-    setGpioAction(BREWING, 0);
-    setGpioAction(STEAMING, 0);
-    setGpioAction(HOTWATER, 0);
-    // Initialisation MUST be at the very end of the init(), otherwise the time
-    // comparison in loop() will have a big offset
-    unsigned long currentTime = millis();
-    previousTimerRefreshTemp = currentTime;
-    setPreviousTimerBlynk(currentTime + 800);
-    lastMQTTStatusReportTime = currentTime + 300;
-    pidComputeLastRunTime = currentTime;
+  InitDebug();
 
-    /********************************************************
-     * Timer1 ISR - Initialisierung
-     * TIM_DIV1 = 0,   //80MHz (80 ticks/us - 104857.588 us max)
-     * TIM_DIV16 = 1,  //5MHz (5 ticks/us - 1677721.4 us max)
-     * TIM_DIV256 = 3  //312.5Khz (1 tick = 3.2us - 26843542.4 us max)
-     ******************************************************/
-    isrCounter = 0;
-#ifdef ESP32
-    timer = timerBegin(0, 80, true); // 1Mhz
-    timerAttachInterrupt(timer, &onTimer1ISR, true);
-    timerAlarmWrite(timer, 10000, true); // 10ms
-    timerAlarmEnable(timer);
+  DefineTriggerTypes();
+  InitPins();
+
+#if defined(OVERWRITE_VERSION_DISPLAY_TEXT)
+  displaymessage(0, (char*)DISPLAY_TEXT, (char*)OVERWRITE_VERSION_DISPLAY_TEXT);
 #else
-  timer1_isr_init();
-  timer1_attachInterrupt(onTimer1ISR);
-  timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
-  timer1_write(50000); // set interrupt time to 10ms
+  displaymessage(0, (char*)DISPLAY_TEXT, (char*)sysVersion);
 #endif
-    DEBUG_print("End of setup()\n");
+
+  delay(1000);
+
+  controlsConfig = parseControlsConfig();
+  configureControlsHardware(controlsConfig);
+  checkControls(controlsConfig);  // to get switch states at startup
+
+  menuConfig = parseMenuConfig();
+  
+  // if simulatedBrewSwitch is already "on" on startup, then brew should
+  // not start automatically
+  if (simulatedBrewSwitch) {
+    ERROR_print("Brewswitch is already turned on after power on. Don't brew until it is turned off.\n");
+    waitingForBrewSwitchOff = true;
   }
+
+  InitPid();
+  InitScale();
+
+  /********************************************************
+     * BLYNK & Fallback offline
+   ******************************************************/
+  if (forceOffline) {
+    DEBUG_print("Staying offline due to forceOffline=1\n");
+  } else {
+    checkWifi(true, 12000); // wait up to 12 seconds for connection
+    if (!isWifiWorking()) {
+      ERROR_print("Cannot connect to WIFI %s. Disabling WIFI\n", ssid);
+      if (DISABLE_SERVICES_ON_STARTUP_ERRORS) {
+        forceOffline = true;
+        mqttDisabledTemporary = true;
+          disableBlynkTemporary();
+        lastWifiConnectionAttempt = millis();
+      }
+      displaymessage(0, (char*)"Cannot connect to Wifi", (char*)"");
+      delay(1000);
+    } else {
+      DEBUG_print("IP address: %s\n", WiFi.localIP().toString().c_str());
+
+#if (defined(ESP32) and defined(DEBUGMODE))
+      //WiFi.onEvent(WiFiStationConnected, SYSTEM_EVENT_STA_CONNECTED);
+      //WiFi.onEvent(WiFiGotIP, SYSTEM_EVENT_STA_GOT_IP);
+      //WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
+      WiFi.onEvent(WiFiStationConnected, ARDUINO_EVENT_WIFI_STA_CONNECTED);
+      WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP);
+      WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP6);
+      WiFi.onEvent(WiFiStationDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+#endif
+
+// MQTT
+#if (MQTT_ENABLE == 1)
+      snprintf(topicWill, sizeof(topicWill), "%s%s/%s", mqttTopicPrefix, hostname, "will");
+      snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
+      snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
+      //mqttClient.setKeepAlive(3);      //activates mqttping keepalives (default 15)
+      mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)
+      mqttClient.setServer(mqttServerIP, mqttServerPort);
+      mqttClient.setCallback(mqttCallback1);
+      if (!mqttReconnect(true)) {
+        if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
+        ERROR_print("Cannot connect to MQTT. Disabling...\n");
+        // displaymessage(0, "Cannot connect to MQTT", "");
+        // delay(1000);
+      } else {
+        const bool useRetainedSettingsFromMQTT = true;
+        if (useRetainedSettingsFromMQTT) {
+          // read and use settings retained in mqtt and therefore dont use eeprom values
+          eeprom_force_read = false;
+          unsigned long started = millis();
+          while (isMqttWorking() && (millis() < started + 4000)) // attention: delay might not
+                                                                  // be long enough over WAN
+          {
+            mqttClient.loop();
+          }
+          eepromForceSync = 0;
+        }
+      }
+#elif (MQTT_ENABLE == 2)
+    DEBUG_print("Starting MQTT service\n");
+    const unsigned int max_subscriptions = 30;
+    const unsigned int max_retained_topics = 30;
+    const unsigned int mqtt_service_port = 1883;
+    snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
+    snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
+    MQTT_server_onData(mqtt_callback_2);
+    if (MQTT_server_start(mqtt_service_port, max_subscriptions, max_retained_topics)) {
+      if (!MQTT_local_subscribe((unsigned char*)topicSet, 0) || !MQTT_local_subscribe((unsigned char*)topicActions, 0)) {
+        ERROR_print("Cannot subscribe to local MQTT service\n");
+      }
+    } else {
+      if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
+      ERROR_print("Cannot create MQTT service. Disabling...\n");
+      // displaymessage(0, "Cannot create MQTT service", "");
+      // delay(1000);
+    }
+#endif
+        eeprom_force_read = setupBlynk();
+    }
+  }
+
+  SyncEeprom(eeprom_force_read);
+  MqttPublishSettings();
+
+  /********************************************************
+   * OTA
+   ******************************************************/
+  if (ota && !forceOffline) {
+    // wifi connection is done during blynk connection
+    ArduinoOTA.setHostname(hostname); //  Device name for OTA
+    ArduinoOTA.setPassword(OTApass); //  Password for OTA
+    //ArduinoOTA.begin();
+  }
+
+  /********************************************************
+   * moving average ini array
+   ******************************************************/
+  for (int thisReading = 0; thisReading < numReadings; thisReading++) {
+    readingsTemp[thisReading] = 0;
+    readingsTime[thisReading] = 0;
+  }
+
+  InitTemperaturSensor();
+  InitWaterLevelSensor();
+
+  /********************************************************
+   * REST INIT()
+   ******************************************************/
+  setHardwareLed(0);
+  setGpioAction(BREWING, 0);
+  setGpioAction(STEAMING, 0);
+  setGpioAction(HOTWATER, 0);
+
+  InitTimer();
+
+  // This initialisation MUST be at the very end of the setup(), otherwise the time
+  // comparison in loop() will have a big offset
+  unsigned long currentTime = millis();
+  previousTimerRefreshTemp = currentTime;
+    setPreviousTimerBlynk(currentTime + 800);
+  lastMQTTStatusReportTime = currentTime + 300;
+  pidComputeLastRunTime = currentTime;
+
+  DEBUG_print("End of setup()\n");
+}
