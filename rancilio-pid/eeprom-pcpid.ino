@@ -46,9 +46,9 @@ if (startup_read && (current_version == expectedEepromVersion)) {
     scaleSensorWeightOffset = preferences.getDouble("scalWeightOf", 1.5);
 }
 
-// if variables are not read from blynk previously, always get latest values from EEPROM
+// if variables are not read from blynk/mqtt previously, always get latest values from EEPROM
 if (force_read && (current_version == expectedEepromVersion)) {
-    DEBUG_print("EEPROM: Blynk not active and not using external mqtt server. "
+    DEBUG_print("EEPROM: Not connected to MQTT/Blynk. "
                 "Reading settings from EEPROM\n");
     profile = preferences.getUInt("profile", 1);
     aggKp = preferences.getDouble("aggKp", 0.0);
@@ -599,7 +599,7 @@ void sync_eeprom(bool startup_read, bool force_read) {
   // if variables are not read from blynk previously, always get latest values
   // from EEPROM
   if (force_read && (current_version == expectedEepromVersion)) {
-    //DEBUG_print("EEPROM: Blynk not active and not using external mqtt server. Reading settings from EEPROM\n");
+    //DEBUG_print("EEPROM: Not connected to MQTT/Blynk. Reading settings from EEPROM\n");
     EEPROM.get(0, aggKp);
     EEPROM.get(4, aggTn);
     EEPROM.get(8, aggTv);

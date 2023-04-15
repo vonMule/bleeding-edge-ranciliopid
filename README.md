@@ -3,7 +3,7 @@
 
 ## Do it yourself, open-source PID for your espresso machine  
 
-Version 3.2.3 beta2
+Version 3.2.3 beta4
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -125,6 +125,10 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.3 beta4:
+  - Feature: Enable bigger status icons when ENABLE_BIG_STATUS_ICONS is set to 1 (default 0). Many thanks aschoelzhorn!
+  - Refactor: Code refactoring. Many thanks aschoelzhorn!
+  - Fix: Changing MQTT settings while machine being offline is being honored again.
 - 3.2.3 beta3:
   - Changed minimum retry timer when mqtt/blynk disconnects happen from 160s to 60s.
   - Added Blynk state caching.

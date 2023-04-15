@@ -24,7 +24,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.3 beta3";
+const char* sysVersion PROGMEM = "3.2.3 beta4";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -1363,21 +1363,21 @@ network-issues with your other WiFi-devices on your WiFi-network. */
   }
 #endif
 
-  void DisableTimerAlarm() {
+void DisableTimerAlarm() {
 #ifdef ESP32
-    timerAlarmDisable(timer);
+  timerAlarmDisable(timer);
 #else
-    timer1_disable();
+  timer1_disable();
 #endif
-  }
+}
 
-  void EnableTimerAlarm() {
+void EnableTimerAlarm() {
 #ifdef ESP32
-    timerAlarmEnable(timer);
+  timerAlarmEnable(timer);
 #else
-    timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
+  timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
 #endif
-  }
+}
 
 void InitOTA() {
 	static bool runOnceOTASetup = true;
@@ -2056,26 +2056,24 @@ void InitWaterLevelSensor() {
 
 /********************************************************
  * READ/SAVE EEPROM
- * get latest values from EEPROM 
- * remote mqtt-server Additionally this function honors changed values in
+ * get latest values from EEPROM if not already fetched from blynk or
+ * remote mqtt-server. Additionally this function honors changed values in
  * userConfig.h (changed userConfig.h values have priority). Some special
  * variables like profile-dependent ones are always fetched from eeprom.
  ******************************************************/
-void SyncEeprom(bool force_read) {	 
+void InititialSyncEeprom(bool force_read) {	 
     #ifndef ESP32
     EEPROM.begin(432);
     #endif
 
     sync_eeprom(true, force_read);
-    set_profile();
-    print_settings();
 }
 
 /********************************************************
  * PUBLISH settings on MQTT (and wait for them to be processed!)
  * + SAVE settings on MQTT-server if MQTT_ENABLE==1
  ******************************************************/
-void MqttPublishSettings() {
+void InitialMqttPublishSettings() {
     steadyPowerSaved = steadyPower;
     if (isMqttWorking()) {
       steadyPowerMQTTDisableUpdateUntilProcessed = steadyPower;
@@ -2083,8 +2081,11 @@ void MqttPublishSettings() {
       mqttPublishSettings();
 #if (MQTT_ENABLE == 1)
       unsigned long started = millis();
-      while ((millis() < started + 5000) && (steadyPowerMQTTDisableUpdateUntilProcessed != 0)) {
+      while ((millis() < started + 4000) && (steadyPowerMQTTDisableUpdateUntilProcessed != 0)) {
         mqttClient.loop();
+      }
+      if (steadyPowerMQTTDisableUpdateUntilProcessed != 0) {
+        ERROR_print("InitialMqttPublishSettings() was not able to process all mqtt values in time.\n");
       }
 #endif
     }
@@ -2097,7 +2098,7 @@ void InitTemperaturSensor() {
     // displaymessage(0, "Init. vars", "");
     isrCounter = 950; // required
 #if (TEMPSENSOR == 2)    
-    if (TSIC.begin() != true) { ERROR_println("TSIC Tempsensor cannot be initialized"); }
+    if (TSIC.begin() != true) { ERROR_println("Temp sensor cannot be initialized"); }
     delay(120);
 #endif    
     while (true) {
@@ -2111,7 +2112,7 @@ void InitTemperaturSensor() {
       }
       displaymessage(0, (char*)"Temp sensor defect", (char*)"");
       ERROR_print("Temp sensor defect. Cannot read consistent values. Retrying\n");
-      ArduinoOTA.handle();
+      ArduinoOTA.handle();  //being able to OTA even if temp sensor is failing
       delay(1000);
     }
 }
@@ -2159,7 +2160,6 @@ void setup() {
 #else
   displaymessage(0, (char*)DISPLAY_TEXT, (char*)sysVersion);
 #endif
-
   delay(1000);
 
   controlsConfig = parseControlsConfig();
@@ -2228,7 +2228,7 @@ void setup() {
           // read and use settings retained in mqtt and therefore dont use eeprom values
           eeprom_force_read = false;
           unsigned long started = millis();
-          while (isMqttWorking() && (millis() < started + 4000)) // attention: delay might not
+          while (isMqttWorking(true) && (millis() < started + 4000)) // attention: delay might not
                                                                   // be long enough over WAN
           {
             mqttClient.loop();
@@ -2255,17 +2255,24 @@ void setup() {
       // delay(1000);
     }
 #endif
-        eeprom_force_read = setupBlynk();
+         
+        eeprom_force_read = setupBlynk() && eeprom_force_read;
     }
   }
 
-  SyncEeprom(eeprom_force_read);
-  MqttPublishSettings();
+  InititialSyncEeprom(eeprom_force_read);
+
+  set_profile();
+
+  print_settings();
+
+  InitialMqttPublishSettings();
 
   /********************************************************
    * OTA
    ******************************************************/
   if (ota && !forceOffline) {
+    // TODO: OTA logic has to be refactored so have clean setup() and loop() parts
     // wifi connection is done during blynk connection
     ArduinoOTA.setHostname(hostname); //  Device name for OTA
     ArduinoOTA.setPassword(OTApass); //  Password for OTA

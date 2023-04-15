@@ -41,16 +41,19 @@ char* number2string(unsigned int in) {
 }
 
 /* ------------------------------ */
+bool isMqttWorking() {
+   return isMqttWorking(false);
+}
 #if (MQTT_ENABLE == 0) // MQTT Disabled
 bool mqttPublish(char* reading, char* payload) { return true; }
 bool mqttReconnect(bool force_connect = false) { return true; }
-bool isMqttWorking() { return false; }
+bool isMqttWorking(bool refresh) { return false; }
 
 /* ------------------------------ */
 #elif (MQTT_ENABLE == 1) // MQTT Client
-bool isMqttWorking() { 
+bool isMqttWorking(bool refresh) { 
   static bool val_mqtt = false;
-  if (millis() > lastCheckMQTT + 100UL) {
+  if (refresh || millis() > lastCheckMQTT + 100UL) {
     lastCheckMQTT = millis();
     val_mqtt = ((MQTT_ENABLE > 0) && (isWifiWorking()) && (mqttClient.connected()));
   }
@@ -134,7 +137,7 @@ void mqttCallback1(char* topic, unsigned char* data, unsigned int length) {
 
 /* ------------------------------ */
 #elif (MQTT_ENABLE == 2)
-bool isMqttWorking() { return ((MQTT_ENABLE > 0) && (isWifiWorking())); }
+bool isMqttWorking(bool refresh) { return ((MQTT_ENABLE > 0) && (isWifiWorking())); }
 
 bool mqttPublish(char* reading, char* payload) {
   if (!MQTT_ENABLE || forceOffline || mqttDisabledTemporary) return true;
@@ -409,7 +412,7 @@ void mqttPublishSettings() {
   mqttPublish((char*)"setPointSteam/set", number2string(setPointSteam));
   mqttPublish((char*)"steadyPowerOffset/set", number2string(steadyPowerOffset));
   mqttPublish((char*)"steadyPowerOffsetTime/set", number2string(steadyPowerOffsetTime));
-  mqttPublish((char*)"steadyPower/set", number2string(steadyPower)); // this should be last in list
   mqttPublish((char*)"activeBrewTimeEndDetection/set", number2string(*activeBrewTimeEndDetection));
   mqttPublish((char*)"activeScaleSensorWeightSetPoint/set", number2string(*activeScaleSensorWeightSetPoint));
+  mqttPublish((char*)"steadyPower/set", number2string(steadyPower)); // this should be last in list
 }

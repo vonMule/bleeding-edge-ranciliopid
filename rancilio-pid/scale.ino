@@ -109,7 +109,7 @@ void IRAM_ATTR dataReadyISR() {
 }
 
 void initScale() {
-  long stabilizingtime = 2000; // tare preciscion can be improved by adding a few seconds of stabilizing time
+  long stabilizingtime = 2000; // tare precision can be improved by adding a few seconds of stabilizing time
   boolean _tare = true; //set this to false if you don't want tare to be performed in the next step
   for (int i=0; i<3;i++) {
     LoadCell.begin();
