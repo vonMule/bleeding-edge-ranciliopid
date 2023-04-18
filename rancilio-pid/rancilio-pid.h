@@ -74,6 +74,7 @@
 #define STATE_STEAM_MODE 6
 #define STATE_SLEEP_MODE 7
 #define STATE_CLEAN_MODE 8
+#define STATE_SOFTWARE_UPDATE 9
 
 #include <RemoteDebug.h> //https://github.com/JoaoLopesF/RemoteDebug
 extern RemoteDebug Debug;

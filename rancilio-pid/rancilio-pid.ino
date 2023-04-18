@@ -1389,7 +1389,15 @@ void InitOTA() {
 		  Output = 0;
 		  DisableTimerAlarm();
 		  digitalWrite(pinRelayHeater, LOW); // Stop heating
+		  activeState = STATE_SOFTWARE_UPDATE;
 	  });
+	  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+		  int percent = progress / (total / 100);
+		  DEBUG_print("OTA update in progress: %u%%\r", percent);
+		  char line2[17];
+		  snprintf(line2, sizeof(line2), "%u%% / 100%%", percent);
+		  displaymessage(0, (char*)"Updating Software", (char*)line2);
+	  });    
 	  ArduinoOTA.onError([](ota_error_t error) {
 		  ERROR_print("OTA update error\n");
 		  EnableTimerAlarm();
@@ -2276,6 +2284,7 @@ void setup() {
     // wifi connection is done during blynk connection
     ArduinoOTA.setHostname(hostname); //  Device name for OTA
     ArduinoOTA.setPassword(OTApass); //  Password for OTA
+    ArduinoOTA.setRebootOnSuccess(true); // reboot after successful update 
     //ArduinoOTA.begin();
   }
 
