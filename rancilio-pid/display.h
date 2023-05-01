@@ -60,6 +60,7 @@ void displaymessage_helper(int, char*, char*);
 void showScreenSaver();
 void showMenu(char**, char**);
 void showPowerOffCountdown(char*, char*);
+void showSoftwareUpdate();
 
 extern bool brewReady;
 extern unsigned long lastBrewReady;
