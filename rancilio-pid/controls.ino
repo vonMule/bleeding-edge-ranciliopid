@@ -5,6 +5,13 @@
 #include "controls.h"
 #include "rancilio-pid.h"
 
+int simulatedBrewSwitch = 0;
+unsigned long previousCheckControls = 0;
+
+// actionState contain the status (on/off/..) of each actions
+int actionState[MAX_NUM_ACTIONS];
+int gpioLastAction[MAX_NUM_GPIO];
+
 void splitStringBySeperator(char* source, char seperator, char** resultLeft, char** resultRight) {
   char* separator1 = strchr(source, seperator);
   if (separator1 != 0) {

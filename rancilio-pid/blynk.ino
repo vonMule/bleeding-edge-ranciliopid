@@ -6,6 +6,34 @@
 #include "blynk.h"
 #include "controls.h"
 
+unsigned long previousTimerBlynk = 0;
+unsigned long blynkConnectTime = 0;
+const long intervalBlynk = 1000;    // Update intervall to send data to the app
+int blynkSendCounter = 1;
+bool blynkSyncRunOnce = false;
+bool blynkDisabledTemporary = false;
+float steadyPowerSavedInBlynk = 0;
+unsigned long previousTimerBlynkHandle = 0;
+
+String PreviousError = "";
+String PreviousOutputString = "";
+String PreviousPastTemperatureChange = "";
+String PreviousInputString = "";
+
+// Blynk
+const char* blynkAddress = BLYNKADDRESS;
+const int blynkPort = BLYNKPORT;
+const char* blynkAuth = BLYNKAUTH;
+unsigned long blynkLastReconnectAttemptTime = 0;
+unsigned int blynkReconnectAttempts = 0;
+unsigned long blynkReconnectIncrementalBackoff = 180000; // Failsafe: add 180sec to reconnect time after each
+                                                         // connect-failure.
+unsigned int blynkMaxIncrementalBackoff = 5; // At most backoff <mqtt_max_incremenatl_backoff>+1 *
+                                             // (<mqttReconnectIncrementalBackoff>ms)
+
+char* blynkReadyLedColor = (char*)"#000000";
+
+
 #if (BLYNK_ENABLE==0)
     void blynkSave(char* setting) {};
     void sendToBlynk() {};

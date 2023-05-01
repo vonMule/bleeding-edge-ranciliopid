@@ -76,26 +76,7 @@
 #define STATE_CLEAN_MODE 8
 #define STATE_SOFTWARE_UPDATE 9
 
-#include <RemoteDebug.h> //https://github.com/JoaoLopesF/RemoteDebug
-extern RemoteDebug Debug;
 
-#ifndef DEBUGMODE
-#define DEBUG_print(fmt, ...)
-#define DEBUG_println(a)
-#define ERROR_print(fmt, ...)
-#define ERROR_println(a)
-#define DEBUGSTART(a)
-#else
-#define DEBUG_print(fmt, ...)                                                                                                                                                      \
-  if (Debug.isActive(Debug.DEBUG)) Debug.printf("%0lu " fmt, millis() / 1000, ##__VA_ARGS__)
-#define DEBUG_println(a)                                                                                                                                                           \
-  if (Debug.isActive(Debug.DEBUG)) Debug.printf("%0lu %s\n", millis() / 1000, a)
-#define ERROR_print(fmt, ...)                                                                                                                                                      \
-  if (Debug.isActive(Debug.ERROR)) Debug.printf("%0lu " fmt, millis() / 1000, ##__VA_ARGS__)
-#define ERROR_println(a)                                                                                                                                                           \
-  if (Debug.isActive(Debug.ERROR)) Debug.printf("%0lu %s\n", millis() / 1000, a)
-#define DEBUGSTART(a) Serial.begin(a);
-#endif
 
 #define LCDWidth u8g2.getDisplayWidth()
 #define LCDHeight u8g2.getDisplayHeight()
@@ -114,8 +95,6 @@ float getCurrentTemperature();
 float readTemperatureFromSensor();
 bool almostEqual(float, float);
 void print_settings();
-void checkWifi();
-void checkWifi(bool, unsigned long);
 extern char debugLine[200];
 void maintenance();
 void performance_check();

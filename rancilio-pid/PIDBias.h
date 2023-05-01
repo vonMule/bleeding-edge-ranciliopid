@@ -13,6 +13,7 @@
 #define LIBRARY_VERSION 0.0.1
 
 #include "rancilio-pid.h"
+#include "rancilio_debug.h"
 
 class PIDBias {
   public:

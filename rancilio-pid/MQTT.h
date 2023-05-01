@@ -15,15 +15,6 @@ extern bool MQTT_local_publish(char* topic, char* data, size_t data_length, uint
 #include <os.h>
 #endif
 
-#if (BLYNK_ENABLE == 1)
-#ifdef ESP32
-#include <BlynkSimpleEsp32.h>
-#else
-#include <BlynkSimpleEsp8266.h>
-#endif
-extern BlynkWifi Blynk;
-#endif
-
 bool mqttReconnect(bool);
 bool mqttPublish(char*, char*);
 bool isMqttWorking();
@@ -48,10 +39,12 @@ extern const char* mqttTopicPrefix;
 extern const char* hostname;
 extern bool isWifiWorking();
 
+void InitMqtt(bool);
+
 extern bool forceOffline;
 extern bool mqttDisabledTemporary;
 extern unsigned long mqttDontPublishUntilTime;
-extern const int MQTT_MAX_PUBLISH_SIZE;
+extern const int mqttMaxPublishSize;
 extern const bool mqttFlagRetained;
 extern unsigned long mqttDontPublishBackoffTime;
 extern bool inSensitivePhase();
