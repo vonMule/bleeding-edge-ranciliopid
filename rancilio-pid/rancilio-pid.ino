@@ -24,7 +24,7 @@
 
 RemoteDebug Debug;
 
-const char* sysVersion PROGMEM = "3.2.3 beta4";
+const char* sysVersion PROGMEM = "3.2.3 beta5";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -1392,13 +1392,16 @@ void InitOTA() {
 		  activeState = STATE_SOFTWARE_UPDATE;
 	  });
 	  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-		  int percent = progress / (total / 100);
-		  DEBUG_print("OTA update in progress: %u%%\r", percent);
-		  char line2[17];
-		  snprintf(line2, sizeof(line2), "%u%% / 100%%", percent);
-		  displaymessage(0, (char*)"Updating Software", (char*)line2);
+      if (millis() >= previousTimerOtaHandle + 500) {
+	      previousTimerOtaHandle = millis();
+        int percent = progress / (total / 100);
+        DEBUG_print("OTA update in progress: %u %%\n", percent);
+        char line2[17];
+        snprintf(line2, sizeof(line2), "%u %%", percent);
+        displaymessage(0, (char*)"Updating", (char*)line2);
+      }
 	  });    
-	  ArduinoOTA.onError([](ota_error_t error) {
+	  ArduinoOTA.onError([](ota_error_t error) { 
 		  ERROR_print("OTA update error\n");
 		  EnableTimerAlarm();
 	  });

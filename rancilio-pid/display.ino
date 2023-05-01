@@ -140,8 +140,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
 
   if (softwareUpdateCheck()) {
     showSoftwareUpdate();
-  }
-  else if (screenSaverCheck()) {
+  } else if (screenSaverCheck()) {
     showScreenSaver();
   } else if (menuCheck()) {
     showMenu(&displaymessagetext, &displaymessagetext2);
