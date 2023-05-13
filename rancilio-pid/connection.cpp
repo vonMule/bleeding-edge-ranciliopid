@@ -69,7 +69,7 @@ bool isWifiWorking() {
       #else
       WiFi.disconnect(true); // Delete SDK WiFi config
       #endif
-// displaymessage(0, "Connecting Wifi", "");
+// displaymessage(State::Undefined, "Connecting Wifi", "");
 #ifdef STATIC_IP
       IPAddress STATIC_IP;
       IPAddress STATIC_GATEWAY;
@@ -132,7 +132,7 @@ void InitWifi(bool eeprom_force_read) {
       disableBlynkTemporary();
       lastWifiConnectionAttempt = millis();
     }
-    displaymessage(0, (char*)"Cannot connect to Wifi", (char*)"");
+    displaymessage(State::Undefined, (char*)"Cannot connect to Wifi", (char*)"");
     delay(1000);
   } else {
     DEBUG_print("IP address: %s\n", WiFi.localIP().toString().c_str());

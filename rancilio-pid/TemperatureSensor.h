@@ -1,13 +1,7 @@
 #ifndef TEMPERATURESENSOR_H
 #define TEMPERATURESENSOR_H
 
-// : 0 := OK, 1 := Hardware issue, 2:= Software issue / outlier detected, 3: temperature jump
-enum SensorStatus {
-    Ok = 0,
-    HardwareIssue = 1,
-    SoftwareIssue = 2,
-    TemperatureJump = 3
-};
+#include "Enums.h"
 
 class TemperatureSensor {
    
@@ -17,8 +11,8 @@ public:
   void init();
   float read();
   float readWithDelay();
-  SensorStatus checkSensor(int activeState, float* activeSetPoint, float* secondlatestTemperature);
-  float refresh(float previousValue, int activeState, float* activeSetPoint, float* secondlatestTemperature);
+  SensorStatus checkSensor(State activeState, float* activeSetPoint, float* secondlatestTemperature);
+  float refresh(float previousValue, State activeState, float* activeSetPoint, float* secondlatestTemperature);
   void setPreviousTimerRefresh(unsigned long previousTimerRefreshTemp);
   float getCurrentTemperature();
   float getLatestTemperature();

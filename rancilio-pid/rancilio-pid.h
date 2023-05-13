@@ -63,21 +63,6 @@
 #define TEMPSENSOR_BITWINDOW 125
 #endif
 
-#define STATE_UNDEFINED 0
-#define STATE_EMERGENCY_TEMP_REACHED 0
-#define STATE_COLDSTART 1
-#define STATE_STABILIZE_TEMPERATURE 2
-#define STATE_INNER_ZONE_DETECTED 3
-#define STATE_DEFAULT 3
-#define STATE_BREW_DETECTED 4
-#define STATE_OUTER_ZONE_DETECTED 5
-#define STATE_STEAM_MODE 6
-#define STATE_SLEEP_MODE 7
-#define STATE_CLEAN_MODE 8
-#define STATE_SOFTWARE_UPDATE 9
-
-
-
 #define LCDWidth u8g2.getDisplayWidth()
 #define LCDHeight u8g2.getDisplayHeight()
 #define ALIGN_CENTER(t) ((LCDWidth - (u8g2.getUTF8Width(t))) / 2)

@@ -2,7 +2,6 @@
 #include "userConfig.h"
 #include "helper.h"
 
-
 #include <RemoteDebug.h> //https://github.com/JoaoLopesF/RemoteDebug
 extern RemoteDebug Debug;
 
@@ -23,9 +22,6 @@ extern RemoteDebug Debug;
   if (Debug.isActive(Debug.ERROR)) Debug.printf("%0lu %s\n", millis() / 1000, a)
 #define DEBUGSTART(a) Serial.begin(a);
 #endif
-
-#define STATE_COLDSTART 1 // TODO alex remove this
-#define STATE_INNER_ZONE_DETECTED 3 // TODO alex remove this
 
 #if (TEMPSENSOR == 3)
   #include <max6675.h>
@@ -110,14 +106,14 @@ float TemperatureSensor::read() {
  * m_latestTemperature(=latest read sample) is read one sample (100ms) after secondlatestTemperature.
  * Returns: 0 := OK, 1 := Hardware issue, 2:= Software issue / outlier detected
  *****************************************************/
-SensorStatus TemperatureSensor::checkSensor(int activeState, float* activeSetPoint, float* secondlatestTemperature) {
-  SensorStatus sensorStatus = HardwareIssue;
+SensorStatus TemperatureSensor::checkSensor(State activeState, float* activeSetPoint, float* secondlatestTemperature) {
+  SensorStatus sensorStatus = SensorStatus::HardwareIssue;
   if (malfunction) {
     if (m_recovery == 1 && m_latestTemperature >= 0 && m_latestTemperature <= 150) {
       malfunction = false;
       m_error = 0;
       m_errorFarOff = 0;
-      sensorStatus = Ok;
+      sensorStatus = SensorStatus::Ok;
       ERROR_print("temp sensor recovered\n");
     }
     return sensorStatus;
@@ -141,7 +137,7 @@ SensorStatus TemperatureSensor::checkSensor(int activeState, float* activeSetPoi
     
     //support corner-case if due to some hangup the temperature jumps >5 degree.
     if (m_errorFarOff >= (m_maxErrorCounter/2)) {
-      sensorStatus = SoftwareIssue;
+      sensorStatus = SensorStatus::SoftwareIssue;
       ERROR_print("temp sensor read far off fixed: consecErrors=%d, secondlatestTemperature=%0.2f, m_latestTemperature=%0.2f\n",
         m_error, secondlatestTemperature, m_latestTemperature);
     } else {
@@ -149,13 +145,13 @@ SensorStatus TemperatureSensor::checkSensor(int activeState, float* activeSetPoi
         m_error, secondlatestTemperature, m_latestTemperature);
     }
 #ifdef DEV_ESP
-  } else if ((activeState == STATE_INNER_ZONE_DETECTED || activeState == STATE_COLDSTART)  &&
+  } else if ((activeState == State::InnerZoneDetected || activeState == State::ColdStart)  &&
      fabs(m_latestTemperature - secondlatestTemperature) >= 0.2 &&
      fabs(secondlatestTemperature - getTemperature(0)) >= 0.2 && 
      signnum(getTemperature(0) - secondlatestTemperature)*signnum(m_latestTemperature - secondlatestTemperature) > 0
      ) {
 #else
-  } else if (activeState == STATE_INNER_ZONE_DETECTED &&
+  } else if (activeState == State::InnerZoneDetected &&
      //fabs(secondlatestTemperature - setPoint) <= 5 &&
      fabs(m_latestTemperature - *activeSetPoint) <= 5 &&
      fabs(m_latestTemperature - *secondlatestTemperature) >= 0.2 &&
@@ -167,11 +163,11 @@ SensorStatus TemperatureSensor::checkSensor(int activeState, float* activeSetPoi
       m_error++;
       DEBUG_print("temp sensor inaccuracy: thirdlatestTemperature=%0.2f, secondlatestTemperature=%0.2f, m_latestTemperature=%0.2f\n",
         getTemperature(0), secondlatestTemperature, m_latestTemperature);
-      sensorStatus = SoftwareIssue;
+      sensorStatus = SensorStatus::SoftwareIssue;
   } else {
     m_error = 0;
     m_errorFarOff = 0;
-    sensorStatus = Ok;
+    sensorStatus = SensorStatus::Ok;
   }
   if (m_error >= m_maxErrorCounter) {
     malfunction = true;
@@ -184,7 +180,7 @@ void TemperatureSensor::setPreviousTimerRefresh(unsigned long previousTimerRefre
     m_previousTimerRefresh = previousTimerRefresh;
 }
 
-float TemperatureSensor::refresh(float previousValue, int activeState, float* activeSetPoint, float* secondlatestTemperature) {
+float TemperatureSensor::refresh(float previousValue, State activeState, float* activeSetPoint, float* secondlatestTemperature) {
   unsigned long refreshTimeDiff = millis() - m_previousTimerRefresh;
   if (refreshTimeDiff >= m_refreshInterval) {
     if (refreshTimeDiff >= (m_refreshInterval *1.5)) {
@@ -192,14 +188,14 @@ float TemperatureSensor::refresh(float previousValue, int activeState, float* ac
     }
     m_latestTemperature = read();
     SensorStatus sensorStatus = checkSensor(activeState, activeSetPoint, secondlatestTemperature);
-    if (sensorStatus != Ok) {
+    if (sensorStatus != SensorStatus::Ok) {
       ERROR_print("temp sensorStatus: %d\n", (int)sensorStatus);
     }
 
     m_previousTimerRefresh = millis();
-    if (sensorStatus == HardwareIssue) {  //hardware issue
+    if (sensorStatus == SensorStatus::HardwareIssue) {  //hardware issue
       return previousValue;
-    } else if (sensorStatus == SoftwareIssue || sensorStatus == TemperatureJump) {  //software issue: outlier detected(==2) or temperature jump (==3)
+    } else if (sensorStatus == SensorStatus::SoftwareIssue || sensorStatus == SensorStatus::TemperatureJump) {  //software issue: outlier detected(==2) or temperature jump (==3)
       updateTemperatureHistory(m_latestTemperature);  //use currentTemp as replacement
     } else {
       updateTemperatureHistory(*secondlatestTemperature);

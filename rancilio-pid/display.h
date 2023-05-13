@@ -2,6 +2,8 @@
 #define _display_H
 
 #include "rancilio-pid.h"
+#include "Enums.h"
+
 const int Display = DISPLAY_HARDWARE;
 
 #include "controls.h"
@@ -25,7 +27,7 @@ const int Display = DISPLAY_HARDWARE;
 #endif
 
 #ifdef ESP32
-static int activeStateBuffer;
+static State activeStateBuffer;
 #endif
 static char displaymessagetextBuffer[30];
 static char displaymessagetext2Buffer[30];
@@ -55,8 +57,8 @@ const int userActivityWaitPeriod = 180000;
 
 void u8g2_prepare(void);
 bool screenSaverRunning();
-void displaymessage(int, char*, char*);
-void displaymessage_helper(int, char*, char*);
+void displaymessage(State, char*, char*);
+void displaymessage_helper(State, char*, char*);
 #endif  // TODO: shouldn't that be at the end of the file ? 
 void showScreenSaver();
 void showMenu(char**, char**);
@@ -67,7 +69,7 @@ extern bool brewReady;
 extern unsigned long lastBrewReady;
 extern int sleeping;
 extern unsigned long userActivity;
-extern int activeState;
+extern State activeState;
 extern float* activeSetPoint;
 extern float steamReadyTemp;
 extern float Input;

@@ -432,7 +432,7 @@ void InitMqtt(bool eeprom_force_read) {
   if (!mqttReconnect(true)) {
     if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
     ERROR_print("Cannot connect to MQTT. Disabling...\n");
-    // displaymessage(0, "Cannot connect to MQTT", "");
+    // displaymessage(State::Undefined, "Cannot connect to MQTT", "");
     // delay(1000);
   } else {
     const bool useRetainedSettingsFromMQTT = true;
@@ -463,7 +463,7 @@ void InitMqtt(bool eeprom_force_read) {
   } else {
     if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
     ERROR_print("Cannot create MQTT service. Disabling...\n");
-    // displaymessage(0, "Cannot create MQTT service", "");
+    // displaymessage(State::Undefined, "Cannot create MQTT service", "");
     // delay(1000);
   }
 #endif

@@ -23,6 +23,7 @@
 //#include "rancilio_debug.h"
 #include "helper.h"
 #include "TemperatureSensor.h"
+#include "Enums.h"
 
 RemoteDebug Debug;
 
@@ -73,7 +74,7 @@ unsigned long mqttConnectTime = 0; // time of last successfull mqtt connection
 /********************************************************
  * states
  ******************************************************/
-int activeState = STATE_DEFAULT;
+State activeState = State::InnerZoneDetected; // default state
 
 /********************************************************
  * history of temperatures
@@ -366,7 +367,7 @@ void yieldIfNecessary(void){
     }
 }
 
-bool inSensitivePhase() { return (brewing || activeState == STATE_BREW_DETECTED || isrCounter > 1000); }
+bool inSensitivePhase() { return (brewing || activeState == State::BrewDetected || isrCounter > 1000); }
 
 
 /********************************************************
@@ -633,7 +634,7 @@ void setGpioAction(int action, bool mode) {
    ******************************************************/
   void updateState() {
     switch (activeState) {
-      case STATE_COLDSTART: // state 1 running, that means full heater power. Check if target temp is reached
+      case State::ColdStart: // state 1 running, that means full heater power. Check if target temp is reached
       {
         if (!MaschineColdstartRunOnce) {
           MaschineColdstartRunOnce = true;
@@ -653,11 +654,11 @@ void setGpioAction(int action, bool mode) {
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetSumOutputI(0);
-          activeState = STATE_STABILIZE_TEMPERATURE;
+          activeState = State::StabilizeTemperature;
         }
         break;
       }
-      case STATE_STABILIZE_TEMPERATURE: // that means heater is on steadyState and we are waiting to temperature to stabilize
+      case State::StabilizeTemperature: // that means heater is on steadyState and we are waiting to temperature to stabilize
       {
         bPID.SetFilterSumOutputI(30);
 
@@ -724,12 +725,12 @@ void setGpioAction(int action, bool mode) {
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetSumOutputI(0);
-          activeState = STATE_INNER_ZONE_DETECTED;
+          activeState = State::InnerZoneDetected;
           bPID.SetAutoTune(true);
         }
         break;
       }
-      case STATE_BREW_DETECTED: // = Brew running
+      case State::BrewDetected: // = Brew running
       {
         bPID.SetFilterSumOutputI(100);
         bPID.SetAutoTune(false);
@@ -743,11 +744,11 @@ void setGpioAction(int action, bool mode) {
           bPID.SetSumOutputI(0);
           lastBrewEnd = millis();  //used to detect time from brew until brewReady
           timerBrewDetection = 0;
-          activeState = STATE_STABILIZE_TEMPERATURE; 
+          activeState = State::StabilizeTemperature; 
         }
         break;
       }
-      case STATE_OUTER_ZONE_DETECTED: // state 5 in outerZone
+      case State::OuterZoneDetected: // state 5 in outerZone
       {
         if (Input >= *activeSetPoint - outerZoneTemperatureDifference - 1.5) {
           bPID.SetFilterSumOutputI(4.5);
@@ -764,11 +765,11 @@ void setGpioAction(int action, bool mode) {
           bPID.SetSumOutputI(0);
           bPID.SetAutoTune(true);
           timerBrewDetection = 0;
-          activeState = STATE_INNER_ZONE_DETECTED;
+          activeState = State::InnerZoneDetected;
         }
         break;
       }
-      case STATE_STEAM_MODE: // state 6 heat up because we want to steam
+      case State::SteamMode: // state 6 heat up because we want to steam
       {
         bPID.SetAutoTune(false); // do not tune during steam phase
 
@@ -787,11 +788,11 @@ void setGpioAction(int action, bool mode) {
           bPID.SetAutoTune(false);
           Output = 0;
           timerBrewDetection = 0;
-          activeState = STATE_INNER_ZONE_DETECTED;
+          activeState = State::InnerZoneDetected;
         }
         break;
       }
-      case STATE_SLEEP_MODE: // state 7 sleep modus activated (no heater,..)
+      case State::SleepMode: // state 7 sleep modus activated (no heater,..)
       {
         if (!sleeping) {
           snprintf(debugLine, sizeof(debugLine), "** End of Sleeping phase. Transition to state 3 (normal mode)");
@@ -799,23 +800,23 @@ void setGpioAction(int action, bool mode) {
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(true);
           bPID.SetMode(AUTOMATIC);
-          activeState = STATE_INNER_ZONE_DETECTED;
+          activeState = State::InnerZoneDetected;
         }
         break;
       }
-      case STATE_CLEAN_MODE: // state 8 clean modus activated
+      case State::CleanMode: // state 8 clean modus activated
       {
         if (!cleaning) {
           snprintf(debugLine, sizeof(debugLine), "** End of Cleaning phase. Transition to state 3 (normal mode)");
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(true);
-          activeState = STATE_INNER_ZONE_DETECTED;
+          activeState = State::InnerZoneDetected;
         }
         break;
       }
 
-      case STATE_INNER_ZONE_DETECTED: // normal PID mode
+      case State::InnerZoneDetected: // normal PID mode
       default: {
         if (!pidMode) break;
 
@@ -835,7 +836,7 @@ void setGpioAction(int action, bool mode) {
           snprintf(debugLine, sizeof(debugLine), "** End of normal mode. Transition to state 7 (sleeping)");
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
-          activeState = STATE_SLEEP_MODE;
+          activeState = State::SleepMode;
           bPID.SetAutoTune(false);
           bPID.SetMode(MANUAL);
           break;
@@ -847,7 +848,7 @@ void setGpioAction(int action, bool mode) {
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetAutoTune(false); // do not tune
-          activeState = STATE_CLEAN_MODE;
+          activeState = State::CleanMode;
           break;
         }
 
@@ -861,7 +862,7 @@ void setGpioAction(int action, bool mode) {
             activeSetPoint = &setPointSteam;
             DEBUG_print("set activeSetPoint: %0.2f\n", *activeSetPoint);
           }
-          activeState = STATE_STEAM_MODE;
+          activeState = State::SteamMode;
           break;
         }
 
@@ -874,7 +875,7 @@ void setGpioAction(int action, bool mode) {
           DEBUG_print("Enable steadyPowerOffset (%0.2f)\n", steadyPowerOffset);
           bPID.SetAutoTune(false); // do not tune during coldstart + phase2
           bPID.SetSumOutputI(0);
-          activeState = STATE_COLDSTART;
+          activeState = State::ColdStart;
           break;
         }
 
@@ -901,7 +902,7 @@ void setGpioAction(int action, bool mode) {
             DEBUG_println(debugLine);
             mqttPublish((char*)"events", debugLine);
             bPID.SetSumOutputI(0);
-            activeState = STATE_BREW_DETECTED;
+            activeState = State::BrewDetected;
             break;
           }
         }
@@ -912,7 +913,7 @@ void setGpioAction(int action, bool mode) {
           DEBUG_println(debugLine);
           mqttPublish((char*)"events", debugLine);
           bPID.SetSumOutputI(0);
-          activeState = STATE_OUTER_ZONE_DETECTED;
+          activeState = State::OuterZoneDetected;
           if (Input > *activeSetPoint) { // if we are above setPoint always disable heating (primary useful after steaming)  YYY1
             bPID.SetAutoTune(false);
             bPID.SetMode(MANUAL);
@@ -955,7 +956,7 @@ void setGpioAction(int action, bool mode) {
   float Output_save;
   void pidCompute() {
     // certain activeState set Output to fixed values
-    if (activeState == STATE_COLDSTART || activeState == STATE_STABILIZE_TEMPERATURE || activeState == STATE_BREW_DETECTED) { Output_save = Output; }
+    if (activeState == State::ColdStart || activeState == State::StabilizeTemperature || activeState == State::BrewDetected) { Output_save = Output; }
     float pastChange = tempSensor.pastTemperatureChange(10*10) / 2; // difference of the last 10 seconds scaled down to one compute() cycle (=5 seconds).
     float pastChangeOverLongTime = tempSensor.pastTemperatureChange(20*10);  //20sec
     int ret = bPID.Compute(pastChange, pastChangeOverLongTime);
@@ -970,7 +971,7 @@ void setGpioAction(int action, bool mode) {
       pidComputeDelay = millis() + 5 - pidComputeLastRunTime - windowSize;
       if (pidComputeDelay > 50 && pidComputeDelay < 100000000) { DEBUG_print("pidCompute() delay of %lu ms (loop() hang?)\n", pidComputeDelay); }
       pidComputeLastRunTime = millis();
-      if (activeState == STATE_COLDSTART || activeState == STATE_STABILIZE_TEMPERATURE || activeState == STATE_BREW_DETECTED) {
+      if (activeState == State::ColdStart || activeState == State::StabilizeTemperature || activeState == State::BrewDetected) {
 #pragma GCC diagnostic error "-Wuninitialized"
         Output = Output_save;
       }
@@ -1131,7 +1132,7 @@ void CheckMqttConnection() {
       #if (SCALE_SENSOR_ENABLE)
       scaleCalibration();
       #endif
-      displaymessage(0, (char*)"Calibrating", (char*)"check logs");
+      displaymessage(State::Undefined, (char*)"Calibrating", (char*)"check logs");
     }
     return;
 #endif
@@ -1140,7 +1141,7 @@ void CheckMqttConnection() {
 
     checkControls(controlsConfig); // transform controls to actions
 
-    if (activeState == STATE_CLEAN_MODE) {
+    if (activeState == State::CleanMode) {
       clean();
     } else {
       // handle brewing if button is pressed (ONLYPID=0 for now, because
@@ -1209,18 +1210,18 @@ void CheckMqttConnection() {
       updateState();
 
       /* state 1: Water is very cold, set heater to full power */
-      if (activeState == STATE_COLDSTART) {
+      if (activeState == State::ColdStart) {
         Output = windowSize;
 
         /* state 2: ColdstartTemp reached. Now stabilizing temperature after
          * coldstart */
-      } else if (activeState == STATE_STABILIZE_TEMPERATURE) {
+      } else if (activeState == State::StabilizeTemperature) {
         // Output = convertUtilisationToOutput(steadyPower +
         // bPID.GetSteadyPowerOffsetCalculated());
         Output = convertUtilisationToOutput(steadyPower);
 
         /* state 4: Brew detected. Increase heater power */
-      } else if (activeState == STATE_BREW_DETECTED) {
+      } else if (activeState == State::BrewDetected) {
         if (Input > *activeSetPoint + outerZoneTemperatureDifference) {
           Output = convertUtilisationToOutput(steadyPower + bPID.GetSteadyPowerOffsetCalculated());
         } else {
@@ -1231,7 +1232,7 @@ void CheckMqttConnection() {
         }
 
         /* state 5: Outer Zone reached. More power than in inner zone */
-      } else if (activeState == STATE_OUTER_ZONE_DETECTED) {
+      } else if (activeState == State::OuterZoneDetected) {
         if (Input > *activeSetPoint) {
           Output = 0;
         } else {
@@ -1246,7 +1247,7 @@ void CheckMqttConnection() {
         }
 
         /* state 6: Steaming state active*/
-      } else if (activeState == STATE_STEAM_MODE) {
+      } else if (activeState == State::SteamMode) {
         bPID.SetMode(MANUAL);
         if (!pidMode) {
           if (millis() >= streamComputeLastRunTime + 500) {
@@ -1274,7 +1275,7 @@ void CheckMqttConnection() {
         }
 
         /* state 7: Sleeping state active*/
-      } else if (activeState == STATE_SLEEP_MODE) {
+      } else if (activeState == State::SleepMode) {
         if (millis() - recurringOutput > 60000) {
           recurringOutput = millis();
           snprintf(debugLine, sizeof(debugLine), "sleeping...");
@@ -1283,7 +1284,7 @@ void CheckMqttConnection() {
         Output = 0;
 
         /* state 8: Cleaning state active*/
-      } else if (activeState == STATE_CLEAN_MODE) {
+      } else if (activeState == State::CleanMode) {
         if (millis() - recurringOutput > 60000) {
           recurringOutput = millis();
           snprintf(debugLine, sizeof(debugLine), "cleaning...");
@@ -1342,7 +1343,7 @@ void CheckMqttConnection() {
       digitalWrite(pinRelayHeater, LOW); // Stop heating
       char line2[17];
       snprintf(line2, sizeof(line2), "Temp. %0.2f", tempSensor.getCurrentTemperature());
-      displaymessage(0, (char*)"Check Temp. Sensor!", (char*)line2);
+      displaymessage(State::Undefined, (char*)"Check Temp. Sensor!", (char*)line2);
 
     } else if (emergencyStop) {
       // Deactivate PID
@@ -1361,7 +1362,7 @@ void CheckMqttConnection() {
           "%0.0f\xB0"
           "C",
           tempSensor.getCurrentTemperature());
-      displaymessage(0, (char*)"Emergency Stop!", (char*)line2);
+      displaymessage(State::Undefined, (char*)"Emergency Stop!", (char*)line2);
 
     } else {
       if (millis() - recurringOutput > 15000) {
@@ -1662,7 +1663,7 @@ void InitWaterLevelSensor() {
 		waterSensor.setTimeout(300);
 		if (!waterSensor.init()) {
 		  ERROR_println("Water level sensor cannot be initialized");
-		  displaymessage(0, (char*)"Water sensor defect", (char*)"");
+		  displaymessage(State::Undefined, (char*)"Water sensor defect", (char*)"");
 		}
 		// increased accuracy by increase timing budget to 200 ms
 		waterSensor.setMeasurementTimingBudget(200000);
@@ -1690,7 +1691,7 @@ void InititialSyncEeprom(bool force_read) {
  * PUBLISH settings on MQTT (and wait for them to be processed!)
  * + SAVE settings on MQTT-server if MQTT_ENABLE==1
  ******************************************************/
-void InitialMqttPublishSettings() {
+void InitMqttPublishSettings() {
     steadyPowerSaved = steadyPower;
     if (isMqttWorking()) {
       steadyPowerMQTTDisableUpdateUntilProcessed = steadyPower;
@@ -1721,13 +1722,13 @@ void InitTemperaturSensor() {
     while (true) {
       secondlatestTemperature = tempSensor.read();
       Input = tempSensor.readWithDelay();
-      if (tempSensor.checkSensor(activeState, activeSetPoint, &secondlatestTemperature) == Ok) {
+      if (tempSensor.checkSensor(activeState, activeSetPoint, &secondlatestTemperature) == SensorStatus::Ok) {
         tempSensor.updateTemperatureHistory(secondlatestTemperature);
         secondlatestTemperature = Input;
         DEBUG_print("Temp sensor check ok. Sensor init done\n");
         break;
       }
-      displaymessage(0, (char*)"Temp sensor defect", (char*)"");
+      displaymessage(State::Undefined, (char*)"Temp sensor defect", (char*)"");
       ERROR_print("Temp sensor defect. Cannot read consistent values. Retrying\n");
       HandleOTA();
       delay(1000);
@@ -1800,14 +1801,14 @@ void InitOTA() {
 		  Output = 0;
 		  DisableTimerAlarm();
 		  digitalWrite(pinRelayHeater, LOW); // Stop heating
-		  activeState = STATE_SOFTWARE_UPDATE;
+		  activeState = State::SoftwareUpdate;
 	  });
 	  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
 		  int percent = progress / (total / 100);
 		  DEBUG_print("OTA update in progress: %u%%\r", percent);
 		  char line2[17];
 		  snprintf(line2, sizeof(line2), "%u%% / 100%%", percent);
-		  displaymessage(0, (char*)"Updating Software", (char*)line2);
+		  displaymessage(State::Undefined, (char*)"Updating Software", (char*)line2);
 	  });    
 	  ArduinoOTA.onError([](ota_error_t error) {
 		  ERROR_print("OTA update error\n");
@@ -1843,9 +1844,9 @@ void setup() {
   InitPins();
 
 #if defined(OVERWRITE_VERSION_DISPLAY_TEXT)
-  displaymessage(0, (char*)DISPLAY_TEXT, (char*)OVERWRITE_VERSION_DISPLAY_TEXT);
+  displaymessage(State::Undefined, (char*)DISPLAY_TEXT, (char*)OVERWRITE_VERSION_DISPLAY_TEXT);
 #else
-  displaymessage(0, (char*)DISPLAY_TEXT, (char*)sysVersion);
+  displaymessage(State::Undefined, (char*)DISPLAY_TEXT, (char*)sysVersion);
 #endif
   delay(1000);
 
@@ -1864,19 +1865,15 @@ void setup() {
 
   InitPid();
   InitScale();
-
   InitWifi(eeprom_force_read);
-
   InititialSyncEeprom(eeprom_force_read);
 
   set_profile();
 
   print_settings();
 
-  InitialMqttPublishSettings();
-
+  InitMqttPublishSettings();
   InitOTA();  
-
   InitTemperaturSensor();
   InitWaterLevelSensor();
 
