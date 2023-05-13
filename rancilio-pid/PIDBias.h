@@ -26,7 +26,7 @@ class PIDBias {
 
   void SetMode(int Mode); // * sets PIDBias to either Manual (0) or Auto (non-0)
 
-  int Compute(); // * performs the PIDBias calculation.  it should be
+  int Compute(float, float); // * performs the PIDBias calculation.  it should be
                  //   called every time loop() cycles. ON/OFF and
                  //   calculation frequency can be set using SetMode
                  //   SetSampleTime respectively

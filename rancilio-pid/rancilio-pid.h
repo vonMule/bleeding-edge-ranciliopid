@@ -89,10 +89,6 @@
 float convertOutputToUtilisation(double);
 // returns heater utilization in Output
 double convertUtilisationToOutput(float);
-float pastTemperatureChange(int);
-float pastTemperatureChange(int, bool);
-float getCurrentTemperature();
-float readTemperatureFromSensor();
 bool almostEqual(float, float);
 void print_settings();
 extern char debugLine[200];

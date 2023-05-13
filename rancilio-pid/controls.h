@@ -20,6 +20,8 @@
 #define MENU_DEC 9
 #define SLEEPING 10
 #define MENU 11
+#define PROFILE_1 12
+#define PROFILE_2 13
 
 #ifdef ESP32
 #include "driver/rtc_io.h"

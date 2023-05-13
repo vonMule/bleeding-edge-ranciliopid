@@ -174,7 +174,7 @@ void blynkSave(char* setting) {
   else if (!strcmp(setting, "aggoTn")) { Blynk.virtualWrite(V31, String(aggoTn, 1)); }
   else if (!strcmp(setting, "aggoTv")) { Blynk.virtualWrite(V32, String(aggoTv, 1)); }
   else if (!strcmp(setting, "brewDetectionSensitivity")) { Blynk.virtualWrite(V34, String(brewDetectionSensitivity, 1)); }
-  else if (!strcmp(setting, "pastTemperatureChange")) { Blynk.virtualWrite(V35, String(pastTemperatureChange(10*10) / 2, 2)); }
+  else if (!strcmp(setting, "pastTemperatureChange")) { Blynk.virtualWrite(V35, String(tempSensor.pastTemperatureChange(10*10) / 2, 2)); }
   else if (!strcmp(setting, "brewDetectionPower")) { Blynk.virtualWrite(V36, String(brewDetectionPower, 1)); }
   else if (!strcmp(setting, "steadyPower")) { Blynk.virtualWrite(V41, String(steadyPower, 1)); }
   else if (!strcmp(setting, "steadyPowerOffset")) { Blynk.virtualWrite(V42, String(steadyPowerOffset, 1)); }
@@ -227,9 +227,9 @@ void blynkSave(char* setting) {
         }
         if (blynkSendCounter == 2) {
           blynkSendCounter++;
-          if (String(pastTemperatureChange(10*10) / 2, 2) != PreviousPastTemperatureChange) {
+          if (String(tempSensor.pastTemperatureChange(10*10) / 2, 2) != PreviousPastTemperatureChange) {
             blynkSave((char*)"pastTemperatureChange");
-            PreviousPastTemperatureChange = String(pastTemperatureChange(10*10) / 2, 2);
+            PreviousPastTemperatureChange = String(tempSensor.pastTemperatureChange(10*10) / 2, 2);
             return;
           }
         }

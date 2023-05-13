@@ -43,7 +43,7 @@ PIDBias::PIDBias(float* Input, double* Output, float* steadyPower, float* steady
   lastTime = millis();
 }
 
-int PIDBias::Compute() {
+int PIDBias::Compute(float pastChange, float pastChangeOverLongTime) {
   unsigned long now = millis();
   unsigned long timeChange = (now - lastTime);
   if (timeChange >= SampleTime) {
@@ -57,8 +57,6 @@ int PIDBias::Compute() {
     lastOutput = *myOutput;
     float input = *myInput;
     float error = **mySetpoint - input;
-    float pastChange = pastTemperatureChange(10*10) / 2; // difference of the last 10 seconds scaled down to one compute() cycle (=5 seconds).
-    float pastChangeOverLongTime = pastTemperatureChange(20*10);  //20sec
 
     outputP = kp * error;
     outputI = ki * error;
