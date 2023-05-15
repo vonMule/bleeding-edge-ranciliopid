@@ -2,8 +2,8 @@
 #define _control_H
 
 #include "Arduino.h"
-#include "userConfig.h"
-#include "MQTT.h"
+//#include "userConfig.h"
+//#include "MQTT.h"
 #include "PIDBias.h"
 #include "GpioCheck.h"
 
@@ -20,8 +20,8 @@
 #define MENU_DEC 9
 #define SLEEPING 10
 #define MENU 11
-#define PROFILE_1 12
-#define PROFILE_2 13
+//#define PROFILE_1 12  //XXX3 whats that and also are those defines still needed at all 
+//#define PROFILE_2 13  //XXX3 whats that and also are those defines still needed at all 
 
 #ifdef ESP32
 #include "driver/rtc_io.h"
@@ -56,16 +56,13 @@ typedef struct menuMap {
   struct menuMap* nextMenuMap;
 } menuMap;
 
-extern unsigned long previousCheckControls;
 #define FREQUENCYCHECKCONTROLS 100 // XXX: change to 50 or 200? make dynamical!
 
 // actionState contain the status (on/off/..) of each actions
 #define MAX_NUM_ACTIONS 20
-extern int actionState[MAX_NUM_ACTIONS];
 
 // gpioLastAction contain the last known action executed (per gpio)
 #define MAX_NUM_GPIO 35
-extern int gpioLastAction[MAX_NUM_GPIO];
 
 controlMap* parseControlsConfig();
 void debugControlHardware(controlMap* controlsConfig);
@@ -92,8 +89,10 @@ void menuAction(int state);
 void menuIncAction(int state);
 void menuDecAction(int state);
 
+//XXX3 this is the new block
 extern int simulatedBrewSwitch;
 
+//XXX old block to be removed
 extern unsigned long userActivity;
 extern controlMap* controlsConfig;
 extern menuMap* menuConfig;

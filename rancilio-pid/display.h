@@ -1,11 +1,11 @@
 #ifndef _display_H
 #define _display_H
 
-#include "rancilio-pid.h"
-#include "Enums.h"
-
+#include "userConfig.h"
 const int Display = DISPLAY_HARDWARE;
 
+#include "rancilio-pid.h"
+#include "rancilio-enums.h"
 #include "controls.h"
 #include "icon_shared.h"
 #if (ENABLE_BIG_STATUS_ICONS)
@@ -35,6 +35,13 @@ static char displaymessagetext2Buffer[30];
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
+#define LCDWidth u8g2.getDisplayWidth()
+#define LCDHeight u8g2.getDisplayHeight()
+#define ALIGN_CENTER(t) ((LCDWidth - (u8g2.getUTF8Width(t))) / 2)
+#define ALIGN_RIGHT(t) (LCDWidth - u8g2.getUTF8Width(t))
+#define ALIGN_RIGHT_2(t1, t2) (LCDWidth - u8g2.getUTF8Width(t1) - u8g2.getUTF8Width(t2))
+#define ALIGN_LEFT 0
+
 // Attention: refresh takes around 42ms (esp32: 26ms)!
 #if (DISPLAY_HARDWARE == 1)
   extern U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2; // e.g. 1.3"
@@ -59,7 +66,6 @@ void u8g2_prepare(void);
 bool screenSaverRunning();
 void displaymessage(State, char*, char*);
 void displaymessage_helper(State, char*, char*);
-#endif  // TODO: shouldn't that be at the end of the file ? 
 void showScreenSaver();
 void showMenu(char**, char**);
 void showPowerOffCountdown(char*, char*);
@@ -70,7 +76,7 @@ extern unsigned long lastBrewReady;
 extern int sleeping;
 extern unsigned long userActivity;
 extern State activeState;
-extern float* activeSetPoint;
+//extern float* activeSetPoint;
 extern float steamReadyTemp;
 extern float Input;
 extern int pidON;
@@ -84,7 +90,7 @@ extern float* activePreinfusionPause;
 extern unsigned int* activeBrewTimeEndDetection;
 extern float* activeScaleSensorWeightSetPoint;
 extern unsigned long brewTimer;
-extern bool forceOffline;
+//extern bool forceOffline;
 extern bool isWifiWorking();
 extern bool isBlynkWorking();
 extern bool isMqttWorking();
@@ -101,3 +107,4 @@ extern float currentWeight;
 extern unsigned int brewStatisticsAdditionalDisplayTime;
 extern unsigned long brewStatisticsTimer;
 
+#endif  // TODO: shouldn't that be at the end of the file ? 

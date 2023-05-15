@@ -16,13 +16,9 @@
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
-
-int PIDBias::signnum_c(float x) {
-  if (x >= 0.0)
-    return 1;
-  else
-    return -1;
-}
+#include <helper.h>
+#include "rancilio-debug.h"
+#include "rancilio-pid.h"
 
 PIDBias::PIDBias(float* Input, double* Output, float* steadyPower, float* steadyPowerOffset, unsigned long* steadyPowerOffsetActivateTime, unsigned int* steadyPowerOffsetTime,
     float** Setpoint, float Kp, float Ki, float Kd) {
@@ -69,7 +65,7 @@ int PIDBias::Compute(float pastChange, float pastChangeOverLongTime) {
     if (sumOutputI > filterSumOutputI) sumOutputI = filterSumOutputI;
 
     // reset sumI when at setPoint. This improves stabilization.
-    if (signnum_c(error) * signnum_c(lastError) < 0 && (millis() - lastTriggerCrossingSetPoint > 30000)) { // temperature crosses setPoint
+    if (signnum(error) * signnum(lastError) < 0 && (millis() - lastTriggerCrossingSetPoint > 30000)) { // temperature crosses setPoint
       // DEBUG_print("Crossing setPoint\n");
       lastTriggerCrossingSetPoint = millis();
 
@@ -219,7 +215,7 @@ int PIDBias::Compute(float pastChange, float pastChangeOverLongTime) {
   DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f = b:%5.2f + p:%5.2f + i:%5.2f(%5.2f) + d:%5.2f -\n",
     *myInput,
     (**mySetpoint - *myInput),
-    pastTemperatureChange(10*10)/2,
+    tempSensor.pastTemperatureChange(10*10)/2,
     convertOutputToUtilisation(output),
     *mySteadyPower + GetSteadyPowerOffsetCalculated(),
     convertOutputToUtilisation(GetOutputP()),

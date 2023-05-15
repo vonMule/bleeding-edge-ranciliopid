@@ -1,3 +1,7 @@
+/********************************************************
+ * Perfect Coffee PID
+ * https://github.com/medlor/bleeding-edge-ranciliopid
+ *****************************************************/
 #define rancilio_logo_width 45
 #define rancilio_logo_height 45
 

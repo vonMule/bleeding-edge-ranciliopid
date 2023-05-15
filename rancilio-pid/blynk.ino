@@ -2,8 +2,9 @@
  * Perfect Coffee PID
  * https://github.com/medlor/bleeding-edge-ranciliopid
  *****************************************************/
-#include "rancilio-pid.h"
 #include "blynk.h"
+#include "rancilio-debug.h"
+#include "rancilio-pid.h"
 #include "controls.h"
 
 unsigned long previousTimerBlynk = 0;
@@ -37,7 +38,7 @@ char* blynkReadyLedColor = (char*)"#000000";
 #if (BLYNK_ENABLE==0)
     void blynkSave(char* setting) {};
     void sendToBlynk() {};
-    bool setupBlynk() { return true; };
+    bool InitBlynk() { return true; };
     void runBlynk() {};
     void disableBlynkTemporary() {};
     void setPreviousTimerBlynk(unsigned long prevTimer) {};
@@ -297,7 +298,7 @@ void runBlynk() {
     }
  }
 
- bool setupBlynk() {
+ bool InitBlynk() {
      DEBUG_print("Connecting to Blynk ...\n");
      Blynk.config(blynkAuth, blynkAddress, blynkPort);
      if (!Blynk.connect(5000)) {

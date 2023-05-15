@@ -5,6 +5,7 @@
 
 #include "userConfig.h"
 #include "blynk.h"
+#include <WString.h>
 
 #if (BLYNK_ENABLE == 1)
 #ifdef ESP32
@@ -59,9 +60,9 @@ extern unsigned int profile;
 extern float aggKp;
 extern float aggTn;
 extern float aggTv;
-extern float* activeSetPoint;
+//extern float* activeSetPoint;
 extern float* activeStartTemp;
-extern float* activeBrewTime;
+//extern float* activeBrewTime;
 extern float* activePreinfusion;
 extern float* activePreinfusionPause;
 extern int pidON;

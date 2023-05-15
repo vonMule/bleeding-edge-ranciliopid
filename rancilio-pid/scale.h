@@ -5,7 +5,7 @@
 #include "rancilio-pid.h"
 #include "Arduino.h"
 #include "display.h"
-#include "Enums.h"
+#include "rancilio-enums.h"
 
 #if (SCALE_SENSOR_ENABLE)
 #include "scaleConfigOverwrite.h"
@@ -28,6 +28,7 @@ bool getTareAsyncStatus();  //returns true if tareAsync() has completed. else fa
 void updateWeight();
 void scalePowerDown();
 void scalePowerUp();
+void scaleCalibration();
 
 extern float* activeScaleSensorWeightSetPoint;
 extern float scaleSensorWeightOffset;

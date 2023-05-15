@@ -1,5 +1,5 @@
-#ifndef RancilioPid_h
-#define RancilioPid_h
+#ifndef rancilio_pid_h
+#define rancilio_pid_h
 
 #define LIBRARY_VERSION 0.0.1
 
@@ -63,13 +63,6 @@
 #define TEMPSENSOR_BITWINDOW 125
 #endif
 
-#define LCDWidth u8g2.getDisplayWidth()
-#define LCDHeight u8g2.getDisplayHeight()
-#define ALIGN_CENTER(t) ((LCDWidth - (u8g2.getUTF8Width(t))) / 2)
-#define ALIGN_RIGHT(t) (LCDWidth - u8g2.getUTF8Width(t))
-#define ALIGN_RIGHT_2(t1, t2) (LCDWidth - u8g2.getUTF8Width(t1) - u8g2.getUTF8Width(t2))
-#define ALIGN_LEFT 0
-
 // returns heater utilization in percent
 float convertOutputToUtilisation(double);
 // returns heater utilization in Output
@@ -83,6 +76,14 @@ void set_profile();
 void set_profile(bool);
 void debugWaterLevelSensor();
 
-extern void scaleCalibration();
+extern float* activeSetPoint;
+extern float* activeBrewTime;
+extern float* activePreinfusion;
+extern float* activePreinfusionPause;
+extern float* activeStartTemp;
+extern float setPointSteam;
+extern int pidON;
+extern unsigned int profile;
+extern bool mqttDisabledTemporary;
 
 #endif

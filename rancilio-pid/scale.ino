@@ -3,6 +3,7 @@
  * https://github.com/medlor/bleeding-edge-ranciliopid
  *****************************************************/
 #include "scale.h"
+#include "rancilio-debug.h"
 
 bool getTareAsyncStatus() {
   return scaleTareSuccess;

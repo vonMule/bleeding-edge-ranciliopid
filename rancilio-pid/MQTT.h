@@ -37,12 +37,14 @@ char* number2string(unsigned int in);
 
 extern const char* mqttTopicPrefix;
 extern const char* hostname;
-extern bool isWifiWorking();
+bool isWifiWorking();
 
-void InitMqtt(bool);
+bool InitMqtt();
 
-extern bool forceOffline;
-extern bool mqttDisabledTemporary;
+extern const char* mqttServerIP;
+extern const int mqttServerPort;
+//extern bool forceOffline;
+//extern bool mqttDisabledTemporary;
 extern unsigned long mqttDontPublishUntilTime;
 extern const int mqttMaxPublishSize;
 extern const bool mqttFlagRetained;
@@ -61,14 +63,14 @@ extern char topicSet[256];
 extern char topicActions[256];
 extern unsigned long mqttConnectTime;
 extern unsigned int mqttMaxIncrementalBackoff;
-extern unsigned int profile;
-extern float* activeBrewTime;
-extern float* activePreinfusion;
-extern float* activePreinfusionPause;
-extern float* activeStartTemp;
-extern float* activeSetPoint;
-extern float setPointSteam;
-extern int pidON;
+//extern unsigned int profile;
+//extern float* activeBrewTime;
+//extern float* activePreinfusion;
+//extern float* activePreinfusionPause;
+//extern float* activeStartTemp;
+//extern float* activeSetPoint;
+//extern float setPointSteam;
+//extern int pidON;
 extern float brewDetectionSensitivity;
 extern float brewDetectionPower;
 extern float aggoKp;
@@ -84,5 +86,7 @@ extern float steadyPowerMQTTDisableUpdateUntilProcessed;
 extern unsigned long steadyPowerMQTTDisableUpdateUntilProcessedTime;
 extern float steadyPowerSaved;
 extern unsigned long eepromForceSync;
+
+extern bool InitBlynk();
 
 #endif

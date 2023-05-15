@@ -1,10 +1,13 @@
 /********************************************************
-  MQTT
-*****************************************************/
+ * Perfect Coffee PID
+ * https://github.com/medlor/bleeding-edge-ranciliopid
+ *****************************************************/
 #include <float.h>
-
 #include "userConfig.h"
 #include "MQTT.h"
+#include "rancilio-debug.h"
+#include "rancilio-pid.h"
+#include "rancilio-network.h"
 #include "controls.h"
 
 unsigned long lastCheckMQTT = 0;
@@ -417,8 +420,9 @@ void mqttPublishSettings() {
   mqttPublish((char*)"steadyPower/set", number2string(steadyPower)); // this should be last in list
 }
 
-// Setup Mqtt (none, client only, server) 
-void InitMqtt(bool eeprom_force_read) {
+// Setup Mqtt (and also call initBlynk()) returns eeprom_force_read
+bool InitMqtt() {
+  bool eeprom_force_read = true;
 // MQTT
 #if (MQTT_ENABLE == 1)
   snprintf(topicWill, sizeof(topicWill), "%s%s/%s", mqttTopicPrefix, hostname, "will");
@@ -426,8 +430,7 @@ void InitMqtt(bool eeprom_force_read) {
   snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
   //mqttClient.setKeepAlive(3);      //activates mqttping keepalives (default 15)
   mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)
-  uint16_t mqtt_port = strtol(mqttServerPort, NULL, 10);
-  mqttClient.setServer(mqttServerIP, mqtt_port);
+  mqttClient.setServer(mqttServerIP, mqttServerPort);
   mqttClient.setCallback(mqttCallback1);
   if (!mqttReconnect(true)) {
     if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
@@ -468,5 +471,5 @@ void InitMqtt(bool eeprom_force_read) {
   }
 #endif
          
-    eeprom_force_read = setupBlynk() && eeprom_force_read;
+    return InitBlynk() && eeprom_force_read;
 }

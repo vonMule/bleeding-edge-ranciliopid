@@ -1,8 +1,10 @@
 /***********************************
  *  DISPLAY
  ***********************************/
-#include "display.h"
 #include <float.h>
+#include "display.h"
+#include "rancilio-debug.h"
+#include "rancilio-network.h"
 
 unsigned long previousMillisDisplay = 0; // initialisation at the end of init()
 const long intervalDisplay = 1000; // update for display
@@ -83,6 +85,7 @@ char* outputSimpleState() {
     case State::SleepMode: {
       return (char*)"Sleeping";
     }
+    default: {}
   }
   if (!pidON) { return (char*)"Turned off"; }
   if (brewReady) { return (char*)"Ready"; }

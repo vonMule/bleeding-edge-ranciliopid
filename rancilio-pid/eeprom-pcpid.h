@@ -19,10 +19,11 @@ void sync_eeprom(bool startup_read, bool force_read);
 #define expectedEepromVersion 9 // EEPROM values are saved according to this versions layout. Increase
                                 // if a new layout is implemented.
 
-extern bool forceOffline;
-extern bool mqttDisabledTemporary;
+//extern bool forceOffline;
+//extern bool mqttDisabledTemporary;
 extern unsigned long mqttDontPublishUntilTime;
-extern const int mqttMaxPublishSize;
+//XXX3 remove all not needed
+//extern const int mqttMaxPublishSize;
 extern const bool mqttFlagRetained;
 extern unsigned long mqttDontPublishBackoffTime;
 extern bool inSensitivePhase();

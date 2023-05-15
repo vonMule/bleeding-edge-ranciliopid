@@ -12,8 +12,8 @@
 #define PIDBias_h
 #define LIBRARY_VERSION 0.0.1
 
-#include "rancilio-pid.h"
-#include "rancilio_debug.h"
+//#include "rancilio-pid.h"
+#include <stdio.h>
 
 class PIDBias {
   public:
@@ -64,7 +64,7 @@ class PIDBias {
   float GetFilterSumOutputI();
   // void SetSteadyPowerOffset(float);
   // float GetSteadyPowerOffset();
-  void SetAutoTune(boolean);
+  void SetAutoTune(bool);
   void SetSteadyPowerDefault(float);
   float GetSteadyPowerOffset();
   // void UpdateSteadyPowerOffset(unsigned long, unsigned long);

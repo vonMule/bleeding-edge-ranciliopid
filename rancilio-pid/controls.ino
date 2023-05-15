@@ -3,7 +3,11 @@
  * https://github.com/medlor/bleeding-edge-ranciliopid
  *****************************************************/
 #include "controls.h"
+#include "rancilio-debug.h"
 #include "rancilio-pid.h"
+//#include "userConfig.h"
+#include "MQTT.h"
+#include "PIDBias.h"
 
 int simulatedBrewSwitch = 0;
 unsigned long previousCheckControls = 0;

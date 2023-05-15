@@ -13,21 +13,20 @@
 #include <float.h>
 #include <math.h>
 
-#include "userConfig.h"
 #include "rancilio-pid.h"
+#include "userConfig.h"
+#include "rancilio-debug.h"
+#include "rancilio-enums.h"
+#include "helper.h"
 #include "MQTT.h"
 #include "blynk.h"
 #include "display.h"
 #include "eeprom-pcpid.h"
-#include "connection.h"
-//#include "rancilio_debug.h"
-#include "helper.h"
+#include "rancilio-network.h"  //XXX3 needed
 #include "TemperatureSensor.h"
-#include "Enums.h"
+#include "controls.h"
 
-RemoteDebug Debug;
-
-const char* sysVersion PROGMEM = "3.2.3";
+const char* sysVersion PROGMEM = "3.2.4 beta1";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -44,16 +43,16 @@ WiFiClient espClient;
 #if (MQTT_ENABLE == 1)
 #include <PubSubClient.h>
 PubSubClient mqttClient(espClient);
-#elif (MQTT_ENABLE == 2)
+#elif (MQTT_ENABLE == 2 && defined(ESP8266))
 #include <uMQTTBroker.h>
 #endif
 
 const char* mqttServerIP = MQTT_SERVER_IP;
-const char* mqttServerPort = MQTT_SERVER_PORT;
+const int mqttServerPort = MQTT_SERVER_PORT;
 const char* mqttUsername = MQTT_USERNAME;
 const char* mqttPassword = MQTT_PASSWORD;
 const char* mqttTopicPrefix = MQTT_TOPIC_PREFIX;
-const int mqttMaxPublishSize = MQTT_MAX_PUBLISH_SIZE;
+const int mqttMaxPublishSize = 120;
 char topicWill[256];
 char topicSet[256];
 char topicActions[256];
@@ -314,13 +313,6 @@ unsigned long previousTimerWaterLevelCheck = 0;
  ******************************************************/
 TemperatureSensor tempSensor(TempSensorRecovery);
 
-// uint16_t temperature = 0;
-// volatile uint16_t temp_value[2] = { 0 };
-// volatile byte tsicDataAvailable = 0;
-
-unsigned int isrCounterStripped = 0;
-const int isrCounterFrame = 1000;
-
 /********************************************************
  * SCALE
  ******************************************************/
@@ -398,7 +390,7 @@ double convertUtilisationToOutput(float utilization) { return (utilization / 100
 
 bool checkBrewReady(float setPoint, float marginOfFluctuation, int lookback) {
   if (almostEqual(marginOfFluctuation, 0)) return false;
-  if (lookback >= tempSensor.numberOfReadings) lookback = tempSensor.numberOfReadings - 1;
+  if (lookback >= tempSensor.getHistorySize()) lookback = tempSensor.getHistorySize() - 1;
   for (int offset = 0; offset <= floor(lookback / 5); offset++) {
     int offsetReading = offset * 5;
     float temp_avg = tempSensor.getAverageTemperature(5, offsetReading);
@@ -1068,9 +1060,9 @@ void CheckMqttConnection() {
    * LOOP()
    ***********************************/
   void loop() {
-    Input = tempSensor.refresh(Input, activeState, activeSetPoint, &secondlatestTemperature); // save new temperature values
+    tempSensor.refresh(&Input, activeState, *activeSetPoint, &secondlatestTemperature); // measure and store current temperature 
     
-    if (tempSensor.malfunction) {
+    if (tempSensor.isMalfunction()) {
       snprintf(debugLine, sizeof(debugLine), "temp sensor malfunction: latestTemperature=%0.2f, secondlatestTemperature=%0.2f", tempSensor.getLatestTemperature(), secondlatestTemperature);
       ERROR_println(debugLine);
       mqttPublish((char*)"events", debugLine);
@@ -1206,7 +1198,7 @@ void CheckMqttConnection() {
     #endif
 
     // Sicherheitsabfrage
-    if (!tempSensor.malfunction && !emergencyStop && Input > 0) {
+    if (!tempSensor.isMalfunction() && !emergencyStop && Input > 0) {
       updateState();
 
       /* state 1: Water is very cold, set heater to full power */
@@ -1329,7 +1321,7 @@ void CheckMqttConnection() {
       return;
 #endif
 
-    } else if (tempSensor.malfunction) {
+    } else if (tempSensor.isMalfunction()) {
       // Deactivate PID
       if (pidMode == 1) {
         pidMode = 0;
@@ -1559,7 +1551,7 @@ void CheckMqttConnection() {
     DEBUG_print("cleaningCycles: %d | cleaningInterval: %d | cleaningPause: %d\n", cleaningCycles, cleaningInterval, cleaningPause);
     DEBUG_print("steadyPower: %0.2f | steadyPowerOffset: %0.2f | steadyPowerOffsetTime: %u\n",
         steadyPower, steadyPowerOffset, steadyPowerOffsetTime);
-    DEBUG_print("pidON: %d | tempSensor: %s\n", pidON, tempSensor.name);
+    DEBUG_print("pidON: %d | tempSensor: %s\n", pidON, tempSensor.getName());
     printControlsConfig(controlsConfig);
     printMultiToggleConfig();
     printMenuConfig(menuConfig);
@@ -1722,10 +1714,9 @@ void InitTemperaturSensor() {
     while (true) {
       secondlatestTemperature = tempSensor.read();
       Input = tempSensor.readWithDelay();
-      if (tempSensor.checkSensor(activeState, activeSetPoint, &secondlatestTemperature) == SensorStatus::Ok) {
+      if (tempSensor.checkSensor(activeState, *activeSetPoint, secondlatestTemperature) == SensorStatus::Ok) {
         tempSensor.updateTemperatureHistory(secondlatestTemperature);
         secondlatestTemperature = Input;
-        DEBUG_print("Temp sensor check ok. Sensor init done\n");
         break;
       }
       displaymessage(State::Undefined, (char*)"Temp sensor defect", (char*)"");
@@ -1830,8 +1821,6 @@ void InitOTA() {
  * SETUP()
  ***********************************/
 void setup() {
-  bool eeprom_force_read = true;
-
  #ifdef ESP32
   WiFi.useStaticBuffers(true);
   // required for remoteDebug to work
@@ -1865,8 +1854,7 @@ void setup() {
 
   InitPid();
   InitScale();
-  InitWifi(eeprom_force_read);
-  InititialSyncEeprom(eeprom_force_read);
+  InititialSyncEeprom(InitNetworking());
 
   set_profile();
 

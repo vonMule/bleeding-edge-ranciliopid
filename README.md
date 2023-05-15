@@ -3,7 +3,7 @@
 
 ## Do it yourself, open-source PID for your espresso machine  
 
-Version 3.2.3
+Version 3.2.4 beta
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -125,6 +125,15 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.4 beta 1:
+  - ALPHA! 
+  - Some bugfixes and refactorings by Tobias.
+  - Started (work in progress) cleanup of includes.
+  - Many more refactorings by aschoelzhorn. Thanks again!
+    - Seperated wifi, temperature and other code to dedicated files. 
+    - introduces rancilio-enums.h file and replaced some defines with enum classes.
+    - reorganized OTA (init and handle), OTA code still in "rancilio-pid.ino" because of timer stuff.
+    - separated declaration and implementation in some header/code files.
 - 3.2.3:
   - Feature: On OTA Update show special logo and progress. Thanks aschoelzhorn!
   - Feature: Enable bigger status icons when ENABLE_BIG_STATUS_ICONS is set to 1 (default 0). Many thanks aschoelzhorn!
