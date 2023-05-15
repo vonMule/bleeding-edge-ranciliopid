@@ -104,26 +104,12 @@ void updateWeight() {
 /********************************************************
    Initialize scale
 ******************************************************/
-void IRAM_ATTR dataReadyISR(void * arg) {
+void IRAM_ATTR dataReadyISR() {
   LoadCell.dataWaitingAsync();
 }
 
-static void attachISR_ESP32_SCALE(void *arg){					//attach ISR in freeRTOS because arduino can't attachInterrupt() inside of template class
-  //DEBUG_print("attachISR_ESP32_2()\n");
-  gpio_config_t gpioConfig;
-  gpioConfig.pin_bit_mask = ((uint64_t)(((uint64_t)1)<<SCALE_SENSOR_DATA_PIN));
-  gpioConfig.mode         = GPIO_MODE_INPUT;
-  gpioConfig.pull_up_en   = GPIO_PULLUP_ENABLE ; //convertPortModeToDefine(_portMode) == INPUT_PULLUP ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
-  gpioConfig.pull_down_en = GPIO_PULLDOWN_DISABLE; //convertPortModeToDefine(_portMode) == INPUT_PULLDOWN ? GPIO_PULLDOWN_ENABLE : GPIO_PULLDOWN_DISABLE;
-  gpioConfig.intr_type    = GPIO_INTR_NEGEDGE;
-  ESP_ERROR_CHECK(gpio_config(& gpioConfig));
-  gpio_install_isr_service(0);
-  gpio_isr_handler_add((gpio_num_t)SCALE_SENSOR_DATA_PIN, dataReadyISR, NULL);
-  vTaskDelete(NULL);
-}
-
 void initScale() {
-  long stabilizingtime = 2000; // tare preciscion can be improved by adding a few seconds of stabilizing time
+  long stabilizingtime = 2000; // tare precision can be improved by adding a few seconds of stabilizing time
   boolean _tare = true; //set this to false if you don't want tare to be performed in the next step
   for (int i=0; i<3;i++) {
     LoadCell.begin();
@@ -137,8 +123,7 @@ void initScale() {
       DEBUG_print("HX711 initialized (#%u)\n", i);
       LoadCell.setCalFactor(SCALE_SENSOR_CALIBRATION_FACTOR); // set calibration factor (float)
       #ifdef ESP32
-      //CPU pinning does not have an effect (TSIC). Why?
-      xTaskCreatePinnedToCore(attachISR_ESP32_SCALE,"attachISR_ESP32_SCALE",2000,NULL,1,NULL,1); //freeRTOS
+      attachInterrupt(SCALE_SENSOR_DATA_PIN, dataReadyISR, FALLING);
       #else
       attachInterrupt(digitalPinToInterrupt(SCALE_SENSOR_DATA_PIN), dataReadyISR, FALLING);
       #endif

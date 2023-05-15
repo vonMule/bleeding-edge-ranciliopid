@@ -113,7 +113,13 @@ BLYNK_WRITE(V110) {
 }
 
 bool isBlynkWorking() { 
-  return isWifiWorking() && Blynk.connected(); 
+  static bool val_blynk = false;
+  static unsigned long lastCheckBlynk = 0;
+  if (millis() > lastCheckBlynk + 100UL) {
+    lastCheckBlynk = millis();
+    val_blynk = ((BLYNK_ENABLE > 0) && (isWifiWorking()) && (Blynk.connected()));
+  }
+  return val_blynk;
 }
 
 /******************************************************
@@ -182,58 +188,57 @@ void blynkSave(char* setting) {
             brewReadyLed.setColor(blynkReadyLedColor);
           }
         }
-        if (grafana == 1 && blynkSendCounter == 1) { Blynk.virtualWrite(V60, Input, Output, bPID.GetKp(), bPID.GetKi(), bPID.GetKd(), *activeSetPoint); }
         // performance tests has shown to only send one api-call per sendToBlynk()
         if (blynkSendCounter == 1) {
+          blynkSendCounter++;
           if (steadyPower != steadyPowerSavedInBlynk) {
             blynkSave((char*)"steadyPower");  // auto-tuning params should be saved by Blynk.virtualWrite()
             steadyPowerSavedInBlynk = steadyPower;
-          } else {
-            blynkSendCounter++;
+            return;
           }
         }
         if (blynkSendCounter == 2) {
+          blynkSendCounter++;
           if (String(pastTemperatureChange(10*10) / 2, 2) != PreviousPastTemperatureChange) {
             blynkSave((char*)"pastTemperatureChange");
             PreviousPastTemperatureChange = String(pastTemperatureChange(10*10) / 2, 2);
-          } else {
-            blynkSendCounter++;
+            return;
           }
         }
         if (blynkSendCounter == 3) {
+          blynkSendCounter++;
           if (String(Input - *activeSetPoint, 2) != PreviousError) {
             blynkSave((char*)"error");
             PreviousError = String(Input - *activeSetPoint, 2);
-          } else {
-            blynkSendCounter++;
+            return;
           }
         }
         if (blynkSendCounter == 4) {
+          blynkSendCounter++;
           if (String(convertOutputToUtilisation(Output), 2) != PreviousOutputString) {
             blynkSave((char*)"output");
             PreviousOutputString = String(convertOutputToUtilisation(Output), 2);
-          } else {
-            blynkSendCounter++;
+            return;
           }
         }
         if (blynkSendCounter == 5) {
+          blynkSendCounter++;
           powerOffTimer = ENABLE_POWER_OFF_COUNTDOWN - ((millis() - lastBrewEnd) / 1000);
           int power_off_timer_min = powerOffTimer >= 0 ? ((powerOffTimer + 59) / 60) : 0;
           if (power_off_timer_min != previousPowerOffTimer) {
             blynkSave((char*)"power_off_timer_min");
             previousPowerOffTimer = power_off_timer_min;
-          } else {
-            blynkSendCounter++;
+            return;
           }
         }
         if (blynkSendCounter >= 6) {
-          if (String(Input, 2) != PreviousInputString) {
+          blynkSendCounter = 1;
+          String currentInput = String(Input, 2);
+          if (currentInput != PreviousInputString) {
             blynkSave((char*)"Input");
-            PreviousInputString = String(Input, 2);
+            PreviousInputString = currentInput;
           }
-          blynkSendCounter = 0;
         }
-        blynkSendCounter++;
     }
 }
 
@@ -247,7 +252,7 @@ void runBlynk() {
             }
         } else {
             unsigned long now = millis();
-            if ((now > blynkLastReconnectAttemptTime + (blynkReconnectIncrementalBackoff * (blynkReconnectAttempts)))
+            if ((now > blynkLastReconnectAttemptTime + (blynkReconnectIncrementalBackoff * (blynkReconnectAttempts<=blynkMaxIncrementalBackoff? blynkReconnectAttempts:blynkMaxIncrementalBackoff)))
                 && now > allServicesLastReconnectAttemptTime + allservicesMinReconnectInterval && !inSensitivePhase()) {
               blynkLastReconnectAttemptTime = now;
               allServicesLastReconnectAttemptTime = now;
@@ -256,7 +261,7 @@ void runBlynk() {
                 blynkLastReconnectAttemptTime = 0;
                 blynkReconnectAttempts = 0;
                 DEBUG_print("Blynk reconnected in %lu seconds\n", (millis() - now) / 1000);
-              } else if (blynkReconnectAttempts < blynkMaxIncrementalBackoff) {
+              } else {
                 blynkReconnectAttempts++;
               }
             }

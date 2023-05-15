@@ -27,6 +27,10 @@ void u8g2_prepare(void) {
   u8g2.setPowerSave(0);
 }
 
+bool softwareUpdateCheck() {
+  return activeState == STATE_SOFTWARE_UPDATE;
+}
+
 bool screenSaverCheck() {
   if ((enableScreenSaver && brewReady && (millis() >= lastBrewReady + brewReadyWaitPeriod) && (millis() >= userActivity + userActivityWaitPeriod)) || sleeping) {
     menuPosition = 0;
@@ -134,7 +138,9 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
   u8g2.clearBuffer();
   u8g2.setBitmapMode(1);
 
-  if (screenSaverCheck()) {
+  if (softwareUpdateCheck()) {
+    showSoftwareUpdate();
+  } else if (screenSaverCheck()) {
     showScreenSaver();
   } else if (menuCheck()) {
     showMenu(&displaymessagetext, &displaymessagetext2);
@@ -360,6 +366,10 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     #endif
   }
   u8g2.sendBuffer();
+}
+
+void showSoftwareUpdate() {
+    u8g2.drawXBMP(41, 0, icon_width, general_logo_height, update_bits);
 }
 
 void showScreenSaver() {

@@ -9,7 +9,7 @@
 #include <BlynkSimpleEsp8266.h>
 #endif
 
-#include <userConfig.h>
+#include "userConfig.h"
 
 /********************************************************
  * BLYNK
@@ -82,7 +82,6 @@ extern int cleaningPause;
 extern bool brewReady;
 extern float marginOfFluctuation;
 extern bool checkBrewReady(float setPoint, float marginOfFluctuation, int lookback);
-extern const int grafana;
 extern int previousPowerOffTimer;
 
 #endif

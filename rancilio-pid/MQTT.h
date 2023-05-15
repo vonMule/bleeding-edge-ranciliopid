@@ -27,6 +27,7 @@ extern BlynkWifi Blynk;
 bool mqttReconnect(bool);
 bool mqttPublish(char*, char*);
 bool isMqttWorking();
+bool isMqttWorking(bool refresh);
 void mqttPublishSettings();
 bool persistSetting(char*, float*, char*);
 bool persistSetting(char*, int*, char*);

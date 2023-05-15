@@ -7,6 +7,7 @@
 #include "MQTT.h"
 #include "controls.h"
 
+unsigned long lastCheckMQTT = 0;
 
 bool almostEqual_exact(float a, float b) { return fabs(a - b) <= FLT_EPSILON; }
 bool almostEqual(float a, float b) { return fabs(a - b) <= 0.0001; }
@@ -39,21 +40,25 @@ char* number2string(unsigned int in) {
   return number2string_uint;
 }
 
-char* mqttBuildTopic(char* reading) {
-  char* topic = (char*)malloc(sizeof(char) * 256);
-  snprintf(topic, sizeof(*topic), "%s%s/%s", mqttTopicPrefix, hostname, reading);
-  return topic;
-}
-
 /* ------------------------------ */
+bool isMqttWorking() {
+   return isMqttWorking(false);
+}
 #if (MQTT_ENABLE == 0) // MQTT Disabled
 bool mqttPublish(char* reading, char* payload) { return true; }
 bool mqttReconnect(bool force_connect = false) { return true; }
-bool isMqttWorking() { return false; }
+bool isMqttWorking(bool refresh) { return false; }
 
 /* ------------------------------ */
 #elif (MQTT_ENABLE == 1) // MQTT Client
-bool isMqttWorking() { return ((MQTT_ENABLE > 0) && (isWifiWorking()) && (mqttClient.connected())); }
+bool isMqttWorking(bool refresh) { 
+  static bool val_mqtt = false;
+  if (refresh || millis() > lastCheckMQTT + 100UL) {
+    lastCheckMQTT = millis();
+    val_mqtt = ((MQTT_ENABLE > 0) && (isWifiWorking()) && (mqttClient.connected()));
+  }
+  return val_mqtt;
+}
 
 bool mqttPublish(char* reading, char* payload) {
   if (!MQTT_ENABLE || forceOffline || mqttDisabledTemporary) return true;
@@ -86,7 +91,7 @@ bool mqttReconnect(bool force_connect = false) {
 
   unsigned long now = millis();
   if (force_connect
-      || ((now > mqttLastReconnectAttemptTime + (mqttReconnectIncrementalBackoff * (mqttReconnectAttempts)))
+      || ((now > mqttLastReconnectAttemptTime + (mqttReconnectIncrementalBackoff * (mqttReconnectAttempts<=mqttMaxIncrementalBackoff? mqttReconnectAttempts:mqttMaxIncrementalBackoff)))
           && now > allServicesLastReconnectAttemptTime + allservicesMinReconnectInterval)) {
     mqttLastReconnectAttemptTime = now;
     allServicesLastReconnectAttemptTime = now;
@@ -105,7 +110,7 @@ bool mqttReconnect(bool force_connect = false) {
       mqttConnectTime = millis();
     } else {
       DEBUG_print("Cannot connect to mqtt server (consecutive failures=#%u)\n", mqttReconnectAttempts);
-      if (mqttReconnectAttempts < mqttMaxIncrementalBackoff) { mqttReconnectAttempts++; }
+      mqttReconnectAttempts++;
     }
   }
   return mqttClient.connected();
@@ -132,7 +137,7 @@ void mqttCallback1(char* topic, unsigned char* data, unsigned int length) {
 
 /* ------------------------------ */
 #elif (MQTT_ENABLE == 2)
-bool isMqttWorking() { return ((MQTT_ENABLE > 0) && (isWifiWorking())); }
+bool isMqttWorking(bool refresh) { return ((MQTT_ENABLE > 0) && (isWifiWorking())); }
 
 bool mqttPublish(char* reading, char* payload) {
   if (!MQTT_ENABLE || forceOffline || mqttDisabledTemporary) return true;
@@ -407,7 +412,7 @@ void mqttPublishSettings() {
   mqttPublish((char*)"setPointSteam/set", number2string(setPointSteam));
   mqttPublish((char*)"steadyPowerOffset/set", number2string(steadyPowerOffset));
   mqttPublish((char*)"steadyPowerOffsetTime/set", number2string(steadyPowerOffsetTime));
-  mqttPublish((char*)"steadyPower/set", number2string(steadyPower)); // this should be last in list
   mqttPublish((char*)"activeBrewTimeEndDetection/set", number2string(*activeBrewTimeEndDetection));
   mqttPublish((char*)"activeScaleSensorWeightSetPoint/set", number2string(*activeScaleSensorWeightSetPoint));
+  mqttPublish((char*)"steadyPower/set", number2string(steadyPower)); // this should be last in list
 }

@@ -1,5 +1,5 @@
 /********************************************************
- * Version 3.2.2
+ * Version 3.2.3
  * Config must be configured by the user
  *****************************************************/
 
@@ -18,7 +18,6 @@
 #define VALVE_TRIGGERTYPE HIGH // LOW = low trigger, HIGH = high trigger relay
 #define PUMP_TRIGGERTYPE HIGH  // LOW = low trigger, HIGH = high trigger relay
 #define OTA true              // true=activate update via OTA
-#define GRAFANA 0             // 0=default(off), 1=enable grafana visualisation by Markus (simply ask him for free access)
 #define EMERGENCY_TEMP 135    // If temperature is higher then notifications are send via display/debug/mqtt and PID is temporary disabled.
                               // Set this to the higest temperature supported by your maschine minus a few degress. (Silvia 5E: 135)
 #define HEATER_INACTIVITY_TIMER 120  // 0=Disable. When there is no activity at the maschine for this amount of minutes, the heater should stop heating until new activity is detected.
@@ -128,6 +127,7 @@
 #define ICON_COLLECTION 0                 // 0:="simple", 1:="smiley", 2:="winter", 3:="text"
 #define DISPLAY_TEXT "Perfect-Coffee PID"  // Text is displayed on bootup (max 21 chars)
 //#define OVERWRITE_VERSION_DISPLAY_TEXT "" // Text is displayed on bootup one line below DISPLAY_TEXT (max 21 chars)
+#define ENABLE_BIG_STATUS_ICONS 0         // 0=off (default), 1=on. Use double size status icons (22x18)
 #define ENABLE_PROFILE_STATUS 2           // 0 = off. 1 = always show . 2 = only show not-default profile (which is "profile 1")
 #define ENABLE_FAILURE_STATUS_ICONS 1     // 1 = on (default), 0 = off. If enabled show status icons if services are offline.
 #define ENABLE_SCREEN_SAVER 3             // 0=Disable, 1=Enable(blank screen), 2=Enable(use BrewReady Collection Icon), 3=Enable(Use Maschine logo)
