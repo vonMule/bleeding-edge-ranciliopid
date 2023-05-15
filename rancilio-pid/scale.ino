@@ -117,7 +117,7 @@ void initScale() {
     //DEBUG_print("currentWeight: %0.2f (index=%d, getTareTimeoutFlag=%d, getSignalTimeoutFlag=%d)\n", currentWeight, LoadCell.getReadIndex(), LoadCell.getTareTimeoutFlag(), LoadCell.getSignalTimeoutFlag());
     if (LoadCell.getTareTimeoutFlag() || LoadCell.getSignalTimeoutFlag()) {
       ERROR_print("HX711 cannot be initialized (#%u)\n", i);
-      displaymessage(0, (char*)"Scale sensor defect", (char*)"");
+      displaymessage(State::Undefined, (char*)"Scale sensor defect", (char*)"");
     }
     else {
       DEBUG_print("HX711 initialized (#%u)\n", i);

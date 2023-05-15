@@ -20,6 +20,8 @@
 #define MENU_DEC 9
 #define SLEEPING 10
 #define MENU 11
+#define PROFILE_1 12
+#define PROFILE_2 13
 
 #ifdef ESP32
 #include "driver/rtc_io.h"
@@ -54,16 +56,16 @@ typedef struct menuMap {
   struct menuMap* nextMenuMap;
 } menuMap;
 
-unsigned long previousCheckControls = 0;
+extern unsigned long previousCheckControls;
 #define FREQUENCYCHECKCONTROLS 100 // XXX: change to 50 or 200? make dynamical!
 
 // actionState contain the status (on/off/..) of each actions
 #define MAX_NUM_ACTIONS 20
-int actionState[MAX_NUM_ACTIONS];
+extern int actionState[MAX_NUM_ACTIONS];
 
 // gpioLastAction contain the last known action executed (per gpio)
 #define MAX_NUM_GPIO 35
-int gpioLastAction[MAX_NUM_GPIO];
+extern int gpioLastAction[MAX_NUM_GPIO];
 
 controlMap* parseControlsConfig();
 void debugControlHardware(controlMap* controlsConfig);
@@ -90,7 +92,7 @@ void menuAction(int state);
 void menuIncAction(int state);
 void menuDecAction(int state);
 
-int simulatedBrewSwitch = 0;
+extern int simulatedBrewSwitch;
 
 extern unsigned long userActivity;
 extern controlMap* controlsConfig;

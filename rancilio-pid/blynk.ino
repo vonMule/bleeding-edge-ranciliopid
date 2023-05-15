@@ -6,6 +6,34 @@
 #include "blynk.h"
 #include "controls.h"
 
+unsigned long previousTimerBlynk = 0;
+unsigned long blynkConnectTime = 0;
+const long intervalBlynk = 1000;    // Update intervall to send data to the app
+int blynkSendCounter = 1;
+bool blynkSyncRunOnce = false;
+bool blynkDisabledTemporary = false;
+float steadyPowerSavedInBlynk = 0;
+unsigned long previousTimerBlynkHandle = 0;
+
+String PreviousError = "";
+String PreviousOutputString = "";
+String PreviousPastTemperatureChange = "";
+String PreviousInputString = "";
+
+// Blynk
+const char* blynkAddress = BLYNKADDRESS;
+const int blynkPort = BLYNKPORT;
+const char* blynkAuth = BLYNKAUTH;
+unsigned long blynkLastReconnectAttemptTime = 0;
+unsigned int blynkReconnectAttempts = 0;
+unsigned long blynkReconnectIncrementalBackoff = 180000; // Failsafe: add 180sec to reconnect time after each
+                                                         // connect-failure.
+unsigned int blynkMaxIncrementalBackoff = 5; // At most backoff <mqtt_max_incremenatl_backoff>+1 *
+                                             // (<mqttReconnectIncrementalBackoff>ms)
+
+char* blynkReadyLedColor = (char*)"#000000";
+
+
 #if (BLYNK_ENABLE==0)
     void blynkSave(char* setting) {};
     void sendToBlynk() {};
@@ -146,7 +174,7 @@ void blynkSave(char* setting) {
   else if (!strcmp(setting, "aggoTn")) { Blynk.virtualWrite(V31, String(aggoTn, 1)); }
   else if (!strcmp(setting, "aggoTv")) { Blynk.virtualWrite(V32, String(aggoTv, 1)); }
   else if (!strcmp(setting, "brewDetectionSensitivity")) { Blynk.virtualWrite(V34, String(brewDetectionSensitivity, 1)); }
-  else if (!strcmp(setting, "pastTemperatureChange")) { Blynk.virtualWrite(V35, String(pastTemperatureChange(10*10) / 2, 2)); }
+  else if (!strcmp(setting, "pastTemperatureChange")) { Blynk.virtualWrite(V35, String(tempSensor.pastTemperatureChange(10*10) / 2, 2)); }
   else if (!strcmp(setting, "brewDetectionPower")) { Blynk.virtualWrite(V36, String(brewDetectionPower, 1)); }
   else if (!strcmp(setting, "steadyPower")) { Blynk.virtualWrite(V41, String(steadyPower, 1)); }
   else if (!strcmp(setting, "steadyPowerOffset")) { Blynk.virtualWrite(V42, String(steadyPowerOffset, 1)); }
@@ -199,9 +227,9 @@ void blynkSave(char* setting) {
         }
         if (blynkSendCounter == 2) {
           blynkSendCounter++;
-          if (String(pastTemperatureChange(10*10) / 2, 2) != PreviousPastTemperatureChange) {
+          if (String(tempSensor.pastTemperatureChange(10*10) / 2, 2) != PreviousPastTemperatureChange) {
             blynkSave((char*)"pastTemperatureChange");
-            PreviousPastTemperatureChange = String(pastTemperatureChange(10*10) / 2, 2);
+            PreviousPastTemperatureChange = String(tempSensor.pastTemperatureChange(10*10) / 2, 2);
             return;
           }
         }

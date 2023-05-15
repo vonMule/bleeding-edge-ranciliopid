@@ -11,9 +11,16 @@ jobs:
         - name: Add config file
           working-directory: ./rancilio-pid
           run: cp userConfig.h.SAMPLE userConfig.h
-        - name: PlatformIO Run
+        - name: PlatformIO Run esp32_ota_LIVE
           uses: karniv00l/platformio-run-action@v1
           with:
-            environments: "nodemcuv2_ota,esp32_ota_LIVE"
+            environments: "esp32_ota_LIVE"
             silent: false
             verbose: true
+        - name: PlatformIO Run nodemcuv2_ota
+          uses: karniv00l/platformio-run-action@v1
+          with:
+            environments: "nodemcuv2_ota"
+            silent: false
+            verbose: true
+  

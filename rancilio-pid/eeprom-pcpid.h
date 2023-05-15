@@ -22,7 +22,7 @@ void sync_eeprom(bool startup_read, bool force_read);
 extern bool forceOffline;
 extern bool mqttDisabledTemporary;
 extern unsigned long mqttDontPublishUntilTime;
-extern const int MQTT_MAX_PUBLISH_SIZE;
+extern const int mqttMaxPublishSize;
 extern const bool mqttFlagRetained;
 extern unsigned long mqttDontPublishBackoffTime;
 extern bool inSensitivePhase();
@@ -39,6 +39,9 @@ extern char topicSet[256];
 extern char topicActions[256];
 extern unsigned long mqttConnectTime;
 extern unsigned int mqttMaxIncrementalBackoff;
+extern float steadyPowerMQTTDisableUpdateUntilProcessed;
+extern unsigned long steadyPowerMQTTDisableUpdateUntilProcessedTime;
+
 extern unsigned int profile;
 extern unsigned int activeProfile;
 extern float brewtime1;
@@ -69,8 +72,7 @@ extern float aggTv;
 extern float steadyPower;
 extern float steadyPowerOffset;
 extern unsigned int steadyPowerOffsetTime;
-extern float steadyPowerMQTTDisableUpdateUntilProcessed;
-extern unsigned long steadyPowerMQTTDisableUpdateUntilProcessedTime;
+
 extern float steadyPowerSaved;
 extern unsigned long eepromForceSync;
 extern void blynkSave(char*);

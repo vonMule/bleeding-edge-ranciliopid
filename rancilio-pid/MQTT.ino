@@ -63,10 +63,10 @@ bool isMqttWorking(bool refresh) {
 bool mqttPublish(char* reading, char* payload) {
   if (!MQTT_ENABLE || forceOffline || mqttDisabledTemporary) return true;
   if (!isMqttWorking()) { return false; }
-  char topic[MQTT_MAX_PUBLISH_SIZE];
-  snprintf(topic, MQTT_MAX_PUBLISH_SIZE, "%s%s/%s", mqttTopicPrefix, hostname, reading);
+  char topic[mqttMaxPublishSize];
+  snprintf(topic, mqttMaxPublishSize, "%s%s/%s", mqttTopicPrefix, hostname, reading);
 
-  if (strlen(topic) + strlen(payload) >= MQTT_MAX_PUBLISH_SIZE) {
+  if (strlen(topic) + strlen(payload) >= mqttMaxPublishSize) {
     ERROR_print("mqttPublish() wants to send too much data (len=%u)\n", strlen(topic) + strlen(payload));
     return false;
   } else {
@@ -141,10 +141,10 @@ bool isMqttWorking(bool refresh) { return ((MQTT_ENABLE > 0) && (isWifiWorking()
 
 bool mqttPublish(char* reading, char* payload) {
   if (!MQTT_ENABLE || forceOffline || mqttDisabledTemporary) return true;
-  char topic[MQTT_MAX_PUBLISH_SIZE];
-  snprintf(topic, MQTT_MAX_PUBLISH_SIZE, "%s%s/%s", mqttTopicPrefix, hostname, reading);
+  char topic[mqttMaxPublishSize];
+  snprintf(topic, mqttMaxPublishSize, "%s%s/%s", mqttTopicPrefix, hostname, reading);
   if (!isMqttWorking()) { return false; }
-  if (strlen(topic) + strlen(payload) >= MQTT_MAX_PUBLISH_SIZE) {
+  if (strlen(topic) + strlen(payload) >= mqttMaxPublishSize) {
     ERROR_print("mqttPublish() wants to send too much data (len=%u)\n", strlen(topic) + strlen(payload));
     return false;
   } else {
@@ -415,4 +415,58 @@ void mqttPublishSettings() {
   mqttPublish((char*)"activeBrewTimeEndDetection/set", number2string(*activeBrewTimeEndDetection));
   mqttPublish((char*)"activeScaleSensorWeightSetPoint/set", number2string(*activeScaleSensorWeightSetPoint));
   mqttPublish((char*)"steadyPower/set", number2string(steadyPower)); // this should be last in list
+}
+
+// Setup Mqtt (none, client only, server) 
+void InitMqtt(bool eeprom_force_read) {
+// MQTT
+#if (MQTT_ENABLE == 1)
+  snprintf(topicWill, sizeof(topicWill), "%s%s/%s", mqttTopicPrefix, hostname, "will");
+  snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
+  snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
+  //mqttClient.setKeepAlive(3);      //activates mqttping keepalives (default 15)
+  mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)
+  uint16_t mqtt_port = strtol(mqttServerPort, NULL, 10);
+  mqttClient.setServer(mqttServerIP, mqtt_port);
+  mqttClient.setCallback(mqttCallback1);
+  if (!mqttReconnect(true)) {
+    if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
+    ERROR_print("Cannot connect to MQTT. Disabling...\n");
+    // displaymessage(State::Undefined, "Cannot connect to MQTT", "");
+    // delay(1000);
+  } else {
+    const bool useRetainedSettingsFromMQTT = true;
+    if (useRetainedSettingsFromMQTT) {
+      // read and use settings retained in mqtt and therefore dont use eeprom values
+      eeprom_force_read = false;
+      unsigned long started = millis();
+          while (isMqttWorking(true) && (millis() < started + 4000)) // attention: delay might not
+                                                              // be long enough over WAN
+      {
+        mqttClient.loop();
+      }
+      eepromForceSync = 0;
+    }
+  }
+#elif (MQTT_ENABLE == 2)
+  DEBUG_print("Starting MQTT service\n");
+  const unsigned int max_subscriptions = 30;
+  const unsigned int max_retained_topics = 30;
+  const unsigned int mqtt_service_port = 1883;
+  snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
+  snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
+  MQTT_server_onData(mqtt_callback_2);
+  if (MQTT_server_start(mqtt_service_port, max_subscriptions, max_retained_topics)) {
+    if (!MQTT_local_subscribe((unsigned char*)topicSet, 0) || !MQTT_local_subscribe((unsigned char*)topicActions, 0)) {
+      ERROR_print("Cannot subscribe to local MQTT service\n");
+    }
+  } else {
+    if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
+    ERROR_print("Cannot create MQTT service. Disabling...\n");
+    // displaymessage(State::Undefined, "Cannot create MQTT service", "");
+    // delay(1000);
+  }
+#endif
+         
+    eeprom_force_read = setupBlynk() && eeprom_force_read;
 }

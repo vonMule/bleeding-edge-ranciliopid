@@ -5,6 +5,7 @@
 #include "rancilio-pid.h"
 #include "Arduino.h"
 #include "display.h"
+#include "Enums.h"
 
 #if (SCALE_SENSOR_ENABLE)
 #include "scaleConfigOverwrite.h"
@@ -30,5 +31,5 @@ void scalePowerUp();
 
 extern float* activeScaleSensorWeightSetPoint;
 extern float scaleSensorWeightOffset;
-extern void displaymessage(int, char*, char*);
+extern void displaymessage(State, char*, char*);
 #endif
