@@ -3,7 +3,7 @@
 
 ## Do it yourself, open-source PID for your espresso machine  
 
-Version 3.2.3 beta4
+Version 3.2.3
 
 ## Support / Contact
 You can chat with us directly using our [discord server](https://discord.gg/VA5ZeacFdw).
@@ -125,28 +125,22 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
-- 3.2.3 beta5:
-  - On OTA Update show special logo and progress. Thanks aschoelzhorn!
-- 3.2.3 beta4:
+- 3.2.3:
+  - Feature: On OTA Update show special logo and progress. Thanks aschoelzhorn!
   - Feature: Enable bigger status icons when ENABLE_BIG_STATUS_ICONS is set to 1 (default 0). Many thanks aschoelzhorn!
-  - Refactor: Code refactoring. Many thanks aschoelzhorn!
-  - Fix: Changing MQTT settings while machine being offline is being honored again.
-- 3.2.3 beta3:
-  - Changed minimum retry timer when mqtt/blynk disconnects happen from 160s to 60s.
-  - Added Blynk state caching.
-- 3.2.3 beta2:
-  - Fix: esp8266 compile issues.
-  - Fix: Newly beta1 added esp8266 compile issues.
-  - Fix: Blynk working again with latest version.
-  - Fix: Some "include" issues when arduinoIDE is used. Thanks Helge!
-  - Removed legacy grafana.
-- 3.2.3 beta1:
+  - Refactor: Code refactorings. Many thanks aschoelzhorn!
   - Fix: Wifi stability improvements.
     - Disable WiFi Power Safe.
     - Reduce WiFi retry wait times.
     - WiFi instability by adding housekeeping times.
+  - Changed minimum retry timer when mqtt/blynk disconnects happen from 160s to 60s.
+  - Fix: Changing MQTT settings while machine being offline is being honored again.
+  - Fix: Blynk working again with latest version.
+  - Added Blynk state caching.
+  - Fix: Some "include" issues when arduinoIDE is used. Thanks Helge!
   - Fix: Support for Expressif v5.3.
   - Performance improvements. 
+  - Removed legacy grafana.
 - 3.2.2:
   - Refactor: Moved blynk code into own files. Thanks aschoelzhorn!
   - Refactor: Add a temperature sensor mock. Thanks aschoelzhorn!
