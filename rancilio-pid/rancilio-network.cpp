@@ -6,10 +6,9 @@
 #include "userConfig.h"
 #include "rancilio-debug.h"
 #include "rancilio-enums.h"
-#include "rancilio-pid.h"
 #include "MQTT.h"
+#include "blynk.h"
 #include "display.h"
-#include "blynk.h"  //XXX3: all includes checked.
 
 // Wifi
 const char* hostname = HOSTNAME;
@@ -22,7 +21,6 @@ unsigned long wifiConnectWaitTime = 10000; // ms to wait for the connection to s
 unsigned int wifiReconnects = 0; // number of reconnects
 
 unsigned long lastCheckNetwork = 0;
-
 bool forceOffline = FORCE_OFFLINE;
 
 

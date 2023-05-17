@@ -125,6 +125,8 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
+- 3.2.4 beta 2:
+  - minor refactorings.
 - 3.2.4 beta 1:
   - ALPHA! 
   - Some bugfixes and refactorings by Tobias.

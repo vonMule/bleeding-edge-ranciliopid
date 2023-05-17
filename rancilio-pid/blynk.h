@@ -4,18 +4,7 @@
 #define BLYNK_PRINT Serial
 
 #include "userConfig.h"
-#include "blynk.h"
 #include <WString.h>
-
-#if (BLYNK_ENABLE == 1)
-#ifdef ESP32
-#include <BlynkSimpleEsp32.h>
-#else
-#include <ESP8266WiFi.h>
-#include <BlynkSimpleEsp8266.h>
-#endif
-extern BlynkWifi Blynk;
-#endif
 
 /********************************************************
  * BLYNK
@@ -25,7 +14,7 @@ extern BlynkWifi Blynk;
 #define BLYNK_RED "#D3435C"
 extern unsigned long previousTimerBlynk;
 extern unsigned long blynkConnectTime;
-extern const long intervalBlynk;    // Update intervall to send data to the app
+extern const long intervalBlynk;    // Update interval to send data to the app
 extern int blynkSendCounter;
 extern bool blynkSyncRunOnce;
 extern bool blynkDisabledTemporary;
@@ -56,6 +45,7 @@ void runBlynk();
 void disableBlynkTemporary();
 void setPreviousTimerBlynk(unsigned long prevTimer);
 
+/*
 extern unsigned int profile;
 extern float aggKp;
 extern float aggTn;
@@ -79,13 +69,8 @@ extern unsigned int* activeBrewTimeEndDetection;
 extern float* activeScaleSensorWeightSetPoint;
 extern float Input;
 extern double Output;
-extern unsigned int powerOffTimer;
-extern int cleaningCycles;
-extern int cleaningInterval;
-extern int cleaningPause;
-extern bool brewReady;
-extern float marginOfFluctuation;
-extern bool checkBrewReady(float setPoint, float marginOfFluctuation, int lookback);
-extern int previousPowerOffTimer;
+
+
+*/
 
 #endif

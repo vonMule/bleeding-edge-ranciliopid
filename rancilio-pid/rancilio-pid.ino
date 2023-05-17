@@ -9,7 +9,6 @@
 
 #include <Arduino.h>
 #include <ArduinoOTA.h>
-
 #include <float.h>
 #include <math.h>
 
@@ -17,58 +16,31 @@
 #include "userConfig.h"
 #include "rancilio-debug.h"
 #include "rancilio-enums.h"
-#include "helper.h"
+#include "rancilio-helper.h"
 #include "MQTT.h"
 #include "blynk.h"
 #include "display.h"
 #include "eeprom-pcpid.h"
-#include "rancilio-network.h"  //XXX3 needed
+#include "rancilio-network.h"
 #include "TemperatureSensor.h"
 #include "controls.h"
+#include "PIDBias.h"
 
-const char* sysVersion PROGMEM = "3.2.4 beta1";
+const char* sysVersion PROGMEM = "3.2.4 beta2";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
  ******************************************************/
 const int OnlyPID = ONLYPID;
-const int TempSensorRecovery = TEMPSENSORRECOVERY;
 const int brewDetection = BREWDETECTION;
 const int valveTriggerType = VALVE_TRIGGERTYPE;
 const int pumpTriggerType = PUMP_TRIGGERTYPE;
 
-WiFiClient espClient;
-
-// MQTT
-#if (MQTT_ENABLE == 1)
-#include <PubSubClient.h>
-PubSubClient mqttClient(espClient);
-#elif (MQTT_ENABLE == 2 && defined(ESP8266))
-#include <uMQTTBroker.h>
-#endif
-
-const char* mqttServerIP = MQTT_SERVER_IP;
-const int mqttServerPort = MQTT_SERVER_PORT;
-const char* mqttUsername = MQTT_USERNAME;
-const char* mqttPassword = MQTT_PASSWORD;
-const char* mqttTopicPrefix = MQTT_TOPIC_PREFIX;
-const int mqttMaxPublishSize = 120;
-char topicWill[256];
-char topicSet[256];
-char topicActions[256];
+/********************************************************
+ * MQTT
+ *****************************************************/
 unsigned long lastMQTTStatusReportTime = 0;
 unsigned long lastMQTTStatusReportInterval = 5000; // mqtt send status-report every 5 second
-const bool mqttFlagRetained = true;
-unsigned long mqttDontPublishUntilTime = 0;
-unsigned long mqttDontPublishBackoffTime = 15000; // Failsafe: dont publish if there are errors for 15 seconds
-unsigned long mqttLastReconnectAttemptTime = 0;
-unsigned int mqttReconnectAttempts = 0;
-unsigned long mqttReconnectIncrementalBackoff = 30000; // Failsafe: add 30sec to reconnect time after each
-                                                        // connect-failure.
-unsigned int mqttMaxIncrementalBackoff = 4; // At most backoff <mqtt_max_incremenatl_backoff>+1 *
-                                            // (<mqttReconnectIncrementalBackoff>ms)
-bool mqttDisabledTemporary = false;
-unsigned long mqttConnectTime = 0; // time of last successfull mqtt connection
 
 /********************************************************
  * states
@@ -89,7 +61,7 @@ int timerBrewDetection = 0;
  * PID Variables
  *****************************************************/
 const unsigned int windowSizeSeconds = 5; // How often should PID.compute() run? must be >= 1sec
-unsigned int windowSize = windowSizeSeconds * 1000; // 1000=100% heater power => resolution used in
+const unsigned int windowSize = windowSizeSeconds * 1000; // 1000=100% heater power => resolution used in
                                                     // TSR() and PID.compute().
 volatile unsigned int isrCounter = 0; // counter for heater ISR
 #ifdef ESP32
@@ -154,7 +126,6 @@ const float outerZoneTemperatureDifference = 1;
 /********************************************************
  * PID with Bias (steadyPower) Temperature Controller
  *****************************************************/
-#include "PIDBias.h"
 float steadyPower = STEADYPOWER; // in percent
 float steadyPowerSaved = steadyPower;
 float steadyPowerMQTTDisableUpdateUntilProcessed = 0; // used as semaphore
@@ -176,7 +147,7 @@ bool MachineColdOnStart = true;
 float starttempOffset = 0; // Increasing this lead to too high temp and emergency measures taking
                             // place. For my rancilio it is best to leave this at 0.
 
-PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyPowerOffsetActivateTime, &steadyPowerOffsetTime, &activeSetPoint, aggKp, aggKi, aggKd);
+PIDBias bPID(&Input, &Output, &steadyPower, &steadyPowerOffsetModified, &steadyPowerOffsetActivateTime, &steadyPowerOffsetTime, &activeSetPoint, aggKp, aggKi, aggKd, windowSize);
 
 /********************************************************
  * BREWING / PREINFUSSION
@@ -311,6 +282,7 @@ unsigned long previousTimerWaterLevelCheck = 0;
 /********************************************************
  * Temperature Sensor 
  ******************************************************/
+const int TempSensorRecovery = TEMPSENSORRECOVERY;
 TemperatureSensor tempSensor(TempSensorRecovery);
 
 /********************************************************
@@ -380,13 +352,6 @@ void testEmergencyStop() {
     emergencyStop = false;
   }
 }
-
-
-// returns heater utilization in percent
-float convertOutputToUtilisation(double Output) { return (100 * Output) / windowSize; }
-
-// returns heater utilization in Output
-double convertUtilisationToOutput(float utilization) { return (utilization / 100) * windowSize; }
 
 bool checkBrewReady(float setPoint, float marginOfFluctuation, int lookback) {
   if (almostEqual(marginOfFluctuation, 0)) return false;
@@ -969,15 +934,15 @@ void setGpioAction(int action, bool mode) {
       }
       DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f = b:%5.2f + "
                   "p:%5.2f + i:%5.2f(%5.2f) + d:%5.2f (RSSI=%d)\n",
-          Input, (*activeSetPoint - Input), tempSensor.pastTemperatureChange(10*10) / 2, convertOutputToUtilisation(Output), steadyPower + bPID.GetSteadyPowerOffsetCalculated(),
-          convertOutputToUtilisation(bPID.GetOutputP()), convertOutputToUtilisation(bPID.GetSumOutputI()), convertOutputToUtilisation(bPID.GetOutputI()),
-          convertOutputToUtilisation(bPID.GetOutputD()), WiFi.RSSI());
+          Input, (*activeSetPoint - Input), tempSensor.pastTemperatureChange(10*10) / 2, convertOutputToUtilisation(Output, windowSize), steadyPower + bPID.GetSteadyPowerOffsetCalculated(),
+          convertOutputToUtilisation(bPID.GetOutputP(), windowSize), convertOutputToUtilisation(bPID.GetSumOutputI(), windowSize), convertOutputToUtilisation(bPID.GetOutputI(), windowSize),
+          convertOutputToUtilisation(bPID.GetOutputD(), windowSize), WiFi.RSSI());
     } else if (ret == 2) { // PID is disabled but compute() should have run
       isrCounter = 0;
       pidComputeLastRunTime = millis();
       DEBUG_print("Input=%6.2f | error=%5.2f delta=%5.2f | Output=%6.2f (PID "
                   "disabled)\n",
-          Input, (*activeSetPoint - Input), tempSensor.pastTemperatureChange(10*10) / 2, convertOutputToUtilisation(Output));
+          Input, (*activeSetPoint - Input), tempSensor.pastTemperatureChange(10*10) / 2, convertOutputToUtilisation(Output, windowSize));
     }
   }
 
@@ -1037,7 +1002,7 @@ void CheckMqttConnection() {
         lastMQTTStatusReportTime = now;
         mqttPublish((char*)"temperature", number2string(Input));
         mqttPublish((char*)"temperatureAboveTarget", number2string((Input - *activeSetPoint)));
-        mqttPublish((char*)"heaterUtilization", number2string(convertOutputToUtilisation(Output)));
+        mqttPublish((char*)"heaterUtilization", number2string(convertOutputToUtilisation(Output, windowSize)));
         mqttPublish((char*)"pastTemperatureChange", number2string(tempSensor.pastTemperatureChange(10*10)));
         mqttPublish((char*)"brewReady", bool2string(brewReady));
         if (ENABLE_POWER_OFF_COUNTDOWN != 0) {
@@ -1210,14 +1175,14 @@ void CheckMqttConnection() {
       } else if (activeState == State::StabilizeTemperature) {
         // Output = convertUtilisationToOutput(steadyPower +
         // bPID.GetSteadyPowerOffsetCalculated());
-        Output = convertUtilisationToOutput(steadyPower);
+        Output = convertUtilisationToOutput(steadyPower, windowSize);
 
         /* state 4: Brew detected. Increase heater power */
       } else if (activeState == State::BrewDetected) {
         if (Input > *activeSetPoint + outerZoneTemperatureDifference) {
-          Output = convertUtilisationToOutput(steadyPower + bPID.GetSteadyPowerOffsetCalculated());
+          Output = convertUtilisationToOutput(steadyPower + bPID.GetSteadyPowerOffsetCalculated(), windowSize);
         } else {
-          Output = convertUtilisationToOutput(brewDetectionPower);
+          Output = convertUtilisationToOutput(brewDetectionPower, windowSize);
         }
         if (OnlyPID == 1) {
           if (timerBrewDetection == 1) { brewTimer = millis() - lastBrewTime; }

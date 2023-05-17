@@ -1,11 +1,8 @@
 #ifndef _scale_H
 #define _scale_H
 
-#include "userConfig.h"
-#include "rancilio-pid.h"
 #include "Arduino.h"
-#include "display.h"
-#include "rancilio-enums.h"
+#include "userConfig.h"
 
 #if (SCALE_SENSOR_ENABLE)
 #include "scaleConfigOverwrite.h"
@@ -30,7 +27,4 @@ void scalePowerDown();
 void scalePowerUp();
 void scaleCalibration();
 
-extern float* activeScaleSensorWeightSetPoint;
-extern float scaleSensorWeightOffset;
-extern void displaymessage(State, char*, char*);
 #endif

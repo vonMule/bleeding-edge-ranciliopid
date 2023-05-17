@@ -11,17 +11,16 @@
  *
  **********************************************************************************************/
 
-#include "PIDBias.h"
 #include <Arduino.h>
+#include "PIDBias.h"
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
-#include <helper.h>
+#include "rancilio-helper.h"
 #include "rancilio-debug.h"
-#include "rancilio-pid.h"
 
 PIDBias::PIDBias(float* Input, double* Output, float* steadyPower, float* steadyPowerOffset, unsigned long* steadyPowerOffsetActivateTime, unsigned int* steadyPowerOffsetTime,
-    float** Setpoint, float Kp, float Ki, float Kd) {
+    float** Setpoint, float Kp, float Ki, float Kd, unsigned int windowSize) {
   myOutput = Output;
   myInput = Input;
   mySetpoint = Setpoint;
@@ -29,6 +28,7 @@ PIDBias::PIDBias(float* Input, double* Output, float* steadyPower, float* steady
   mySteadyPowerOffset = steadyPowerOffset;
   mySteadyPowerOffset_Activated = steadyPowerOffsetActivateTime;
   mySteadyPowerOffset_Time = steadyPowerOffsetTime;
+  myWindowSize = windowSize;
   inAuto = MANUAL;
   lastOutput = *myOutput;
   steadyPowerDefault = *mySteadyPower;
@@ -77,13 +77,13 @@ int PIDBias::Compute(float pastChange, float pastChangeOverLongTime) {
             DEBUG_print("Attention: steadyPowerOffset is probably too high (%0.2f -= %0.2f) (moving up at setPoint)\n", steadyPowerOffsetCalculated, 0.2);
             *mySteadyPowerOffset -= 0.2;
             // TODO: perhaps we need to reduce steadyPowerOffset in eeprom (permanently)
-          } else if (convertOutputToUtilisation(sumOutputI) >= 0.5 && pastChangeOverLongTime >= 0 && pastChangeOverLongTime <= 0.1) {
-            DEBUG_print("Auto-Tune steadyPower(%0.2f += %0.2f) (moving up with too much outputI)\n", *mySteadyPower, 0.15); // convertOutputToUtilisation(sumOutputI / 2));
-            *mySteadyPower += 0.15; // convertOutputToUtilisation(sumOutputI / 2);
+          } else if (convertOutputToUtilisation(sumOutputI, myWindowSize) >= 0.5 && pastChangeOverLongTime >= 0 && pastChangeOverLongTime <= 0.1) {
+            DEBUG_print("Auto-Tune steadyPower(%0.2f += %0.2f) (moving up with too much outputI)\n", *mySteadyPower, 0.15); // convertOutputToUtilisation(sumOutputI / 2, myWindowSize));
+            *mySteadyPower += 0.15; // convertOutputToUtilisation(sumOutputI / 2, myWindowSize);
             // TODO: remember sumOutputI and restore it back to 1/2 when moving down later. only when we are moving up <0.2
-          } else if (convertOutputToUtilisation(sumOutputI) >= 0.3 && pastChangeOverLongTime >= 0 && pastChangeOverLongTime <= 0.1) {
-            DEBUG_print("Auto-Tune steadyPower(%0.2f += %0.2f) (moving up with too much outputI)\n", *mySteadyPower, 0.1); // convertOutputToUtilisation(sumOutputI / 2));
-            *mySteadyPower += 0.1; // convertOutputToUtilisation(sumOutputI / 2);
+          } else if (convertOutputToUtilisation(sumOutputI, myWindowSize) >= 0.3 && pastChangeOverLongTime >= 0 && pastChangeOverLongTime <= 0.1) {
+            DEBUG_print("Auto-Tune steadyPower(%0.2f += %0.2f) (moving up with too much outputI)\n", *mySteadyPower, 0.1); // convertOutputToUtilisation(sumOutputI / 2, myWindowSize));
+            *mySteadyPower += 0.1; // convertOutputToUtilisation(sumOutputI / 2, myWindowSize);
             // TODO: remember sumOutputI and restore it back to 1/2 when moving down later. only when we are moving up <0.2
           }
         }
@@ -108,7 +108,7 @@ int PIDBias::Compute(float pastChange, float pastChangeOverLongTime) {
         *mySteadyPower += 0.1;
       }
 
-      // DEBUG_print("Set sumOutputI=0 to stabilize(%0.2f)\n", convertOutputToUtilisation(sumOutputI));
+      // DEBUG_print("Set sumOutputI=0 to stabilize(%0.2f)\n", convertOutputToUtilisation(sumOutputI, myWindowSize));
       sumOutputI = 0;
     }
 
@@ -179,8 +179,8 @@ int PIDBias::Compute(float pastChange, float pastChangeOverLongTime) {
       }
     }
 
-    double output = +convertUtilisationToOutput(*mySteadyPower)
-        + convertUtilisationToOutput(steadyPowerOffsetCalculated) // convertUtilisationToOutput(*mySteadyPowerOffset) // add steadyPower (bias) always to output
+    double output = +convertUtilisationToOutput(*mySteadyPower, myWindowSize)
+        + convertUtilisationToOutput(steadyPowerOffsetCalculated, myWindowSize) // convertUtilisationToOutput(*mySteadyPowerOffset) // add steadyPower (bias) always to output
         + outputP + sumOutputI + outputD;
 
     // if we in upper-side of side-band, (nearly) not moving at all due to stable temp but yet not near setpoint, manipulate output once
@@ -192,7 +192,7 @@ int PIDBias::Compute(float pastChange, float pastChangeOverLongTime) {
         factor = 0.3;
       }
       if (factor != 1) {
-        DEBUG_print("Overwrite output (%0.2f *= %0.2f) (not moving)\n", convertOutputToUtilisation(output), factor);
+        DEBUG_print("Overwrite output (%0.2f *= %0.2f) (not moving)\n", convertOutputToUtilisation(output, myWindowSize), factor);
         output *= factor;
         lastTrigger2 = millis();
       }
@@ -216,12 +216,12 @@ int PIDBias::Compute(float pastChange, float pastChangeOverLongTime) {
     *myInput,
     (**mySetpoint - *myInput),
     tempSensor.pastTemperatureChange(10*10)/2,
-    convertOutputToUtilisation(output),
+    convertOutputToUtilisation(output, myWindowSize),
     *mySteadyPower + GetSteadyPowerOffsetCalculated(),
-    convertOutputToUtilisation(GetOutputP()),
-    convertOutputToUtilisation(GetSumOutputI()),
-    convertOutputToUtilisation(GetOutputI()),
-    convertOutputToUtilisation(GetOutputD())
+    convertOutputToUtilisation(GetOutputP(), myWindowSize),
+    convertOutputToUtilisation(GetSumOutputI(), myWindowSize),
+    convertOutputToUtilisation(GetOutputI(), myWindowSize),
+    convertOutputToUtilisation(GetOutputD(), myWindowSize)
     );
   */
     return 1; // compute did run
@@ -299,11 +299,11 @@ void PIDBias::Initialize() {
     lastOutput = outMin;
 }
 
-void PIDBias::SetSumOutputI(float sumOutputI_set) { sumOutputI = convertUtilisationToOutput(sumOutputI_set); }
+void PIDBias::SetSumOutputI(float sumOutputI_set) { sumOutputI = convertUtilisationToOutput(sumOutputI_set, myWindowSize); }
 
-void PIDBias::SetFilterSumOutputI(float filterSumOutputI_set) { filterSumOutputI = convertUtilisationToOutput(filterSumOutputI_set); }
+void PIDBias::SetFilterSumOutputI(float filterSumOutputI_set) { filterSumOutputI = convertUtilisationToOutput(filterSumOutputI_set, myWindowSize); }
 
-void PIDBias::SetSteadyPowerDefault(float steadyPowerDefault_set) { steadyPowerDefault = convertUtilisationToOutput(steadyPowerDefault_set); }
+void PIDBias::SetSteadyPowerDefault(float steadyPowerDefault_set) { steadyPowerDefault = convertUtilisationToOutput(steadyPowerDefault_set, myWindowSize); }
 
 // void PIDBias::SetSteadyPowerOffset(float steadyPowerOffset_set)
 //{

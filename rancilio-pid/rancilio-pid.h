@@ -4,6 +4,7 @@
 #define LIBRARY_VERSION 0.0.1
 
 #include "userConfig.h"
+#include "TemperatureSensor.h"
 
 #ifdef ESP8266
 #include <core_version.h>
@@ -63,10 +64,6 @@
 #define TEMPSENSOR_BITWINDOW 125
 #endif
 
-// returns heater utilization in percent
-float convertOutputToUtilisation(double);
-// returns heater utilization in Output
-double convertUtilisationToOutput(float);
 bool almostEqual(float, float);
 void print_settings();
 extern char debugLine[200];
@@ -75,7 +72,11 @@ void performance_check();
 void set_profile();
 void set_profile(bool);
 void debugWaterLevelSensor();
+bool inSensitivePhase();
 
+// TODO build static global ConfigStore and move all global variables in there
+extern float Input;
+extern double Output;
 extern float* activeSetPoint;
 extern float* activeBrewTime;
 extern float* activePreinfusion;
@@ -84,6 +85,80 @@ extern float* activeStartTemp;
 extern float setPointSteam;
 extern int pidON;
 extern unsigned int profile;
+extern const unsigned int windowSize;
 extern bool mqttDisabledTemporary;
+extern unsigned int* activeBrewTimeEndDetection;
+extern unsigned long allServicesLastReconnectAttemptTime;
+extern unsigned long allservicesMinReconnectInterval;
+extern float brewDetectionSensitivity;
+extern float brewDetectionPower;
+extern float aggoKp;
+extern float aggoTn;
+extern float aggoTv;
+extern float aggKp;
+extern float aggTn;
+extern float aggTv;
+extern float steadyPower;
+extern float steadyPowerOffset;
+extern unsigned int steadyPowerOffsetTime;
+extern float steadyPowerMQTTDisableUpdateUntilProcessed;
+extern unsigned long steadyPowerMQTTDisableUpdateUntilProcessedTime;
+extern float steadyPowerSaved;
+extern float* activeScaleSensorWeightSetPoint;
+extern float scaleSensorWeightOffset;
+
+extern unsigned int powerOffTimer;
+extern int cleaningCycles;
+extern int cleaningInterval;
+extern int cleaningPause;
+extern bool brewReady;
+extern float marginOfFluctuation;
+extern bool checkBrewReady(float setPoint, float marginOfFluctuation, int lookback);
+extern int previousPowerOffTimer;
+extern unsigned long lastBrewEnd;
+
+extern unsigned int profile;
+//extern unsigned int activeProfile;
+extern float brewtime1;
+extern float brewtime2;
+extern float brewtime3;
+extern float preinfusion1;
+extern float preinfusion2;
+extern float preinfusion3;
+extern float preinfusionpause1;
+extern float preinfusionpause2;
+extern float preinfusionpause3;
+extern float starttemp1;
+extern float starttemp2;
+extern float starttemp3;
+extern float setPoint1;
+extern float setPoint2;
+extern float setPoint3;
+extern float setPointSteam;
+extern int pidON;
+extern float brewDetectionSensitivity;
+extern float brewDetectionPower;
+extern float aggoKp;
+extern float aggoTn;
+extern float aggoTv;
+extern float aggKp;
+extern float aggTn;
+extern float aggTv;
+extern float steadyPower;
+extern float steadyPowerOffset;
+extern unsigned int steadyPowerOffsetTime;
+
+extern float steadyPowerSaved;
+extern unsigned long eepromForceSync;
+//extern void blynkSave(char*);
+extern unsigned int brewtimeEndDetection1;
+extern unsigned int brewtimeEndDetection2;
+extern unsigned int brewtimeEndDetection3;
+extern float scaleSensorWeightSetPoint1;
+extern float scaleSensorWeightSetPoint2;
+extern float scaleSensorWeightSetPoint3;
+extern float scaleSensorWeightOffset;
+
+extern TemperatureSensor tempSensor;
 
 #endif

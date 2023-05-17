@@ -6,11 +6,61 @@
 #include "userConfig.h"
 #include "MQTT.h"
 #include "rancilio-debug.h"
-#include "rancilio-pid.h"
 #include "rancilio-network.h"
 #include "controls.h"
+#include "rancilio-pid.h"  // refactoring needed to remove this
 
+const char* mqttServerIP = MQTT_SERVER_IP;
+const int mqttServerPort = MQTT_SERVER_PORT;
+const char* mqttUsername = MQTT_USERNAME;
+const char* mqttPassword = MQTT_PASSWORD;
+const char* mqttTopicPrefix = MQTT_TOPIC_PREFIX;
+const int mqttMaxPublishSize = 120;
+char topicWill[256];
+char topicSet[256];
+char topicActions[256];
+const bool mqttFlagRetained = true;
+unsigned long mqttDontPublishUntilTime = 0;
+unsigned long mqttDontPublishBackoffTime = 15000; // Failsafe: dont publish if there are errors for 15 seconds
+unsigned long mqttLastReconnectAttemptTime = 0;
+unsigned int mqttReconnectAttempts = 0;
+unsigned long mqttReconnectIncrementalBackoff = 30000; // Failsafe: add 30sec to reconnect time after each
+                                                        // connect-failure.
+unsigned int mqttMaxIncrementalBackoff = 4; // At most backoff <mqtt_max_incremenatl_backoff>+1 *
+                                            // (<mqttReconnectIncrementalBackoff>ms)
+bool mqttDisabledTemporary = false;
+unsigned long mqttConnectTime = 0; // time of last successfull mqtt connection
 unsigned long lastCheckMQTT = 0;
+
+//TODO loaded from rancilio-pid.cpp. needs refactoring (global ConfigClass, injection)
+/*
+extern float* activeSetPoint;
+extern float* activeStartTemp;
+extern float* activeBrewTime;
+extern float* activePreinfusion;
+extern float* activePreinfusionPause;
+extern unsigned int* activeBrewTimeEndDetection;
+extern float* activeScaleSensorWeightSetPoint;
+extern int pidON;
+extern char debugLine[200];
+extern unsigned int profile;
+extern float setPointSteam;
+extern bool inSensitivePhase();
+*/
+
+//blynk.cpp
+extern bool InitBlynk();
+extern void blynkSave(char*);
+
+
+// --------------------------------------------
+#if (MQTT_ENABLE == 1)
+WiFiClient espClient;
+#include <PubSubClient.h>
+PubSubClient mqttClient(espClient);
+#elif (MQTT_ENABLE == 2 && defined(ESP8266))
+#include <uMQTTBroker.h>
+#endif
 
 bool almostEqual_exact(float a, float b) { return fabs(a - b) <= FLT_EPSILON; }
 bool almostEqual(float a, float b) { return fabs(a - b) <= 0.0001; }
@@ -423,7 +473,6 @@ void mqttPublishSettings() {
 // Setup Mqtt (and also call initBlynk()) returns eeprom_force_read
 bool InitMqtt() {
   bool eeprom_force_read = true;
-// MQTT
 #if (MQTT_ENABLE == 1)
   snprintf(topicWill, sizeof(topicWill), "%s%s/%s", mqttTopicPrefix, hostname, "will");
   snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
@@ -471,5 +520,5 @@ bool InitMqtt() {
   }
 #endif
          
-    return InitBlynk() && eeprom_force_read;
+  return InitBlynk() && eeprom_force_read;
 }

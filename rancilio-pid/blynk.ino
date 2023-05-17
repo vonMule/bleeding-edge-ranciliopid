@@ -4,8 +4,20 @@
  *****************************************************/
 #include "blynk.h"
 #include "rancilio-debug.h"
-#include "rancilio-pid.h"
+#include "rancilio-helper.h"
 #include "controls.h"
+#include "rancilio-network.h"
+#include "rancilio-pid.h"
+
+#if (BLYNK_ENABLE == 1)
+#ifdef ESP32
+#include <BlynkSimpleEsp32.h>
+#else
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+#endif
+//extern BlynkWifi Blynk;
+#endif
 
 unsigned long previousTimerBlynk = 0;
 unsigned long blynkConnectTime = 0;
@@ -170,7 +182,7 @@ void blynkSave(char* setting) {
   else if (!strcmp(setting, "error")) { Blynk.virtualWrite(V11, String(Input - *activeSetPoint, 2)); }
   else if (!strcmp(setting, "activeStartTemp")) { Blynk.virtualWrite(V12, String(*activeStartTemp, 1)); }
   else if (!strcmp(setting, "pidON")) { Blynk.virtualWrite(V13, String(pidON)); }
-  else if (!strcmp(setting, "output")) { Blynk.virtualWrite(V23, String(convertOutputToUtilisation(Output), 2)); }
+  else if (!strcmp(setting, "output")) { Blynk.virtualWrite(V23, String(convertOutputToUtilisation(Output, windowSize), 2)); }
   else if (!strcmp(setting, "aggoKp")) { Blynk.virtualWrite(V30, String(aggoKp, 1)); }
   else if (!strcmp(setting, "aggoTn")) { Blynk.virtualWrite(V31, String(aggoTn, 1)); }
   else if (!strcmp(setting, "aggoTv")) { Blynk.virtualWrite(V32, String(aggoTv, 1)); }
@@ -244,9 +256,9 @@ void blynkSave(char* setting) {
         }
         if (blynkSendCounter == 4) {
           blynkSendCounter++;
-          if (String(convertOutputToUtilisation(Output), 2) != PreviousOutputString) {
+          if (String(convertOutputToUtilisation(Output, windowSize), 2) != PreviousOutputString) {
             blynkSave((char*)"output");
-            PreviousOutputString = String(convertOutputToUtilisation(Output), 2);
+            PreviousOutputString = String(convertOutputToUtilisation(Output, windowSize), 2);
             return;
           }
         }

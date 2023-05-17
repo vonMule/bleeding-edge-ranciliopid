@@ -4,6 +4,8 @@
  *****************************************************/
 #include "scale.h"
 #include "rancilio-debug.h"
+#include "rancilio-enums.h"
+#include "display.h"
 
 bool getTareAsyncStatus() {
   return scaleTareSuccess;

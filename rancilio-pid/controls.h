@@ -89,34 +89,6 @@ void menuAction(int state);
 void menuIncAction(int state);
 void menuDecAction(int state);
 
-//XXX3 this is the new block
 extern int simulatedBrewSwitch;
-
-//XXX old block to be removed
-extern unsigned long userActivity;
-extern controlMap* controlsConfig;
-extern menuMap* menuConfig;
-extern const int OnlyPID;
-extern const int brewDetection;
-extern int brewing;
-extern void setGpioAction(int action, bool mode);
-extern int pumpRelayON, pumpRelayOFF;
-extern int valveRelayON, valveRelayOFF;
-extern int steaming;
-extern int cleaning;
-extern PIDBias bPID;
-extern unsigned long userActivitySavedOnForcedSleeping;
-extern int sleeping;
-extern unsigned long lastBrewEnd;
-extern unsigned int brewStatisticsAdditionalDisplayTime;
-extern bool MaschineColdstartRunOnce;
-extern float steadyPowerOffsetModified;
-extern unsigned int menuPosition;
-extern unsigned long previousTimerMenuCheck;
-extern void blynkSave(char*);
-extern unsigned int* activeBrewTimeEndDetection;
-extern float* activeScaleSensorWeightSetPoint;
-extern unsigned long brewTimer;
-extern float currentWeight;
 
 #endif

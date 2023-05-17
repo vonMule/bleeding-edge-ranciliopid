@@ -5,7 +5,8 @@ bool InitNetworking();
 void checkWifi(bool);
 void HandleOTA();
 void InitOTA();
+bool isWifiWorking();
 
 extern bool forceOffline;
 
-#endif // _connection_H
+#endif

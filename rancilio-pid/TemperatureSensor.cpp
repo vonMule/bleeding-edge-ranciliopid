@@ -5,20 +5,20 @@
 #include "TemperatureSensor.h"
 #include "rancilio-debug.h"
 #include "userConfig.h"
-#include "helper.h"
+#include "rancilio-helper.h"
 
 #if (TEMPSENSOR == 3)
   #include <max6675.h>
   MAX6675 thermocouple(pinTemperatureCLK, pinTemperatureCS, pinTemperatureSO);
 #elif (TEMPSENSOR == 9)
   #include <sensorMock.h>
-#else   
+#else
   #include <ZACwire.h>
 #if (!defined(ZACWIRE_VERSION) || (defined(ZACWIRE_VERSION) && ZACWIRE_VERSION < 200L))
   #error ERROR ZACwire library version must be >= 2.0.0
 #endif
-  ZACwire TSIC(pinTemperature, 306, true); 
-#endif    
+  ZACwire TSIC(pinTemperature, 306, true);
+#endif
 
 TemperatureSensor::TemperatureSensor(int recovery) {
   m_recovery = recovery;
