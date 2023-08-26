@@ -1,8 +1,29 @@
 /***********************************
  *  DISPLAY
  ***********************************/
-#include "display.h"
 #include <float.h>
+#include "display.h"
+#include "rancilio-debug.h"
+#include "rancilio-network.h"
+
+unsigned long previousMillisDisplay = 0; // initialisation at the end of init()
+const long intervalDisplay = 1000; // update for display
+bool image_flip = true;
+unsigned int enableScreenSaver = ENABLE_SCREEN_SAVER;
+bool screenSaverOn = false;
+
+// Attention: refresh takes around 42ms (esp32: 26ms)!
+#if (DISPLAY_HARDWARE == 1)
+  U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, DISPLAY_I2C_SCL, DISPLAY_I2C_SDA); // e.g. 1.3"
+#elif (DISPLAY_HARDWARE == 2)
+  U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, DISPLAY_I2C_SCL, DISPLAY_I2C_SDA); // e.g. 0.96"
+#else
+// 23-MOSI 18-CLK
+#define OLED_CS             5
+#define OLED_DC             2
+U8G2_SH1106_128X64_NONAME_F_4W_HW_SPI u8g2(U8G2_R0, OLED_CS, OLED_DC, /* reset=*/U8X8_PIN_NONE); // e.g. 1.3"
+#endif
+
 
 void u8g2_init(void) {
 #ifdef ESP32
@@ -28,7 +49,7 @@ void u8g2_prepare(void) {
 }
 
 bool softwareUpdateCheck() {
-  return activeState == STATE_SOFTWARE_UPDATE;
+  return activeState == State::SoftwareUpdate;
 }
 
 bool screenSaverCheck() {
@@ -55,25 +76,26 @@ bool menuCheck() {
 
 char* outputSimpleState() {
   switch (activeState) {
-    case STATE_STEAM_MODE: {
+    case State::SteamMode: {
       return (char*)"Steaming";
     }
-    case STATE_CLEAN_MODE: {
+    case State::CleanMode: {
       return (char*)"Cleaning";
     }
-    case STATE_SLEEP_MODE: {
+    case State::SleepMode: {
       return (char*)"Sleeping";
     }
+    default: {}
   }
   if (!pidON) { return (char*)"Turned off"; }
   if (brewReady) { return (char*)"Ready"; }
   return (char*)""; //"Please wait";
 }
 
-void setDisplayTextState(int activeState, char* displaymessagetext, char* displaymessagetext2) {
+void setDisplayTextState(State activeState, char* displaymessagetext, char* displaymessagetext2) {
 #if (DISPLAY_TEXT_STATE == 1)
   if (menuPosition != 0) return;
-  if (strlen(displaymessagetext) > 0 || strlen(displaymessagetext2) > 0 || screenSaverOn || activeState == STATE_BREW_DETECTED) { // dont show state in certain situations
+  if (strlen(displaymessagetext) > 0 || strlen(displaymessagetext2) > 0 || screenSaverOn || activeState == State::BrewDetected) { // dont show state in certain situations
     snprintf((char*)displaymessagetextBuffer, sizeof(displaymessagetextBuffer), "%s", displaymessagetext);
     snprintf((char*)displaymessagetext2Buffer, sizeof(displaymessagetext2Buffer), "%s", displaymessagetext2);
   } else {
@@ -100,7 +122,7 @@ void displaymessage_esp32_task(void* activeStateParam) {
 }
 #endif
 
-void displaymessage(int activeState, char* displaymessagetext, char* displaymessagetext2) {
+void displaymessage(State activeState, char* displaymessagetext, char* displaymessagetext2) {
   if (Display > 0) {
     static int only_once = 0;
 #ifdef ESP32
@@ -134,7 +156,7 @@ void displaymessage(int activeState, char* displaymessagetext, char* displaymess
   }
 }
 
-void displaymessage_helper(int activeState, char* displaymessagetext, char* displaymessagetext2) {
+void displaymessage_helper(State activeState, char* displaymessagetext, char* displaymessagetext2) {
   u8g2.clearBuffer();
   u8g2.setBitmapMode(1);
 
@@ -154,7 +176,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
      (millis() <= brewStatisticsTimer + brewStatisticsAdditionalDisplayTime) ) ? true : false;
 
     // boot logo
-    if (activeState == STATE_UNDEFINED) {
+    if (activeState == State::Undefined) {
       if (strcmp(MACHINE_TYPE, "rancilio") == 0) {
         u8g2.drawXBMP(41, 0, rancilio_logo_width, rancilio_logo_height, rancilio_logo_bits);
       } else if (strcmp(MACHINE_TYPE, "gaggia") == 0) {
@@ -175,22 +197,22 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
 #else
       // display icons
       switch (activeState) {
-        case STATE_COLDSTART:
-        case STATE_STABILIZE_TEMPERATURE:
+        case State::ColdStart:
+        case State::StabilizeTemperature:
           if (image_flip) {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_rotate_bits);
           } else {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, coldstart_bits);
           }
           break;
-        case STATE_BREW_DETECTED: // brew
+        case State::BrewDetected: // brew
           if (image_flip) {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, brewing_bits);
           } else {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, brewing_rotate_bits);
           }
           break;
-        case STATE_INNER_ZONE_DETECTED:
+        case State::InnerZoneDetected:
           if (brewReady) {
             if (image_flip) {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, brew_ready_bits);
@@ -205,7 +227,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             }
           }
           break;
-        case STATE_OUTER_ZONE_DETECTED:
+        case State::OuterZoneDetected:
           if (Input >= steamReadyTemp) { // fallback: if hardware steaming button is used still show steaming icon
             if (image_flip) {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, steam_bits);
@@ -220,7 +242,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             }
           }
           break;
-        case STATE_STEAM_MODE: // steaming state (detected via controlAction STEAMING)
+        case State::SteamMode: // steaming state (detected via controlAction STEAMING)
           if (Input >= steamReadyTemp) {
             if (image_flip) {
               u8g2.drawXBMP(0, 0, icon_width, icon_height, steam_bits);
@@ -236,9 +258,9 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
             }
           }
           break;
-        case STATE_SLEEP_MODE: // sleeping state
+        case State::SleepMode: // sleeping state
           break;
-        case STATE_CLEAN_MODE: // cleaning state
+        case State::CleanMode: // cleaning state
           if (image_flip) {
             u8g2.drawXBMP(0, 0, icon_width, icon_height, clean_bits);
           } else {
@@ -250,7 +272,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
     }
 
     // display current and target temperature
-    if (activeState > STATE_UNDEFINED && activeState != STATE_BREW_DETECTED && !showLastBrewStatistics) {
+    if (activeState != State::Undefined && activeState != State::BrewDetected && !showLastBrewStatistics) {
       if (Input - 100 > -FLT_EPSILON) {
         align_right = align_right_3digits;
       } else {
@@ -265,7 +287,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
       u8g2.setFont(u8g2_font_open_iconic_embedded_1x_t);
       u8g2.drawGlyph(align_right - 11, 3 + 6, 0x0046);
 
-      // if (Input <= *activeSetPoint + 5 || activeState == STATE_STEAM_MODE) { //only show setpoint if we are not steaming
+      // if (Input <= *activeSetPoint + 5 || activeState == State::SteamMode) { //only show setpoint if we are not steaming
       if (!steaming) {
         if (*activeSetPoint >= 100) {
           align_right = align_right_3digits;
@@ -281,7 +303,7 @@ void displaymessage_helper(int activeState, char* displaymessagetext, char* disp
         u8g2.setFont(u8g2_font_open_iconic_other_1x_t);
         u8g2.drawGlyph(align_right - 11, 20 + 6, 0x047);
       }
-    } else if (activeState == STATE_BREW_DETECTED || showLastBrewStatistics) {  //brew
+    } else if (activeState == State::BrewDetected || showLastBrewStatistics) {  //brew
       totalBrewTime = ( (OnlyPID || BREWTIME_TIMER == 0 )? *activeBrewTime : *activePreinfusion + *activePreinfusionPause + *activeBrewTime) * 1000;
       unsigned int align_right_left_value = LCDWidth - 56 - 5;
       unsigned int align_right_right_value = LCDWidth - 56 + 28;

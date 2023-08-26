@@ -4,7 +4,10 @@
  *****************************************************/
 
 #include "eeprom-pcpid.h"
+#include "rancilio-debug.h"
 #include "rancilio-pid.h"
+
+extern void blynkSave(char*);
 
 void sync_eeprom() { sync_eeprom(false, false); }
 

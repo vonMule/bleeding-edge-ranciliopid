@@ -3,7 +3,59 @@
  * https://github.com/medlor/bleeding-edge-ranciliopid
  *****************************************************/
 #include "controls.h"
-#include "rancilio-pid.h"
+#include "rancilio-debug.h"
+//#include "rancilio-pid.h"
+#include "MQTT.h"
+#include "blynk.h"
+#include "PIDBias.h"
+
+//TODO loaded from rancilio-pid.cpp. needs refactoring (class, injection)
+extern float* activeSetPoint;
+extern float* activeStartTemp;
+extern float* activeBrewTime;
+extern float* activePreinfusion;
+extern float* activePreinfusionPause;
+extern int pidON;
+extern char debugLine[200];
+extern unsigned int profile;
+extern float setPointSteam;
+
+//TODO old block to be removed by refactoring
+extern unsigned long userActivity;
+extern controlMap* controlsConfig;
+extern menuMap* menuConfig;
+extern const int OnlyPID;
+extern const int brewDetection;
+extern int brewing;
+extern void setGpioAction(int action, bool mode);
+extern int pumpRelayON, pumpRelayOFF;
+extern int valveRelayON, valveRelayOFF;
+extern int steaming;
+extern int cleaning;
+extern PIDBias bPID;
+extern unsigned long userActivitySavedOnForcedSleeping;
+extern int sleeping;
+extern unsigned long lastBrewEnd;
+extern unsigned int brewStatisticsAdditionalDisplayTime;
+extern bool MaschineColdstartRunOnce;
+extern float steadyPowerOffsetModified;
+extern unsigned int menuPosition;
+extern unsigned long previousTimerMenuCheck;
+extern unsigned int* activeBrewTimeEndDetection;
+extern float* activeScaleSensorWeightSetPoint;
+extern unsigned long brewTimer;
+extern float currentWeight;
+extern float steadyPowerOffset;
+extern unsigned long eepromForceSync;
+
+extern void blynkSave(char*);
+
+int simulatedBrewSwitch = 0;
+unsigned long previousCheckControls = 0;
+
+// actionState contain the status (on/off/..) of each actions
+int actionState[MAX_NUM_ACTIONS];
+int gpioLastAction[MAX_NUM_GPIO];
 
 void splitStringBySeperator(char* source, char seperator, char** resultLeft, char** resultRight) {
   char* separator1 = strchr(source, seperator);

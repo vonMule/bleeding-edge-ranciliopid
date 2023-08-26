@@ -2,8 +2,8 @@
 #define _control_H
 
 #include "Arduino.h"
-#include "userConfig.h"
-#include "MQTT.h"
+//#include "userConfig.h"
+//#include "MQTT.h"
 #include "PIDBias.h"
 #include "GpioCheck.h"
 
@@ -20,6 +20,8 @@
 #define MENU_DEC 9
 #define SLEEPING 10
 #define MENU 11
+//#define PROFILE_1 12  //XXX3 whats that and also are those defines still needed at all 
+//#define PROFILE_2 13  //XXX3 whats that and also are those defines still needed at all 
 
 #ifdef ESP32
 #include "driver/rtc_io.h"
@@ -54,16 +56,13 @@ typedef struct menuMap {
   struct menuMap* nextMenuMap;
 } menuMap;
 
-unsigned long previousCheckControls = 0;
 #define FREQUENCYCHECKCONTROLS 100 // XXX: change to 50 or 200? make dynamical!
 
 // actionState contain the status (on/off/..) of each actions
 #define MAX_NUM_ACTIONS 20
-int actionState[MAX_NUM_ACTIONS];
 
 // gpioLastAction contain the last known action executed (per gpio)
 #define MAX_NUM_GPIO 35
-int gpioLastAction[MAX_NUM_GPIO];
 
 controlMap* parseControlsConfig();
 void debugControlHardware(controlMap* controlsConfig);
@@ -90,32 +89,6 @@ void menuAction(int state);
 void menuIncAction(int state);
 void menuDecAction(int state);
 
-int simulatedBrewSwitch = 0;
-
-extern unsigned long userActivity;
-extern controlMap* controlsConfig;
-extern menuMap* menuConfig;
-extern const int OnlyPID;
-extern const int brewDetection;
-extern int brewing;
-extern void setGpioAction(int action, bool mode);
-extern int pumpRelayON, pumpRelayOFF;
-extern int valveRelayON, valveRelayOFF;
-extern int steaming;
-extern int cleaning;
-extern PIDBias bPID;
-extern unsigned long userActivitySavedOnForcedSleeping;
-extern int sleeping;
-extern unsigned long lastBrewEnd;
-extern unsigned int brewStatisticsAdditionalDisplayTime;
-extern bool MaschineColdstartRunOnce;
-extern float steadyPowerOffsetModified;
-extern unsigned int menuPosition;
-extern unsigned long previousTimerMenuCheck;
-extern void blynkSave(char*);
-extern unsigned int* activeBrewTimeEndDetection;
-extern float* activeScaleSensorWeightSetPoint;
-extern unsigned long brewTimer;
-extern float currentWeight;
+extern int simulatedBrewSwitch;
 
 #endif

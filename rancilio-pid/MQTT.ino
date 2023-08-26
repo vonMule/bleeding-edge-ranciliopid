@@ -1,13 +1,66 @@
 /********************************************************
-  MQTT
-*****************************************************/
+ * Perfect Coffee PID
+ * https://github.com/medlor/bleeding-edge-ranciliopid
+ *****************************************************/
 #include <float.h>
-
 #include "userConfig.h"
 #include "MQTT.h"
+#include "rancilio-debug.h"
+#include "rancilio-network.h"
 #include "controls.h"
+#include "rancilio-pid.h"  // refactoring needed to remove this
 
+const char* mqttServerIP = MQTT_SERVER_IP;
+const int mqttServerPort = MQTT_SERVER_PORT;
+const char* mqttUsername = MQTT_USERNAME;
+const char* mqttPassword = MQTT_PASSWORD;
+const char* mqttTopicPrefix = MQTT_TOPIC_PREFIX;
+const int mqttMaxPublishSize = 120;
+char topicWill[256];
+char topicSet[256];
+char topicActions[256];
+const bool mqttFlagRetained = true;
+unsigned long mqttDontPublishUntilTime = 0;
+unsigned long mqttDontPublishBackoffTime = 15000; // Failsafe: dont publish if there are errors for 15 seconds
+unsigned long mqttLastReconnectAttemptTime = 0;
+unsigned int mqttReconnectAttempts = 0;
+unsigned long mqttReconnectIncrementalBackoff = 30000; // Failsafe: add 30sec to reconnect time after each
+                                                        // connect-failure.
+unsigned int mqttMaxIncrementalBackoff = 4; // At most backoff <mqtt_max_incremenatl_backoff>+1 *
+                                            // (<mqttReconnectIncrementalBackoff>ms)
+bool mqttDisabledTemporary = false;
+unsigned long mqttConnectTime = 0; // time of last successfull mqtt connection
 unsigned long lastCheckMQTT = 0;
+
+//TODO loaded from rancilio-pid.cpp. needs refactoring (global ConfigClass, injection)
+/*
+extern float* activeSetPoint;
+extern float* activeStartTemp;
+extern float* activeBrewTime;
+extern float* activePreinfusion;
+extern float* activePreinfusionPause;
+extern unsigned int* activeBrewTimeEndDetection;
+extern float* activeScaleSensorWeightSetPoint;
+extern int pidON;
+extern char debugLine[200];
+extern unsigned int profile;
+extern float setPointSteam;
+extern bool inSensitivePhase();
+*/
+
+//blynk.cpp
+extern bool InitBlynk();
+extern void blynkSave(char*);
+
+
+// --------------------------------------------
+#if (MQTT_ENABLE == 1)
+WiFiClient espClient;
+#include <PubSubClient.h>
+PubSubClient mqttClient(espClient);
+#elif (MQTT_ENABLE == 2 && defined(ESP8266))
+#include <uMQTTBroker.h>
+#endif
 
 bool almostEqual_exact(float a, float b) { return fabs(a - b) <= FLT_EPSILON; }
 bool almostEqual(float a, float b) { return fabs(a - b) <= 0.0001; }
@@ -63,10 +116,10 @@ bool isMqttWorking(bool refresh) {
 bool mqttPublish(char* reading, char* payload) {
   if (!MQTT_ENABLE || forceOffline || mqttDisabledTemporary) return true;
   if (!isMqttWorking()) { return false; }
-  char topic[MQTT_MAX_PUBLISH_SIZE];
-  snprintf(topic, MQTT_MAX_PUBLISH_SIZE, "%s%s/%s", mqttTopicPrefix, hostname, reading);
+  char topic[mqttMaxPublishSize];
+  snprintf(topic, mqttMaxPublishSize, "%s%s/%s", mqttTopicPrefix, hostname, reading);
 
-  if (strlen(topic) + strlen(payload) >= MQTT_MAX_PUBLISH_SIZE) {
+  if (strlen(topic) + strlen(payload) >= mqttMaxPublishSize) {
     ERROR_print("mqttPublish() wants to send too much data (len=%u)\n", strlen(topic) + strlen(payload));
     return false;
   } else {
@@ -141,10 +194,10 @@ bool isMqttWorking(bool refresh) { return ((MQTT_ENABLE > 0) && (isWifiWorking()
 
 bool mqttPublish(char* reading, char* payload) {
   if (!MQTT_ENABLE || forceOffline || mqttDisabledTemporary) return true;
-  char topic[MQTT_MAX_PUBLISH_SIZE];
-  snprintf(topic, MQTT_MAX_PUBLISH_SIZE, "%s%s/%s", mqttTopicPrefix, hostname, reading);
+  char topic[mqttMaxPublishSize];
+  snprintf(topic, mqttMaxPublishSize, "%s%s/%s", mqttTopicPrefix, hostname, reading);
   if (!isMqttWorking()) { return false; }
-  if (strlen(topic) + strlen(payload) >= MQTT_MAX_PUBLISH_SIZE) {
+  if (strlen(topic) + strlen(payload) >= mqttMaxPublishSize) {
     ERROR_print("mqttPublish() wants to send too much data (len=%u)\n", strlen(topic) + strlen(payload));
     return false;
   } else {
@@ -415,4 +468,57 @@ void mqttPublishSettings() {
   mqttPublish((char*)"activeBrewTimeEndDetection/set", number2string(*activeBrewTimeEndDetection));
   mqttPublish((char*)"activeScaleSensorWeightSetPoint/set", number2string(*activeScaleSensorWeightSetPoint));
   mqttPublish((char*)"steadyPower/set", number2string(steadyPower)); // this should be last in list
+}
+
+// Setup Mqtt (and also call initBlynk()) returns eeprom_force_read
+bool InitMqtt() {
+  bool eeprom_force_read = true;
+#if (MQTT_ENABLE == 1)
+  snprintf(topicWill, sizeof(topicWill), "%s%s/%s", mqttTopicPrefix, hostname, "will");
+  snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
+  snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
+  //mqttClient.setKeepAlive(3);      //activates mqttping keepalives (default 15)
+  mqttClient.setSocketTimeout(2);  //sets application level timeout (default 15)
+  mqttClient.setServer(mqttServerIP, mqttServerPort);
+  mqttClient.setCallback(mqttCallback1);
+  if (!mqttReconnect(true)) {
+    if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
+    ERROR_print("Cannot connect to MQTT. Disabling...\n");
+    // displaymessage(State::Undefined, "Cannot connect to MQTT", "");
+    // delay(1000);
+  } else {
+    const bool useRetainedSettingsFromMQTT = true;
+    if (useRetainedSettingsFromMQTT) {
+      // read and use settings retained in mqtt and therefore dont use eeprom values
+      eeprom_force_read = false;
+      unsigned long started = millis();
+          while (isMqttWorking(true) && (millis() < started + 4000)) // attention: delay might not
+                                                              // be long enough over WAN
+      {
+        mqttClient.loop();
+      }
+      eepromForceSync = 0;
+    }
+  }
+#elif (MQTT_ENABLE == 2)
+  DEBUG_print("Starting MQTT service\n");
+  const unsigned int max_subscriptions = 30;
+  const unsigned int max_retained_topics = 30;
+  const unsigned int mqtt_service_port = 1883;
+  snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
+  snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
+  MQTT_server_onData(mqtt_callback_2);
+  if (MQTT_server_start(mqtt_service_port, max_subscriptions, max_retained_topics)) {
+    if (!MQTT_local_subscribe((unsigned char*)topicSet, 0) || !MQTT_local_subscribe((unsigned char*)topicActions, 0)) {
+      ERROR_print("Cannot subscribe to local MQTT service\n");
+    }
+  } else {
+    if (DISABLE_SERVICES_ON_STARTUP_ERRORS) mqttDisabledTemporary = true;
+    ERROR_print("Cannot create MQTT service. Disabling...\n");
+    // displaymessage(State::Undefined, "Cannot create MQTT service", "");
+    // delay(1000);
+  }
+#endif
+         
+  return InitBlynk() && eeprom_force_read;
 }

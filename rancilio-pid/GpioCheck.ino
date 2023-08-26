@@ -1,4 +1,5 @@
 #include "GpioCheck.h"
+#include "rancilio-debug.h"
 
 GpioCheck::GpioCheck(uint8_t inputPin, char* portMode, unsigned int debounceTime) {
 			counter = 0;
