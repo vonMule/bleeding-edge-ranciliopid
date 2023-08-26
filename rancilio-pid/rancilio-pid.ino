@@ -26,7 +26,7 @@
 #include "controls.h"
 #include "PIDBias.h"
 
-const char* sysVersion PROGMEM = "3.2.4 beta2";
+const char* sysVersion PROGMEM = "3.2.4";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
