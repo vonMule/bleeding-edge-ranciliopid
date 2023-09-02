@@ -9,9 +9,14 @@
 #if (MQTT_ENABLE == 1)
 #include <PubSubClient.h>
 extern PubSubClient mqttClient;
-#elif (MQTT_ENABLE == 2 && defined(ESP8266))
+#elif MQTT_ENABLE == 2
+#if defined(ESP8266)
 #include <uMQTTBroker.h>
 //bool MQTT_local_publish(char* topic, char* data, size_t data_length, uint8_t qos, uint8_t retain);
+#elif defined(ESP32)
+#include <PicoMQTT.h>
+void mqttLoop();
+#endif
 #endif
 
 bool isWifiWorking();

@@ -1010,6 +1010,9 @@ void CheckMqttConnection() {
           mqttPublish((char*)"powerOffTimer", int2string(powerOffTimer >= 0 ? ((powerOffTimer + 59) / 60) : 0)); // in minutes always rounded up
         }
         // mqttPublishSettings();  //not needed because we update live on occurence
+#if defined(ESP32)
+        mqttLoop();
+#endif
       }
 #if (MQTT_ENABLE == 1)
       if (millis() >= previousTimerMqttHandle + 100) {
@@ -1057,7 +1060,11 @@ void CheckMqttConnection() {
     if (!forceOffline) {
       if (!isWifiWorking()) {
 #if (MQTT_ENABLE == 2)
+#if defined(ESP32)
+        isMqttWorking(false);
+#else
         MQTT_server_cleanupClientCons();
+#endif
 #endif
         checkWifi(inSensitivePhase());
       } else {
