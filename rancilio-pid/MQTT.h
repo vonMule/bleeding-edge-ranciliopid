@@ -15,7 +15,11 @@ extern PubSubClient mqttClient;
 //bool MQTT_local_publish(char* topic, char* data, size_t data_length, uint8_t qos, uint8_t retain);
 #elif defined(ESP32)
 #include <PicoMQTT.h>
-void mqttLoop();
+class MyPicoMQTTBroker: public PicoMQTT::Server {
+    protected:
+        virtual void on_connected(const char * client_id) override;
+};
+extern MyPicoMQTTBroker picoMQTTBroker;
 #endif
 #endif
 
@@ -26,6 +30,7 @@ bool mqttPublish(char*, char*);
 bool isMqttWorking();
 bool isMqttWorking(bool refresh);
 void mqttPublishSettings();
+void mqttPublishPersistedSettings();
 bool persistSetting(char*, float*, char*);
 bool persistSetting(char*, int*, char*);
 bool persistSetting(char*, unsigned int*, char*);

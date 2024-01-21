@@ -20,6 +20,7 @@ char topicWill[256];
 char topicSet[256];
 char topicActions[256];
 const bool mqttFlagRetained = true;
+unsigned long publishSettingsAfterClientConnect = 0;
 unsigned long mqttDontPublishUntilTime = 0;
 unsigned long mqttDontPublishBackoffTime = 15000; // Failsafe: dont publish if there are errors for 15 seconds
 unsigned long mqttLastReconnectAttemptTime = 0;
@@ -63,11 +64,13 @@ PubSubClient mqttClient(espClient);
 #include <uMQTTBroker.h>
 #elif defined(ESP32)
 #include <PicoMQTT.h>
-
-PicoMQTT::Server mqtt{};
-
-void mqttLoop() { mqtt.loop(); }
+void MyPicoMQTTBroker::on_connected(const char * client_id) {
+            //Serial.printf("Client %s connected.\n", client_id);
+            publishSettingsAfterClientConnect = millis();
+        }
+MyPicoMQTTBroker picoMQTTBroker{};
 #endif
+
 #endif
 
 bool almostEqual_exact(float a, float b) { return fabs(a - b) <= FLT_EPSILON; }
@@ -212,7 +215,8 @@ bool mqttPublish(char* reading, char* payload) {
     unsigned long currentMillis = millis();
     if (currentMillis > mqttDontPublishUntilTime) {
 #if defined(ESP32)
-      bool ret = mqtt.publish(topic, payload);
+      bool ret = picoMQTTBroker.publish(topic, payload);
+      mqtt_callback_2(nullptr, topic, strlen(topic), payload, strlen(payload));
 #else
       bool ret = MQTT_local_publish((unsigned char*)&topic, (unsigned char*)payload, strlen(payload), 1, 1);
 #endif
@@ -239,7 +243,7 @@ void mqtt_callback_2(uint32_t* client, const char* topic, uint32_t topic_len, co
   char data_str[length + 1];
   os_memcpy(data_str, data, length);
   data_str[length] = '\0';
-  // DEBUG_print("MQTT: %s = %s\n", topic_str, data_str);
+  //DEBUG_print("MQTT: %s = %s\n", topic_str, data_str);
   if (strstr(topic_str, "/actions/") != NULL) {
     mqttParseActions(topic_str, data_str);
   } else {
@@ -253,9 +257,9 @@ void mqttParseActions(char* topic_str, char* data_str) {
   char topic_pattern[255];
   char actionParsed[120];
   char* endptr;
-  // DEBUG_print("mqttParseActions(%s, %s)\n", topic_str, data_str);
+  //DEBUG_print("mqttParseActions(%s, %s)\n", topic_str, data_str);
   snprintf(topic_pattern, sizeof(topic_pattern), "%s%s/actions/%%[^\\/]", mqttTopicPrefix, hostname);
-  // DEBUG_print("topic_pattern=%s\n",topic_pattern);
+  //DEBUG_print("topic_pattern=%s\n",topic_pattern);
   if (sscanf(topic_str, topic_pattern, &actionParsed) != 1) {
     DEBUG_print("Ignoring un-parsable topic (%s)\n", topic_str);
     return;
@@ -281,7 +285,7 @@ void mqttParse(char* topic_str, char* data_str) {
   //DEBUG_print("mqttParse(%s, %s)\n", topic_str, data_str);
   snprintf(topic_pattern, sizeof(topic_pattern), "%s%s/%%[^\\/]/%%[^\\/]", mqttTopicPrefix, hostname);
   if ((sscanf(topic_str, topic_pattern, &configVar, &cmd) != 2) || (strcmp(cmd, "set") != 0)) {
-    // DEBUG_print("Ignoring topic (%s)\n", topic_str);
+    //DEBUG_print("Ignoring topic (%s)\n", topic_str);
     return;
   }
   if (strcmp(configVar, "profile") == 0) {
@@ -437,7 +441,7 @@ bool persistSetting(char* setting, int* value, char* data_str) {
   int data_int;
   sscanf(data_str, "%d", &data_int);
   if (data_int != *value) {
-    // DEBUG_print("setting %s=%s (=%d) (prev=%d)\n", setting, data_str, data_int, *value);
+    //DEBUG_print("setting %s=%s (=%d) (prev=%d)\n", setting, data_str, data_int, *value);
     *value = data_int;
     mqttPublish(setting, data_str);
     eepromForceSync = millis();
@@ -482,6 +486,32 @@ void mqttPublishSettings() {
   mqttPublish((char*)"steadyPower/set", number2string(steadyPower)); // this should be last in list
 }
 
+void mqttPublishPersistedSettings() {
+  mqttPublish((char*)"profile", number2string(profile));
+  mqttPublish((char*)"activeBrewTime", number2string(*activeBrewTime));
+  mqttPublish((char*)"activeStartTemp", number2string(*activeStartTemp));
+  mqttPublish((char*)"activeSetPoint", number2string(*activeSetPoint));
+  mqttPublish((char*)"activePreinfusion", number2string(*activePreinfusion));
+  mqttPublish((char*)"activePreinfusionPause", number2string(*activePreinfusionPause));
+  mqttPublish((char*)"pidON", number2string(pidON));
+  mqttPublish((char*)"brewDetectionSensitivity", number2string(brewDetectionSensitivity));
+  mqttPublish((char*)"brewDetectionPower", number2string(brewDetectionPower));
+  mqttPublish((char*)"aggKp", number2string(aggKp));
+  mqttPublish((char*)"aggTn", number2string(aggTn));
+  mqttPublish((char*)"aggTv", number2string(aggTv));
+  mqttPublish((char*)"aggoKp", number2string(aggoKp));
+  mqttPublish((char*)"aggoTn", number2string(aggoTn));
+  mqttPublish((char*)"aggoTv", number2string(aggoTv));
+  mqttPublish((char*)"setPointSteam", number2string(setPointSteam));
+  mqttPublish((char*)"steadyPowerOffset", number2string(steadyPowerOffset));
+  mqttPublish((char*)"steadyPowerOffsetTime", number2string(steadyPowerOffsetTime));
+  mqttPublish((char*)"activeBrewTimeEndDetection", number2string(*activeBrewTimeEndDetection));
+  mqttPublish((char*)"activeScaleSensorWeightSetPoint", number2string(*activeScaleSensorWeightSetPoint));
+  mqttPublish((char*)"steadyPower", number2string(steadyPower)); // this should be last in list
+  mqttPublish((char*)"steadyPower", number2string(steadyPower));
+  publishActions();
+}
+
 // Setup Mqtt (and also call initBlynk()) returns eeprom_force_read
 bool InitMqtt() {
   bool eeprom_force_read = true;
@@ -523,10 +553,10 @@ bool InitMqtt() {
   auto callback = [](const char * topic, const char * payload) {
         mqtt_callback_2(nullptr, topic, strlen(topic), payload, strlen(payload));
     };
-  mqtt.subscribe(topicSet, callback);
-  mqtt.subscribe(topicActions, callback);
-  mqtt.begin();
-  mqtt.loop();
+  picoMQTTBroker.subscribe(topicSet, callback);
+  picoMQTTBroker.subscribe(topicActions, callback);
+  picoMQTTBroker.begin();
+  picoMQTTBroker.loop();
 #else
   MQTT_server_onData(mqtt_callback_2);
   if (MQTT_server_start(mqtt_service_port, max_subscriptions, max_retained_topics)) {

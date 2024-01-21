@@ -158,4 +158,6 @@ extern float scaleSensorWeightOffset;
 
 extern TemperatureSensor tempSensor;
 
+extern unsigned long publishSettingsAfterClientConnect;
+
 #endif

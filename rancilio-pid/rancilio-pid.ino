@@ -26,7 +26,7 @@
 #include "controls.h"
 #include "PIDBias.h"
 
-const char* sysVersion PROGMEM = "3.2.4";
+const char* sysVersion PROGMEM = "3.2.5 beta1";
 
 /********************************************************
  * definitions below must be changed in the userConfig.h file
@@ -1010,15 +1010,23 @@ void CheckMqttConnection() {
           mqttPublish((char*)"powerOffTimer", int2string(powerOffTimer >= 0 ? ((powerOffTimer + 59) / 60) : 0)); // in minutes always rounded up
         }
         // mqttPublishSettings();  //not needed because we update live on occurence
-#if defined(ESP32)
-        mqttLoop();
-#endif
+        if (publishSettingsAfterClientConnect != 0 && millis() - publishSettingsAfterClientConnect >= 2000) { //delay is needed else messages are dropped
+          publishSettingsAfterClientConnect = 0;
+          mqttPublishPersistedSettings();
+        }
       }
 #if (MQTT_ENABLE == 1)
       if (millis() >= previousTimerMqttHandle + 100) {
         previousTimerMqttHandle = millis();
         mqttClient.loop(); // mqtt client connected, do mqtt housekeeping
       }
+#elif (MQTT_ENABLE == 2)
+#if defined(ESP32)
+      if (millis() >= previousTimerMqttHandle + 1000) {
+        previousTimerMqttHandle = millis();
+        picoMQTTBroker.loop(); // mqtt client connected, do mqtt housekeeping
+      }
+#endif
 #endif
     }
   }
@@ -1060,10 +1068,8 @@ void CheckMqttConnection() {
     if (!forceOffline) {
       if (!isWifiWorking()) {
 #if (MQTT_ENABLE == 2)
-#if defined(ESP32)
-        isMqttWorking(false);
-#else
-        MQTT_server_cleanupClientCons();
+#if defined(ESP8266)
+      MQTT_server_cleanupClientCons();
 #endif
 #endif
         checkWifi(inSensitivePhase());
