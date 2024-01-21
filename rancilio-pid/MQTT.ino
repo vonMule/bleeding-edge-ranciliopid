@@ -58,8 +58,16 @@ extern void blynkSave(char*);
 WiFiClient espClient;
 #include <PubSubClient.h>
 PubSubClient mqttClient(espClient);
-#elif (MQTT_ENABLE == 2 && defined(ESP8266))
+#elif MQTT_ENABLE == 2
+#if defined(ESP8266)
 #include <uMQTTBroker.h>
+#elif defined(ESP32)
+#include <PicoMQTT.h>
+
+PicoMQTT::Server mqtt{};
+
+void mqttLoop() { mqtt.loop(); }
+#endif
 #endif
 
 bool almostEqual_exact(float a, float b) { return fabs(a - b) <= FLT_EPSILON; }
@@ -203,7 +211,11 @@ bool mqttPublish(char* reading, char* payload) {
   } else {
     unsigned long currentMillis = millis();
     if (currentMillis > mqttDontPublishUntilTime) {
+#if defined(ESP32)
+      bool ret = mqtt.publish(topic, payload);
+#else
       bool ret = MQTT_local_publish((unsigned char*)&topic, (unsigned char*)payload, strlen(payload), 1, 1);
+#endif
       if (ret == false) {
         mqttDontPublishUntilTime = millis() + mqttDontPublishBackoffTime;
         ERROR_print("Error on publish. Wont publish the next %lu ms\n", mqttDontPublishBackoffTime);
@@ -507,6 +519,15 @@ bool InitMqtt() {
   const unsigned int mqtt_service_port = 1883;
   snprintf(topicSet, sizeof(topicSet), "%s%s/+/%s", mqttTopicPrefix, hostname, "set");
   snprintf(topicActions, sizeof(topicActions), "%s%s/actions/+", mqttTopicPrefix, hostname);
+#if defined(ESP32)
+  auto callback = [](const char * topic, const char * payload) {
+        mqtt_callback_2(nullptr, topic, strlen(topic), payload, strlen(payload));
+    };
+  mqtt.subscribe(topicSet, callback);
+  mqtt.subscribe(topicActions, callback);
+  mqtt.begin();
+  mqtt.loop();
+#else
   MQTT_server_onData(mqtt_callback_2);
   if (MQTT_server_start(mqtt_service_port, max_subscriptions, max_retained_topics)) {
     if (!MQTT_local_subscribe((unsigned char*)topicSet, 0) || !MQTT_local_subscribe((unsigned char*)topicActions, 0)) {
@@ -518,6 +539,7 @@ bool InitMqtt() {
     // displaymessage(State::Undefined, "Cannot create MQTT service", "");
     // delay(1000);
   }
+#endif
 #endif
          
   return InitBlynk() && eeprom_force_read;
