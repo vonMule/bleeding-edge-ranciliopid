@@ -125,8 +125,9 @@ Installation is as explained on http://rancilio-pid.de/ but with following adapa
 - Instructions can be found at https://github.com/medlor/bleeding-edge-ranciliopid/wiki/Instructions-on-how-to-create-new-icon-collections
 
 ## Changelog
-- 3.2.5 beta1:
-  - Feature: Add local(!) MQTT Broker support on ESP32. Many thanks to bviecelli!
+- 3.2.5:
+  - Feature: Add local(!) MQTT Broker support on ESP32. Finally you can have MQTT without an external running broker. Many thanks to bviecelli!
+  - Fix: Upgrade to Expressif v6.5.0
   - Some bugfixes on the new broker integration.
 - 3.2.4:
   - Many more refactorings by aschoelzhorn. Thanks again!
