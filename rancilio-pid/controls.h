@@ -88,6 +88,7 @@ void brewingAction(int state);
 void menuAction(int state);
 void menuIncAction(int state);
 void menuDecAction(int state);
+void publishActions();
 
 extern int simulatedBrewSwitch;
 

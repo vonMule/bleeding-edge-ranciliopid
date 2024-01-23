@@ -46,9 +46,6 @@
 // ESP32 sometimes (after crash) is not able to connect to wifi. Workaround: set DISABLE_SERVICES_ON_STARTUP_ERRORS to 0
 #undef DISABLE_SERVICES_ON_STARTUP_ERRORS
 #define DISABLE_SERVICES_ON_STARTUP_ERRORS 0
-#if (MQTT_ENABLE == 2)
-#error ERROR Not supported to set MQTT_ENABLE=2 on ESP32
-#endif
 
 #endif
 
@@ -160,5 +157,7 @@ extern float scaleSensorWeightSetPoint3;
 extern float scaleSensorWeightOffset;
 
 extern TemperatureSensor tempSensor;
+
+extern unsigned long publishSettingsAfterClientConnect;
 
 #endif

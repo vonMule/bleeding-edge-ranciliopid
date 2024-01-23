@@ -254,7 +254,7 @@
 #define BLYNKPORT 8080
 
 // MQTT
-#define MQTT_ENABLE 1        // 0 = off (no MQTT at all) | 1=MQTT client  | 2=MQTT Server if you dont have a mqtt server running on another system)
+#define MQTT_ENABLE 2        // 0 = off (no MQTT at all) | 1=MQTT client  | 2=MQTT Server if you dont have a mqtt server running on another system)
 #define MQTT_USERNAME "myuser"
 #define MQTT_PASSWORD "mypass"
 #define MQTT_TOPIC_PREFIX "custom/Küche."  // topic will be "<MQTT_TOPIC_PREFIX><HOSTNAME>/<READING>" <HOSTNAME> is defined in //Wifi section

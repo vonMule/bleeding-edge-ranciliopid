@@ -109,6 +109,12 @@ network-issues with your other WiFi-devices on your WiFi-network. */
       if (isWifiWorking()) {
         DEBUG_print("Wifi connection attempt (#%u) successfull (%lu secs)\n", wifiReconnects, (millis() - lastWifiConnectionAttempt) / 1000);
         wifiReconnects = 0;
+        #if (MQTT_ENABLE == 2)
+        #ifdef ESP32
+        picoMQTTBroker.stop();
+        #endif
+        #endif
+        InitMqtt();
       } else {
         ERROR_print("Wifi connection attempt (#%u) not successfull (%lu secs)\n", wifiReconnects, (millis() - lastWifiConnectionAttempt) / 1000);
         wifiReconnects++;
